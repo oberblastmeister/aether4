@@ -1,0 +1,24 @@
+(ocamllex ae_c0_lexer_gen)
+
+(library
+ (name aether4)
+ (inline_tests)
+ (flags
+  ; turn pattern matching into error 
+  (:standard -warn-error -A+8 -w -23))
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_inline_test
+   ppx_deriving.enum
+   ppx_deriving.iter
+   ppx_deriving.map
+   ppx_deriving.fold
+   -log-source-position))
+ (libraries
+  parsec
+  std
+  core
+  algaeff
+  zarith
+  int_repr))
