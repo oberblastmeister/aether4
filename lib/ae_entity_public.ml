@@ -16,6 +16,7 @@ end
 
 module Table = Ae_entity_table
 module Map = Ae_entity_map
+module Intern = Ae_entity_intern
 
 module type S = sig
   module Id : sig

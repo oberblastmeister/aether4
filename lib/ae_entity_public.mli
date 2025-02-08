@@ -32,6 +32,27 @@ module Name : sig
   module Map : Map.S with type 'w Key.t = 'w t
 end
 
+module Intern : sig
+  module String_to_name : sig
+    type 'w t [@@deriving sexp_of]
+
+    val create : unit -> 'w t
+    val intern : 'w t -> string -> 'w Name.t
+    val find_exn : 'w t -> string -> 'w Name.t
+
+    module Make_global (Witness : T) () : sig
+      val intern : string -> Witness.t Name.t
+      val find_exn : string -> Witness.t Name.t
+    end
+  end
+
+  module Name_to_name : sig
+    type ('w1, 'w2) t
+
+    val intern : ('w1, 'w2) t -> 'w1 Name.t -> 'w2 Name.t
+  end
+end
+
 module type S = sig
   module Id : sig
     module Witness : Ae_entity_witness.S
