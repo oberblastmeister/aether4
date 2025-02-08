@@ -1,5 +1,6 @@
 open Std
-module Entity_map := Ae_entity_map
+module Table = Ae_entity_table
+module Map = Ae_entity_map
 
 module Id : sig
   type 'k t
@@ -7,7 +8,8 @@ module Id : sig
   val unchecked_of_int : int -> 'a t
   val unchecked_coerce : 'a t -> 'b t
 
-  module Table : Entity_map.S with type 'w Key.t = 'w t
+  module Table : Table.S with type 'w Key.t = 'w t
+  module Map : Map.S with type 'w Key.t = 'w t
 end
 
 module Id_gen : sig
@@ -26,36 +28,27 @@ module Name : sig
   val create : string -> 'k Id.t -> 'k t
   val unchecked_coerce : 'a t -> 'b t
 
-  module Table : Entity_map.S with type 'w Key.t = 'w t
+  module Table : Table.S with type 'w Key.t = 'w t
+  module Map : Map.S with type 'w Key.t = 'w t
 end
 
-module Intern : sig
-  module Name_to_name : sig
-    type ('w1, 'w2) t
-
-    val intern : ('w1, 'w2) t -> 'w1 Name.t -> 'w2 Name.t
-    val find_exn : ('w1, 'w2) t -> 'w1 Name.t -> 'w2 Name.t
-  end
-end
-
-module Make () : sig
+module type S = sig
   module Id : sig
-    module Witness : T
+    module Witness : Ae_entity_witness.S
 
     type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Map : Map.S with type Key.t = t
-    module Set : Set.S with type Elt.t = t
+    module Table : module type of Name.Table.Make (Witness)
+    module Map : module type of Name.Map.Make (Witness)
   end
 
   module Name : sig
     type t = Id.Witness.t Name.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Map : Map.S with type Key.t = t
-    module Set : Set.S with type Elt.t = t
-
-    module Table : sig
-      type 'a t = (Id.Witness.t, 'a) Name.Table.t
-    end
+    module Table : module type of Name.Table.Make (Id.Witness)
+    module Map : module type of Name.Map.Make (Id.Witness)
   end
 end
+
+module Make_with_witness (_ : Ae_entity_witness.S) : S
+module Make () : S

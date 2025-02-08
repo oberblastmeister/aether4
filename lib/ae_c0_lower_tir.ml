@@ -1,10 +1,11 @@
 open Std
 module Cst = Ae_c0_cst
-module Tir = Ae_tir
+module Tir = Ae_tir_types
 module Entity = Ae_entity_std
 module Temp = Tir.Temp
 module Id_gen = Entity.Id_gen
-module Append = Ae_data_append
+module Bag = Ae_data_bag
+open Bag.Syntax
 
 type st =
   { gen : Tir.Temp_entity.Id.Witness.t Id_gen.t
@@ -35,12 +36,12 @@ let rec lower_program st (program : Cst.program) : Tir.Func.t =
   let name = program.name in
   let params = [] in
   let start_label = Id_gen.next st.label_gen |> Entity.Name.create "start" in
-  let instrs = lower_block st program.block |> Append.to_list in
+  let instrs = lower_block st program.block |> Bag.to_list in
   let start_block = { Tir.Block.temps = []; body = instrs } in
   let func : Tir.Func.t =
     { name
     ; params
-    ; blocks = Tir.Label.Map.singleton start_label start_block
+    ; blocks = Entity.Name.Map.singleton start_label start_block
     ; start = start_label
     ; next_id = Id_gen.next st.gen
     }
@@ -48,7 +49,7 @@ let rec lower_program st (program : Cst.program) : Tir.Func.t =
   func
 
 and lower_block st (block : Cst.block) =
-  block.stmts |> List.map ~f:(lower_stmt st) |> Append.concat
+  block.stmts |> List.map ~f:(lower_stmt st) |> Bag.concat
 
 and lower_stmt st (stmt : Cst.stmt) =
   match stmt with
@@ -57,7 +58,7 @@ and lower_stmt st (stmt : Cst.stmt) =
   | Assign assign -> lower_assign st assign
   | Return expr -> lower_return st expr
 
-and lower_assign st (assign : Cst.assign) : Tir.Instr.t Append.t =
+and lower_assign st (assign : Cst.assign) : Tir.Instr.t Bag.t =
   match assign.lvalue with
   | Ident var ->
     let temp = var_temp st var in
@@ -68,11 +69,11 @@ and lower_assign st (assign : Cst.assign) : Tir.Instr.t Append.t =
       | AddEq -> Tir.Expr.Bin { lhs = Temp temp; op = Add; rhs = expr }
       | _ -> todo ()
     in
-    Append.(expr_i ++ of_list [ Tir.Instr.Assign { temp; e = bin_expr } ])
+    expr_i +> [ Tir.Instr.Assign { temp; e = bin_expr } ]
 
 and lower_return st expr =
   let expr_i, expr = lower_expr st expr in
-  Append.(expr_i ++ of_list [ Tir.Instr.Ret expr ])
+  expr_i +> [ Tir.Instr.Ret expr ]
 
 and lower_bin_op (op : Cst.bin_op) : Tir.Bin_op.t =
   match op with
@@ -84,24 +85,24 @@ and lower_bin_op (op : Cst.bin_op) : Tir.Bin_op.t =
 
 and lower_expr st (expr : Cst.expr) : _ * Tir.Expr.t =
   match expr with
-  | IntConst i -> Append.of_list [], Tir.Expr.IntConst i
+  | IntConst i -> Bag.of_list [], Tir.Expr.IntConst i
   | Bin { lhs; op; rhs } ->
     let op = lower_bin_op op in
     let lhs_instr, lhs = lower_expr st lhs in
     let rhs_instr, rhs = lower_expr st rhs in
-    Append.(lhs_instr ++ rhs_instr), Bin { lhs; op; rhs }
+    lhs_instr ++ rhs_instr, Bin { lhs; op; rhs }
   | Cst.Neg _ -> todo ()
   | Cst.Var v ->
     let temp = var_temp st v in
-    Append.empty, Temp temp
+    Bag.empty, Temp temp
 
 and lower_decl st (decl : Cst.decl) =
   let temp = var_temp st decl.name in
   match decl.expr with
-  | None -> Append.empty
+  | None -> Bag.empty
   | Some expr ->
     let expr_instr, expr = lower_expr st expr in
-    Append.(expr_instr ++ of_list [ Tir.Instr.Assign { temp; e = expr } ])
+    expr_instr +> [ Tir.Instr.Assign { temp; e = expr } ]
 ;;
 
 let lower p =

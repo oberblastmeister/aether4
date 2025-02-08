@@ -1,6 +1,6 @@
 open Std
 module Id = Ae_entity_id
-module Structures = Ae_structures
+module Name = Ae_entity_name
 
 module Id_gen = struct
   type 'k t = int ref
@@ -14,17 +14,32 @@ module Id_gen = struct
   ;;
 end
 
-module Name = Ae_entity_name
-module Entity_map = Ae_entity_map
-module Intern = Ae_entity_intern
+module Table = Ae_entity_table
+module Map = Ae_entity_map
 
-module Make () = struct
+module type S = sig
+  module Id : sig
+    module Witness : Ae_entity_witness.S
+
+    type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
+
+    module Table : module type of Name.Table.Make (Witness)
+    module Map : module type of Name.Map.Make (Witness)
+  end
+
+  module Name : sig
+    type t = Id.Witness.t Name.t [@@deriving sexp_of, equal, compare, hash]
+
+    module Table : module type of Name.Table.Make (Id.Witness)
+    module Map : module type of Name.Map.Make (Id.Witness)
+  end
+end
+
+module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
   module Id = struct
-    module T = struct
-      module Witness = struct
-        type t [@@deriving sexp, compare, hash, equal]
-      end
+    module Witness = Witness
 
+    module T = struct
       type t = Witness.t Id.t
 
       let sexp_of_t = Int.sexp_of_t
@@ -37,8 +52,8 @@ module Make () = struct
     end
 
     include T
-    module Map = Map.Make (T)
-    module Set = Set.Make (T)
+    module Table = Name.Table.Make (Witness)
+    module Map = Name.Map.Make (Witness)
   end
 
   module Name = struct
@@ -55,13 +70,11 @@ module Make () = struct
     end
 
     include T
-    module Map = Map.Make (T)
-    module Set = Set.Make (T)
-
-    module Table = struct
-      type 'a t = (Id.Witness.t, 'a) Name.Table.t
-    end
+    module Table = Name.Table.Make (Id.Witness)
+    module Map = Name.Map.Make (Id.Witness)
   end
 end
 
-module Map = Entity_map
+module Make () : S = Make_with_witness (struct
+    type t [@@deriving sexp_of]
+  end)

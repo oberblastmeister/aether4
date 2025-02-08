@@ -1,2 +1,3 @@
 - https://xavierleroy.org/publi/parallel-move.pdf
 - https://www.cs.tufts.edu/~nr/cs257/archive/keith-cooper/dom14.pdf
+- https://inria.hal.science/inria-00349925v1/document

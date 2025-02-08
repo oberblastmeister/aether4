@@ -19,6 +19,7 @@
   parsec
   std
   core
+  core_kernel
   algaeff
   zarith
   int_repr))

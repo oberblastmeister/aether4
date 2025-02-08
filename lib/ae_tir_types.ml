@@ -4,7 +4,7 @@ open struct
   module Entity = Ae_entity_std
 end
 
-module Temp_entity = Ae_temp_entity
+module Temp_entity = Entity.Make ()
 module Temp = Temp_entity.Name
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Name

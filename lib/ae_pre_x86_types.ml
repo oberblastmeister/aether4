@@ -1,5 +1,6 @@
 open Std
-module Temp_entity = Ae_temp_entity
+module Entity = Ae_entity_std
+module Temp_entity = Entity.Make ()
 module Temp = Temp_entity.Name
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Name

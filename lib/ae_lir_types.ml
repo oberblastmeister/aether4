@@ -1,3 +1,4 @@
+(* Only has 64 bit types *)
 open Std
 
 open struct

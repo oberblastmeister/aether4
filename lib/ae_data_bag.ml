@@ -6,8 +6,8 @@ type 'a t =
   | Append of 'a t * 'a t
   | List of 'a list
 
-let ( +> ) t l = Append (t, List l)
-let ( ++ ) t t' = Append (t, t')
+let append_list t l = Append (t, List l)
+let append t t' = Append (t, t')
 let of_list l = List l
 
 let to_list builder =
@@ -25,10 +25,17 @@ let to_list builder =
 ;;
 
 let sexp_of_t f t = to_list t |> List.sexp_of_t f
-let concat ts = List.fold_left ~init:Empty ~f:( ++ ) ts
-
+let concat ts = List.fold_left ~init:Empty ~f:append ts
 let empty = Empty
+
+module Syntax = struct
+  let ( +> ) = append_list
+  let ( <+ ) l t = Append (List l, t)
+  let ( ++ ) = append
+end
+
 let%expect_test _ =
+  let open Syntax in
   let b =
     of_list [ 1; 2; 3 ]
     +> [ 3; 4; 5 ]

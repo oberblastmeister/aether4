@@ -1,108 +1,83 @@
-(* TODO, doesn't necessarily have to be entity baesd, move to different namespace
-*)
 open Std
-module Signatures = Ae_signatures
 
-type 'a t = 'a Option_array.t
+module Entry = struct
+  type ('k, 'v) t =
+    { key : 'k
+    ; data : 'v
+    }
+  [@@deriving sexp_of, compare, equal]
+end
 
-module OA = Option_array
-include Ae_entity_map_intf
+module type Key = sig
+  type 'w t [@@deriving sexp_of]
+
+  val to_int : 'w t -> int
+end
+
+module type Key0 = sig
+  type t
+
+  include Key with type 'w t := t
+end
+
+module type S_without_make = sig
+  module Key : Key
+
+  type ('w, 'a) t
+
+  val empty : ('w, 'a) t
+  val singleton : 'w Key.t -> 'a -> ('w, 'a) t
+  val find : ('w, 'a) t -> 'w Key.t -> 'a option
+  val set : ('w, 'a) t -> key:'w Key.t -> data:'a -> ('w, 'a) t
+  val mem : ('w, 'a) t -> 'w Key.t -> bool
+  val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
+end
+
+module type S = sig
+  include S_without_make
+
+  module Make (Witness : Ae_entity_witness.S) : sig
+    type ('w, 'v) t' := ('w, 'v) t
+    type 'v t = (Witness.t, 'v) t' [@@deriving sexp_of]
+  end
+end
+
+module type S0 = sig
+  type 'a t
+
+  include S_without_make with type ('w, 'a) t := 'a t
+end
 
 module Make (Key : Key) : S with module Key = Key = struct
+  type ('w, 'v) t = ('w Key.t, 'v) Entry.t Int.Map.t [@@deriving sexp_of]
+
   module Key = Key
 
-  type ('w, 'a) t = { mutable a : ('w Key.t * 'a) Option_array.t }
+  let empty = Int.Map.empty
+  let singleton key data = Int.Map.singleton (Key.to_int key) { Entry.key; data }
+  let find t k = Map.find t (Key.to_int k) |> Option.map ~f:(fun e -> e.Entry.data)
+  let find_exn t k = (Map.find_exn t (Key.to_int k)).Entry.data
+  let map t ~f = Map.map t ~f:(fun e -> { e with Entry.data = f e.Entry.data })
+  let set t ~key ~data = Map.set t ~key:(Key.to_int key) ~data:{ Entry.key; data }
+  let mem t k = Map.mem t (Key.to_int k)
 
-  let create ?(size = 0) () = { a = OA.create ~len:size }
-  let size t = OA.length t.a
+  module Make (Witness : Ae_entity_witness.S) = struct
+    open struct
+      type ('w, 'v) t' = ('w, 'v) t [@@deriving sexp_of]
+    end
 
-  let resize_for_index t index =
-    if index >= size t then t.a <- Ae_data_utils.Option_array.resize_for_index t.a index
-  ;;
+    type 'v t = (Witness.t, 'v) t' [@@deriving sexp_of]
+  end
+end
 
-  let find t k =
-    let i = Key.to_int k in
-    if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
-  ;;
+module Make0 (Key : Key0) : S0 = struct
+  module Key' = struct
+    include Key
 
-  let remove t k =
-    let i = Key.to_int k in
-    if i < size t then OA.set_none t.a i
-  ;;
+    type 'w t = Key.t
+  end
 
-  let mem t k =
-    let i = Key.to_int k in
-    i < size t && OA.is_some t.a i
-  ;;
+  include Make (Key')
 
-  let key_not_found _t k = raise_s [%message "key not found" ~key:(k : _ Key.t)]
-  let clear t = Option_array.clear t.a
-
-  let find_exn t k =
-    let i = Key.to_int k in
-    if i >= size t
-    then key_not_found t k
-    else if OA.is_none t.a i
-    then key_not_found t k
-    else snd @@ OA.get_some_exn t.a i
-  ;;
-
-  let set t ~key:k ~data:v =
-    let index = Key.to_int k in
-    resize_for_index t index;
-    OA.set_some t.a index (k, v)
-  ;;
-
-  let find_or_add t k ~default =
-    if mem t k
-    then find_exn t k
-    else (
-      let res = default () in
-      set t ~key:k ~data:res;
-      res)
-  ;;
-
-  let foldi t ~init ~f =
-    OA.fold t.a ~init ~f:(fun z -> Option.value_map ~default:z ~f:(fun x -> f z x))
-  ;;
-
-  let iteri t = Container.iter ~fold:foldi t
-
-  let fold t ~init ~f =
-    OA.fold t.a ~init ~f:(fun z -> Option.value_map ~default:z ~f:(fun (_, v) -> f z v))
-  ;;
-
-  let to_list t = Container.to_list ~fold:foldi t
-
-  let of_list l =
-    let t = create () in
-    List.iter l ~f:(fun (k, v) -> set t ~key:k ~data:v);
-    t
-  ;;
-
-  let of_iter ?size i =
-    let t = create ?size () in
-    Iter.iter i ~f:(fun (k, v) ->
-      (* if mem ~to_int t k then raise_s [%message "key was present twice"]; *)
-      set t ~key:k ~data:v);
-    t
-  ;;
-
-  let sexp_of_t f g t = to_list t |> List.sexp_of_t (Tuple2.sexp_of_t f g)
-  let update t k ~f = set t ~key:k ~data:(f (find t k))
-
-  let of_iter_accum ?size i ~init ~f =
-    let t = create ?size () in
-    Iter.iter i ~f:(fun (k, v) ->
-      update t k ~f:(function
-        | None -> f init v
-        | Some acc -> f acc v));
-    t
-  ;;
-
-  let add_exn t ~key ~data =
-    if mem t key
-    then raise_s [%message "key is already inside" (key : _ Key.t)]
-    else set t ~key ~data
-  ;;
+  type nonrec 'a t = (Nothing.t, 'a) t
 end
