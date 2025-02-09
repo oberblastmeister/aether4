@@ -5,9 +5,11 @@ module Entity_set = Ae_entity_set
 
 type 'k t = int [@@deriving sexp, compare, equal, hash]
 
+let to_int i = i
 let unchecked_of_int i = i
 let unchecked_coerce i = i
 let succ = succ
+let pred = pred
 
 module type Intable = sig
   type t

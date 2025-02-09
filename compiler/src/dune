@@ -10,10 +10,6 @@
   (pps
    ppx_jane
    ppx_inline_test
-   ppx_deriving.enum
-   ppx_deriving.iter
-   ppx_deriving.map
-   ppx_deriving.fold
    -log-source-position))
  (libraries
   parsec

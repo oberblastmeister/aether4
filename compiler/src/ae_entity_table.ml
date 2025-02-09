@@ -180,7 +180,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   module Make (Witness : Ae_entity_witness.S) = struct
     type nonrec 'v t = (Witness.t, 'v) t
 
-    let sexp_of_t f t = sexp_of_t sexp_of_opaque f t
+    let sexp_of_t f t = sexp_of_t (Key.sexp_of_t sexp_of_opaque) f t
   end
 end
 

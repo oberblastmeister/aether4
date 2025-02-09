@@ -39,6 +39,7 @@ val rev : 'a t -> 'a t
 val repeat : 'a -> 'a t
 val scan : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
 val product : 'a t -> 'b t -> ('a * 'b) t
+val ensure_ephemeral : 'a t -> 'a t
 
 module Infix : sig
   val ( -- ) : int -> int -> int t

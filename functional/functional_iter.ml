@@ -84,6 +84,16 @@ let unfoldr ~init ~f ~f:k =
   loop init ~f
 ;;
 
+let ensure_ephemeral i =
+  let used = ref false in
+  fun ~f ->
+    if !used
+    then raise_s [%message "An ephemeral iterator was used multiple times"]
+    else (
+      used := true;
+      i ~f)
+;;
+
 (** Mutable unrolled list to serve as intermediate storage *)
 module MList = struct
   type 'a t =

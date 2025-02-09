@@ -5,11 +5,13 @@ module Set = Ae_entity_set
 module Witness = Ae_entity_witness
 
 module Id : sig
-  type 'k t
+  type 'k t = private int
 
   val unchecked_of_int : int -> 'a t
   val unchecked_coerce : 'a t -> 'b t
+  val to_int : 'k t -> int
   val succ : 'a t -> 'a t
+  val pred : 'a t -> 'a t
 
   module Table : Table.S_phantom with type 'w Key.t = 'w t
   module Map : Map.S_phantom with type 'w Key.t = 'w t

@@ -16,6 +16,8 @@ include T
 
 let unchecked_coerce { name; id } = { name; id = Id.unchecked_coerce id }
 let create name id = { name; id }
+let to_string name = [%string "%{name.name}@%{name.id#Int}"]
+let sexp_of_t _ name = Sexp.Atom (to_string name)
 
 module Arg = struct
   type nonrec 'k t = 'k t

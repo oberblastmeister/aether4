@@ -132,8 +132,8 @@ let%expect_test "simple" =
   [%expect
     {|
     ((name bruh) (params ())
-     (blocks ((((name start) (id 0)) ((temps ()) (body ())))))
-     (start ((name start) (id 0))) (next_id 0))
+     (blocks ((0 ((key start@0) (data ((temps ()) (body ()))))))) (start start@0)
+     (next_id 0))
     |}]
 ;;
 
@@ -150,30 +150,28 @@ let%expect_test "simple decl" =
     {|
     ((name first) (params ())
      (blocks
-      ((((name start) (id 0))
-        ((temps ())
-         (body
-          ((Assign (temp ((name first) (id 0)))
-            (e
-             (Bin (lhs (IntConst 12)) (op Add)
-              (rhs
-               (Bin
-                (lhs
+      ((0
+        ((key start@0)
+         (data
+          ((temps ())
+           (body
+            ((Assign (temp first@0)
+              (e
+               (Bin (lhs (IntConst 12)) (op Add)
+                (rhs
                  (Bin
                   (lhs
-                   (Bin (lhs (IntConst 1234)) (op Mod) (rhs (IntConst 1234))))
-                  (op Mul) (rhs (IntConst 12))))
-                (op Div) (rhs (IntConst 2)))))))
-           (Assign (temp ((name second) (id 1)))
-            (e
-             (Bin (lhs (Temp ((name first) (id 0)))) (op Add)
-              (rhs (IntConst 12)))))
-           (Assign (temp ((name second) (id 1)))
-            (e
-             (Bin (lhs (Temp ((name second) (id 1)))) (op Add)
-              (rhs
-               (Bin (lhs (Temp ((name first) (id 0)))) (op Add)
-                (rhs (Temp ((name second) (id 1)))))))))))))))
-     (start ((name start) (id 0))) (next_id 2))
+                   (Bin
+                    (lhs
+                     (Bin (lhs (IntConst 1234)) (op Mod) (rhs (IntConst 1234))))
+                    (op Mul) (rhs (IntConst 12))))
+                  (op Div) (rhs (IntConst 2)))))))
+             (Assign (temp second@1)
+              (e (Bin (lhs (Temp first@0)) (op Add) (rhs (IntConst 12)))))
+             (Assign (temp second@1)
+              (e
+               (Bin (lhs (Temp second@1)) (op Add)
+                (rhs (Bin (lhs (Temp first@0)) (op Add) (rhs (Temp second@1)))))))))))))))
+     (start start@0) (next_id 2))
     |}]
 ;;

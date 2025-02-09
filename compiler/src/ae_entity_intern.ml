@@ -11,14 +11,11 @@ module String_to_name = struct
   let create () = { map = String.Table.create (); id = 0 }
 
   let intern (t : _ t) key =
-    match Hashtbl.find t.map key with
-    | None ->
+    Hashtbl.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
       let name : _ Name.t = { name = key; id } in
-      Hashtbl.set t.map ~key ~data:name;
       t.id <- id + 1;
-      name
-    | Some name -> name
+      name)
   ;;
 
   let find_exn t key = Hashtbl.find_exn t.map key
@@ -37,14 +34,11 @@ module Name_to_name = struct
     }
 
   let intern (t : ('w1, 'w2) t) key =
-    match Name.Table.find t.map key with
-    | None ->
+    Name.Table.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
       let name : _ Name.t = { name = key.name; id } in
-      Name.Table.set t.map ~key ~data:name;
       t.id <- id + 1;
-      name
-    | Some name -> name
+      name)
   ;;
 
   let find_exn t key = Name.Table.find_exn t.map key

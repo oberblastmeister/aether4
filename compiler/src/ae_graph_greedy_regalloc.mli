@@ -8,7 +8,7 @@ module Vreg := Ae_vreg_entity.Name
   
   This is why the add function exists to add a single Vreg.t.
 *)
-module Interference : sig
+module Graph : sig
   type t
 
   val create : unit -> t
@@ -19,10 +19,4 @@ end
 module Color_entity : Entity.S
 module Color = Color_entity.Id
 
-val color_graph : graph:Interference.t -> precolored:Vreg.t list -> Color.t Vreg.Table.t
-
-(* not in the resulting table means spilled *)
-val alloc_colors
-  :  reg_hashable:'r Base.Hashable.t
-  -> Color.t Vreg.Map.t
-  -> 'r Color.Table.t
+val color_graph : Graph.t -> Vreg.Set.t -> Color.t Vreg.Table.t

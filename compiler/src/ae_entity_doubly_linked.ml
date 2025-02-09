@@ -23,7 +23,7 @@ module type S = sig
   type map = (Witness.t, Data.t) Id.Map.t
 
   val remove : map -> Witness.t Id.t -> unit
-  val insert_after : after:Witness.t Id.t -> map -> Witness.t Id.t
+  val insert_head : map -> Witness.t Id.t -> head:Witness.t Id.t -> Witness.t Id.t
 end
 
 module Make (Arg : Arg) = struct
@@ -47,15 +47,22 @@ module Make (Arg : Arg) = struct
     ()
   ;;
 
-  let insert_after ~after:node map insert =
-    let next = Data.next map.!(node) in
-    map.!(insert) <- Data.set_prev map.!(insert) (Some node);
-    map.!(node) <- Data.set_next map.!(node) (Some insert);
-    map.!(insert) <- Data.set_next map.!(insert) next;
+  let insert_head map node ~head =
+    assert (Data.prev map.!(head) |> Option.is_none);
+    assert (Data.next map.!(node) |> Option.is_none);
+    map.!(head) <- Data.set_prev map.!(head) (Some node);
+    map.!(node) <- Data.set_next map.!(node) (Some head);
+    ()
+  ;;
+
+  let remove_head map head =
+    assert (Data.prev map.!(head) |> Option.is_none);
+    let next = Data.next map.!(head) in
+    map.!(head) <- Data.set_next map.!(head) None;
     (match next with
      | None -> ()
      | Some next ->
-       map.!(next) <- Data.set_prev map.!(next) (Some insert);
+       map.!(next) <- Data.set_prev map.!(next) None;
        ());
     ()
   ;;

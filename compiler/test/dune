@@ -1,0 +1,14 @@
+(library
+ (name aether4_test)
+ (inline_tests)
+ (flags
+  ; turn pattern matching into error 
+  (:standard -warn-error -A+8 -w -23))
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_inline_test
+   -log-source-position))
+ (libraries
+  aether4
+  std))
