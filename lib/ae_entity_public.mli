@@ -9,6 +9,7 @@ module Id : sig
 
   val unchecked_of_int : int -> 'a t
   val unchecked_coerce : 'a t -> 'b t
+  val succ : 'a t -> 'a t
 
   module Table : Table.S_phantom with type 'w Key.t = 'w t
   module Map : Map.S_phantom with type 'w Key.t = 'w t

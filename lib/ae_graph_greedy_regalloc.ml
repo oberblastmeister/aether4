@@ -134,11 +134,28 @@ end = struct
 end
 
 let simplicial_elimination_order interference precolored =
+  let heap = Bounded_heap.create ~weight_bound:(Table.length interference) () in
+  let id_to_name =
+    Table.iter_keys interference
+    |> Iter.map ~f:(fun vreg -> vreg.id, vreg)
+    |> Id.Table.of_iter
+  in
   Table.iter_keys interference
-  |> Iter.filter ~f:(fun vreg -> not (Table.mem precolored vreg))
-  |> Iter.iter ~f:(fun vreg -> todo ());
-  (* Table. *)
-  ()
+  |> Iter.filter ~f:(fun vreg -> not (Set.mem precolored vreg))
+  |> Iter.iter ~f:(fun vreg -> Bounded_heap.add_exn heap vreg.id 0);
+  let increase_neighbor_weights vreg =
+    Set.iter interference.!(vreg) ~f:(fun neighbor ->
+      Bounded_heap.increase heap neighbor.id 1;
+      ());
+    ()
+  in
+  Set.iter precolored ~f:increase_neighbor_weights;
+  Iter.unfoldr ~init:() ~f:(fun () ->
+    let open Option.Let_syntax in
+    let%bind vreg_id = Bounded_heap.remove_max heap in
+    let vreg = Id.Table.find_exn id_to_name vreg_id in
+    increase_neighbor_weights vreg;
+    Some (vreg, ()))
 ;;
 
 let color_graph ~graph ~precolored = todo ()

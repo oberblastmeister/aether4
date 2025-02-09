@@ -37,6 +37,7 @@ module type S_phantom_without_make = sig
   val of_iter : ?size:int -> ('w Key.t * 'v) Iter.t -> ('w, 'v) t
   val iter_keys : ('w, 'v) t -> 'w Key.t Iter.t
   val iter : ('w, 'v) t -> ('w Key.t * 'v) Iter.t
+  val length : ('w, 'v) t -> int
 
   module Syntax : sig
     val ( .!() ) : ('w, 'a) t -> 'w Key.t -> 'a
@@ -62,10 +63,14 @@ end
 module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = struct
   module Key = Key
 
-  type ('w, 'a) t = { mutable a : ('w Key.t * 'a) Option_array.t }
+  type ('w, 'a) t =
+    { mutable a : ('w Key.t * 'a) Option_array.t
+    ; mutable length : int
+    }
 
+  let length t = t.length
   let sexp_of_t t f g = Option_array.sexp_of_t (Tuple2.sexp_of_t (Key.sexp_of_t f) g) t.a
-  let create ?(size = 0) () = { a = OA.create ~len:size }
+  let create ?(size = 0) () = { a = OA.create ~len:size; length = 0 }
   let size t = OA.length t.a
 
   let resize_for_index t index =
@@ -79,7 +84,11 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
 
   let remove t k =
     let i = Key.to_int k in
-    if i < size t then OA.set_none t.a i
+    if i < size t
+    then (
+      OA.set_none t.a i;
+      t.length <- t.length - 1;
+      ())
   ;;
 
   let mem t k =
@@ -102,6 +111,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let set t ~key:k ~data:v =
     let index = Key.to_int k in
     resize_for_index t index;
+    if OA.is_none t.a index then t.length <- t.length + 1;
     OA.set_some t.a index (k, v)
   ;;
 

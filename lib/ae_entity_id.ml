@@ -7,6 +7,7 @@ type 'k t = int [@@deriving sexp, compare, equal, hash]
 
 let unchecked_of_int i = i
 let unchecked_coerce i = i
+let succ = succ
 
 module type Intable = sig
   type t
