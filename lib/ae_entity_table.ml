@@ -7,20 +7,20 @@ type 'a t = 'a Option_array.t
 
 module OA = Option_array
 
-module type Key = sig
+module type Key_phantom = sig
   type 'w t [@@deriving sexp_of]
 
   val to_int : 'w t -> int
 end
 
-module type Key0 = sig
+module type Key = sig
   type t
 
-  include Key with type 'w t := t
+  include Key_phantom with type 'w t := t
 end
 
-module type S_without_make = sig
-  module Key : Key
+module type S_phantom_without_make = sig
+  module Key : Key_phantom
 
   type ('w, 'a) t
 
@@ -35,10 +35,17 @@ module type S_without_make = sig
   val update : ('w, 'v) t -> 'w Key.t -> f:('v option -> 'v) -> unit
   val of_list : ('w Key.t * 'v) list -> ('w, 'v) t
   val of_iter : ?size:int -> ('w Key.t * 'v) Iter.t -> ('w, 'v) t
+  val iter_keys : ('w, 'v) t -> 'w Key.t Iter.t
+  val iter : ('w, 'v) t -> ('w Key.t * 'v) Iter.t
+
+  module Syntax : sig
+    val ( .!() ) : ('w, 'a) t -> 'w Key.t -> 'a
+    val ( .!()<- ) : ('w, 'a) t -> 'w Key.t -> 'a -> unit
+  end
 end
 
-module type S = sig
-  include S_without_make
+module type S_phantom = sig
+  include S_phantom_without_make
 
   module Make (Witness : Ae_entity_witness.S) : sig
     type ('w, 'v) t' := ('w, 'v) t
@@ -46,13 +53,13 @@ module type S = sig
   end
 end
 
-module type S0 = sig
+module type S = sig
   type 'a t
 
-  include S_without_make with type ('w, 'a) t := 'a t
+  include S_phantom_without_make with type ('w, 'a) t := 'a t
 end
 
-module Make (Key : Key) : S with module Key = Key = struct
+module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = struct
   module Key = Key
 
   type ('w, 'a) t = { mutable a : ('w Key.t * 'a) Option_array.t }
@@ -127,9 +134,7 @@ module Make (Key : Key) : S with module Key = Key = struct
 
   let of_iter ?size i =
     let t = create ?size () in
-    Iter.iter i ~f:(fun (k, v) ->
-      (* if mem ~to_int t k then raise_s [%message "key was present twice"]; *)
-      set t ~key:k ~data:v);
+    Iter.iter i ~f:(fun (k, v) -> set t ~key:k ~data:v);
     t
   ;;
 
@@ -151,6 +156,17 @@ module Make (Key : Key) : S with module Key = Key = struct
     else set t ~key ~data
   ;;
 
+  let iter_keys t ~f =
+    Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.map ~f:fst |> Iter.iter ~f
+  ;;
+
+  let iter t ~f = Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.iter ~f
+
+  module Syntax = struct
+    let ( .!() ) = find_exn
+    let ( .!()<- ) t key data = set t ~key ~data
+  end
+
   module Make (Witness : Ae_entity_witness.S) = struct
     type nonrec 'v t = (Witness.t, 'v) t
 
@@ -158,14 +174,14 @@ module Make (Key : Key) : S with module Key = Key = struct
   end
 end
 
-module Make0 (Key : Key0) : S0 = struct
+module Make (Key : Key) : S = struct
   module Key' = struct
     include Key
 
     type 'w t = Key.t
   end
 
-  include Make (Key')
+  include Make_phantom (Key')
 
   type nonrec 'a t = (Nothing.t, 'a) t
 end

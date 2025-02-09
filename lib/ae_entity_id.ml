@@ -1,6 +1,7 @@
 open Std
 module Entity_table = Ae_entity_table
 module Entity_map = Ae_entity_map
+module Entity_set = Ae_entity_set
 
 type 'k t = int [@@deriving sexp, compare, equal, hash]
 
@@ -20,5 +21,6 @@ module Arg = struct
   let to_int x = x
 end
 
-module Table = Entity_table.Make (Arg)
-module Map = Entity_map.Make (Arg)
+module Table = Entity_table.Make_phantom (Arg)
+module Map = Entity_map.Make_phantom (Arg)
+module Set = Entity_set.Make_phantom (Arg)

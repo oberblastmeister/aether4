@@ -1,6 +1,7 @@
 open Std
 module Id = Ae_entity_id
 module Name = Ae_entity_name
+module Witness = Ae_entity_witness
 
 module Id_gen = struct
   type 'k t = int ref
@@ -16,6 +17,7 @@ end
 
 module Table = Ae_entity_table
 module Map = Ae_entity_map
+module Set = Ae_entity_set
 module Intern = Ae_entity_intern
 
 module type S = sig
@@ -24,8 +26,9 @@ module type S = sig
 
     type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Table : module type of Name.Table.Make (Witness)
-    module Map : module type of Name.Map.Make (Witness)
+    module Table : module type of Id.Table.Make (Witness)
+    module Map : module type of Id.Map.Make (Witness)
+    module Set : module type of Id.Set.Make (Witness)
   end
 
   module Name : sig
@@ -33,6 +36,7 @@ module type S = sig
 
     module Table : module type of Name.Table.Make (Id.Witness)
     module Map : module type of Name.Map.Make (Id.Witness)
+    module Set : module type of Name.Set.Make (Id.Witness)
   end
 end
 
@@ -53,8 +57,9 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     end
 
     include T
-    module Table = Name.Table.Make (Witness)
-    module Map = Name.Map.Make (Witness)
+    module Table = Id.Table.Make (Witness)
+    module Map = Id.Map.Make (Witness)
+    module Set = Id.Set.Make (Witness)
   end
 
   module Name = struct
@@ -73,6 +78,7 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     include T
     module Table = Name.Table.Make (Id.Witness)
     module Map = Name.Map.Make (Id.Witness)
+    module Set = Name.Set.Make (Witness)
   end
 end
 

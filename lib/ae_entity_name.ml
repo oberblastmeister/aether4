@@ -1,6 +1,7 @@
 open Std
 module Id = Ae_entity_id
 module Entity_table = Ae_entity_table
+module Entity_set = Ae_entity_set
 module Entity_map = Ae_entity_map
 
 module T = struct
@@ -23,5 +24,6 @@ module Arg = struct
   let to_int (x : _ t) = x.id
 end
 
-module Map = Entity_map.Make (Arg)
-module Table = Entity_table.Make (Arg)
+module Map = Entity_map.Make_phantom (Arg)
+module Table = Entity_table.Make_phantom (Arg)
+module Set = Entity_set.Make_phantom (Arg)

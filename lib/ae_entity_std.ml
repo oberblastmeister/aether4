@@ -1,1 +1,2 @@
 include Ae_entity_public
+module Doubly_linked = Ae_entity_doubly_linked

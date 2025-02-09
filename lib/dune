@@ -20,6 +20,7 @@
   std
   core
   core_kernel
+  core_kernel.pairing_heap
   algaeff
   zarith
   int_repr))
