@@ -1,5 +1,3 @@
-(* TODO, doesn't necessarily have to be entity baesd, move to different namespace
-*)
 open Std
 module Signatures = Ae_signatures
 
@@ -36,7 +34,7 @@ module type S_phantom_without_make = sig
   val of_list : ('w Key.t * 'v) list -> ('w, 'v) t
   val of_iter : ?size:int -> ('w Key.t * 'v) Iter.t -> ('w, 'v) t
   val iter_keys : ('w, 'v) t -> 'w Key.t Iter.t
-  val iter : ('w, 'v) t -> ('w Key.t * 'v) Iter.t
+  val iteri : ('w, 'v) t -> ('w Key.t * 'v) Iter.t
   val length : ('w, 'v) t -> int
 
   module Syntax : sig
@@ -170,7 +168,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.map ~f:fst |> Iter.iter ~f
   ;;
 
-  let iter t ~f = Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.iter ~f
+  let iteri t ~f = Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.iter ~f
 
   module Syntax = struct
     let ( .!() ) = find_exn

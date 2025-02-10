@@ -48,6 +48,8 @@ let rec lower_expr st vec (expr : Tir.Expr.t) : Lir.Expr.t =
 
 let lower_instr st (vec : Lir.Instr.t Vec.t) (instr : Tir.Instr.t) =
   match instr with
+  | BlockParams { temps } ->
+    Vec.append_list vec [ BlockParams { temps = List.map temps ~f:(get_temp st) } ]
   | Assign { temp; e } ->
     let temp = get_temp st temp in
     let e = lower_expr st vec e in
@@ -60,20 +62,18 @@ let lower_instr st (vec : Lir.Instr.t Vec.t) (instr : Tir.Instr.t) =
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =
-  let temps = List.map block.temps ~f:(fun temp -> get_temp st temp) in
   let vec = Vec.create () in
   List.iter block.body ~f:(lower_instr st vec);
   let body = Vec.to_list vec in
-  { temps; body }
+  { body }
 ;;
 
 let lower_func st (func : Tir.Func.t) : Lir.Func.t =
   let name = func.name in
-  let params = List.map func.params ~f:(fun temp -> get_temp st temp) in
   let blocks = func.blocks |> Entity.Name.Map.map ~f:(lower_block st) in
   let start = func.start in
   let next_id = Id_gen.next st.gen in
-  { name; params; blocks; start; next_id = Entity.Id.unchecked_coerce next_id }
+  { name; blocks; start; next_id = Entity.Id.unchecked_coerce next_id }
 ;;
 
 let lower func =
@@ -104,14 +104,14 @@ let%expect_test "simple decl" =
   |};
   [%expect
     {|
-    ((name first) (params ())
+    ((name first)
      (blocks
       ((0
         ((key start@0)
          (data
-          ((temps ())
-           (body
-            ((Assign (temp first@0)
+          ((body
+            ((BlockParams (temps ()))
+             (Assign (temp first@0)
               (e
                (Bin (lhs (IntConst 12)) (op Add)
                 (rhs

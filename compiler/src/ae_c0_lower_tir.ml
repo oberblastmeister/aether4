@@ -34,13 +34,11 @@ let fresh_temp t : Temp.t =
 
 let rec lower_program st (program : Cst.program) : Tir.Func.t =
   let name = program.name in
-  let params = [] in
   let start_label = Id_gen.next st.label_gen |> Entity.Name.create "start" in
   let instrs = lower_block st program.block |> Bag.to_list in
-  let start_block = { Tir.Block.temps = []; body = instrs } in
+  let start_block = { Tir.Block.body = BlockParams { temps = [] } :: instrs } in
   let func : Tir.Func.t =
     { name
-    ; params
     ; blocks = Entity.Name.Map.singleton start_label start_block
     ; start = start_label
     ; next_id = Id_gen.next st.gen
@@ -85,7 +83,7 @@ and lower_bin_op (op : Cst.bin_op) : Tir.Bin_op.t =
 
 and lower_expr st (expr : Cst.expr) : _ * Tir.Expr.t =
   match expr with
-  | IntConst i -> Bag.of_list [], Tir.Expr.IntConst i
+  | IntConst i -> Bag.of_list [], Tir.Expr.IntConst (Int64.of_int i)
   | Bin { lhs; op; rhs } ->
     let op = lower_bin_op op in
     let lhs_instr, lhs = lower_expr st lhs in
@@ -131,9 +129,9 @@ let%expect_test "simple" =
   |};
   [%expect
     {|
-    ((name bruh) (params ())
-     (blocks ((0 ((key start@0) (data ((temps ()) (body ()))))))) (start start@0)
-     (next_id 0))
+    ((name bruh)
+     (blocks ((0 ((key start@0) (data ((body ((BlockParams (temps ()))))))))))
+     (start start@0) (next_id 0))
     |}]
 ;;
 
@@ -148,14 +146,14 @@ let%expect_test "simple decl" =
   |};
   [%expect
     {|
-    ((name first) (params ())
+    ((name first)
      (blocks
       ((0
         ((key start@0)
          (data
-          ((temps ())
-           (body
-            ((Assign (temp first@0)
+          ((body
+            ((BlockParams (temps ()))
+             (Assign (temp first@0)
               (e
                (Bin (lhs (IntConst 12)) (op Add)
                 (rhs

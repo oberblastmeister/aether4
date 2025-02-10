@@ -32,6 +32,7 @@ module Name : sig
     }
 
   val create : string -> 'k Id.t -> 'k t
+  val fresh : ?name:string -> 'k Id_gen.t -> 'k t
   val unchecked_coerce : 'a t -> 'b t
 
   module Table : Table.S_phantom with type 'w Key.t = 'w t

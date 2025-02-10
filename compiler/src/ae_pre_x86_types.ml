@@ -65,31 +65,36 @@ end
 
 module Instr = struct
   type t =
+    | BlockMov of { temps : Temp.t list }
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
+        }
+    | MovAbs of
+        { dst : Operand.t
+        ; src : int64
         }
     | Add of
         { dst : Operand.t
         ; src1 : Operand.t
         ; src2 : Operand.t
         }
-    | Ret
+    | Sub of
+        { dst : Operand.t
+        ; src1 : Operand.t
+        ; src2 : Operand.t
+        }
+    | Ret of { src : Operand.t }
   [@@deriving sexp_of]
 end
 
 module Block = struct
-  type t =
-    { temps : Temp.t list
-    ; body : Instr.t list
-    }
-  [@@deriving sexp_of]
+  type t = { body : Instr.t list } [@@deriving sexp_of]
 end
 
 module Func = struct
   type t =
     { name : string
-    ; params : Temp.t list
     ; blocks : Block.t Label.Map.t
     ; start : Label.t
     ; next_id : Temp_entity.Id.t

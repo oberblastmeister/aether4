@@ -37,6 +37,7 @@ and assign_op =
 [@@deriving sexp_of]
 
 and expr =
+  (* TODO: use zarith or string here instead of int *)
   | IntConst of int
   | Var of string
   | Neg of expr

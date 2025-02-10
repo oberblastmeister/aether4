@@ -27,7 +27,7 @@ end
 
 module Expr = struct
   type t =
-    | IntConst of int
+    | IntConst of int64
     | Bin of
         { lhs : t
         ; op : Bin_op.t
@@ -39,6 +39,7 @@ end
 
 module Instr = struct
   type t =
+    | BlockParams of { temps : Temp.t list }
     | Assign of
         { temp : Temp.t
         ; e : Expr.t
@@ -57,17 +58,12 @@ module Instr = struct
 end
 
 module Block = struct
-  type t =
-    { temps : Temp.t list
-    ; body : Instr.t list
-    }
-  [@@deriving sexp_of]
+  type t = { body : Instr.t list } [@@deriving sexp_of]
 end
 
 module Func = struct
   type t =
     { name : string
-    ; params : Temp.t list
     ; blocks : Block.t Label.Map.t
     ; start : Label.t
     ; next_id : Temp_entity.Id.t

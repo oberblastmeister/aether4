@@ -1,1 +1,2 @@
 include Ae_pre_x86_types
+module Lower_flat_x86 = Ae_pre_x86_lower_flat_x86
