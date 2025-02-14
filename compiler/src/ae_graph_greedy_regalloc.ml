@@ -14,6 +14,8 @@ module Graph = struct
 
   let create () = Table.create ()
   let add (t : t) v = Table.find_or_add t v ~default:(fun () -> Set.empty) |> ignore
+  let mem (t : t) v = Table.mem t v
+  let iter_vreg (t : t) ~f = Table.iter_keys t ~f
 
   let add_edge (t : t) v1 v2 =
     Table.update t v1 ~f:(function
@@ -108,7 +110,7 @@ let color_graph_with_ordering ordering (graph : Graph.t) (precolored : Vreg.Set.
     := Id.unchecked_of_int
          (max (Id.to_int !max_color) (Id.to_int lowest_not_in_neighbors));
     ());
-  vreg_to_color
+  vreg_to_color, !max_color
 ;;
 
 let color_graph graph precolored =

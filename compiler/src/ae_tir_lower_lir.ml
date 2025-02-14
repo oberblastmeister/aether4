@@ -4,6 +4,11 @@ module Entity = Ae_entity_std
 module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
 module Lir = Ae_lir_types
+open Bag.Syntax
+module Lower = Ae_monad_bag_writer.Make (Lir.Instr)
+open Lower.Syntax
+
+let empty = Bag.empty
 
 type st =
   { gen : Lir.Temp_entity.Id.Witness.t Id_gen.t
@@ -33,38 +38,35 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Mod -> Mod
 ;;
 
-let rec lower_expr st vec (expr : Tir.Expr.t) : Lir.Expr.t =
+let rec lower_expr : _ -> Tir.Expr.t -> Lir.Expr.t Lower.t =
+  fun st expr ->
   match expr with
-  | IntConst i -> IntConst i
+  | IntConst i -> Lower.pure (Lir.Expr.IntConst i)
   | Bin { lhs; op; rhs } ->
-    let lhs = lower_expr st vec lhs in
-    let rhs = lower_expr st vec rhs in
+    let+ lhs = lower_expr st lhs
+    and+ rhs = lower_expr st rhs in
     let op = lower_bin_op op in
-    Bin { lhs; op; rhs }
+    Lir.Expr.Bin { lhs; op; rhs }
   | Temp temp ->
     let temp = get_temp st temp in
-    Temp temp
+    Lower.pure (Lir.Expr.Temp temp)
 ;;
 
-let lower_instr st (vec : Lir.Instr.t Vec.t) (instr : Tir.Instr.t) =
+let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
   match instr with
   | BlockParams { temps } ->
-    Vec.append_list vec [ BlockParams { temps = List.map temps ~f:(get_temp st) } ]
+    empty +> [ Lir.Instr.BlockParams { temps = List.map temps ~f:(get_temp st) } ]
   | Assign { temp; e } ->
     let temp = get_temp st temp in
-    let e = lower_expr st vec e in
-    Vec.append_list vec [ Assign { temp; e } ]
-  | If _ -> todo ()
-  | Jump _ -> todo ()
+    let e_instr, e = lower_expr st e in
+    e_instr +> [ Lir.Instr.Assign { temp; e } ]
   | Ret e ->
-    let e = lower_expr st vec e in
-    Vec.append_list vec [ Ret e ]
+    let e_instr, e = lower_expr st e in
+    e_instr +> [ Lir.Instr.Ret e ]
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =
-  let vec = Vec.create () in
-  List.iter block.body ~f:(lower_instr st vec);
-  let body = Vec.to_list vec in
+  let body = List.map block.body ~f:(lower_instr st) |> Bag.concat |> Bag.to_list in
   { body }
 ;;
 
@@ -127,7 +129,8 @@ let%expect_test "simple decl" =
              (Assign (temp second@1)
               (e
                (Bin (lhs (Temp second@1)) (op Add)
-                (rhs (Bin (lhs (Temp first@0)) (op Add) (rhs (Temp second@1)))))))))))))))
+                (rhs (Bin (lhs (Temp first@0)) (op Add) (rhs (Temp second@1)))))))
+             (Ret (IntConst 0))))))))))
      (start start@0) (next_id 2))
     |}]
 ;;

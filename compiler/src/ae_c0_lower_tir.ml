@@ -7,6 +7,14 @@ module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
 open Bag.Syntax
 
+let empty = Bag.empty
+
+module Lower = Ae_monad_bag_writer.Make (struct
+    type t = Tir.Instr.t
+  end)
+
+open Lower.Syntax
+
 type st =
   { gen : Tir.Temp_entity.Id.Witness.t Id_gen.t
   ; var_to_temp : Temp.t String.Table.t
@@ -32,11 +40,26 @@ let fresh_temp t : Temp.t =
   Entity.Name.create "fresh" id
 ;;
 
+let assign_op_to_op_exn (op_assign : Cst.assign_op) : Cst.bin_op =
+  match op_assign with
+  | Eq -> assert false
+  | AddEq -> Add
+  | SubEq -> Sub
+  | MulEq -> Mul
+  | DivEq -> Div
+  | ModEq -> Mod
+;;
+
 let rec lower_program st (program : Cst.program) : Tir.Func.t =
   let name = program.name in
   let start_label = Id_gen.next st.label_gen |> Entity.Name.create "start" in
-  let instrs = lower_block st program.block |> Bag.to_list in
-  let start_block = { Tir.Block.body = BlockParams { temps = [] } :: instrs } in
+  let instrs =
+    empty
+    +> [ Tir.Instr.BlockParams { temps = [] } ]
+    ++ lower_block st program.block
+    +> [ Tir.Instr.Ret (IntConst 0L) ]
+  in
+  let start_block = { Tir.Block.body = Bag.to_list instrs } in
   let func : Tir.Func.t =
     { name
     ; blocks = Entity.Name.Map.singleton start_label start_block
@@ -64,8 +87,9 @@ and lower_assign st (assign : Cst.assign) : Tir.Instr.t Bag.t =
     let bin_expr =
       match assign.op with
       | Eq -> expr
-      | AddEq -> Tir.Expr.Bin { lhs = Temp temp; op = Add; rhs = expr }
-      | _ -> todo ()
+      | assign_op ->
+        let op = assign_op_to_op_exn assign_op |> lower_bin_op in
+        Tir.Expr.Bin { lhs = Temp temp; op; rhs = expr }
     in
     expr_i +> [ Tir.Instr.Assign { temp; e = bin_expr } ]
 
@@ -81,14 +105,14 @@ and lower_bin_op (op : Cst.bin_op) : Tir.Bin_op.t =
   | Div -> Div
   | Mod -> Mod
 
-and lower_expr st (expr : Cst.expr) : _ * Tir.Expr.t =
+and lower_expr st (expr : Cst.expr) : Tir.Expr.t Lower.t =
   match expr with
   | IntConst i -> Bag.of_list [], Tir.Expr.IntConst (Int64.of_int i)
   | Bin { lhs; op; rhs } ->
     let op = lower_bin_op op in
-    let lhs_instr, lhs = lower_expr st lhs in
-    let rhs_instr, rhs = lower_expr st rhs in
-    lhs_instr ++ rhs_instr, Bin { lhs; op; rhs }
+    let+ lhs = lower_expr st lhs
+    and+ rhs = lower_expr st rhs in
+    Tir.Expr.Bin { lhs; op; rhs }
   | Cst.Neg _ -> todo ()
   | Cst.Var v ->
     let temp = var_temp st v in
@@ -130,7 +154,10 @@ let%expect_test "simple" =
   [%expect
     {|
     ((name bruh)
-     (blocks ((0 ((key start@0) (data ((body ((BlockParams (temps ()))))))))))
+     (blocks
+      ((0
+        ((key start@0)
+         (data ((body ((BlockParams (temps ())) (Ret (IntConst 0))))))))))
      (start start@0) (next_id 0))
     |}]
 ;;
@@ -169,7 +196,8 @@ let%expect_test "simple decl" =
              (Assign (temp second@1)
               (e
                (Bin (lhs (Temp second@1)) (op Add)
-                (rhs (Bin (lhs (Temp first@0)) (op Add) (rhs (Temp second@1)))))))))))))))
+                (rhs (Bin (lhs (Temp first@0)) (op Add) (rhs (Temp second@1)))))))
+             (Ret (IntConst 0))))))))))
      (start start@0) (next_id 2))
     |}]
 ;;

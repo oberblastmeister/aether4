@@ -7,6 +7,7 @@ module Id_gen = struct
   type 'k t = int ref
 
   let create ?(start = 0) () = ref start
+  let of_id i = ref i
 
   let next t =
     let id = !t in

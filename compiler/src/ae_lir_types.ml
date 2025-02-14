@@ -44,7 +44,7 @@ module Instr = struct
         { temp : Temp.t
         ; e : Expr.t
         }
-    | JumpCond of
+    (* | JumpCond of
         { cond : Expr.t
         ; l1 : Label.t
         ; l2 : Label.t
@@ -52,7 +52,7 @@ module Instr = struct
     | Jump of
         { l : Label.t
         ; args : Temp.t list
-        }
+        } *)
     | Ret of Expr.t
   [@@deriving sexp_of]
 end

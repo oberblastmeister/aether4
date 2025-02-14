@@ -42,7 +42,7 @@ module Instr = struct
         { temp : Temp.t
         ; e : Expr.t
         }
-    | If of
+    (* | If of
         { cond : Expr.t
         ; body1 : t list
         ; body2 : t list
@@ -50,7 +50,7 @@ module Instr = struct
     | Jump of
         { l : Label.t
         ; args : Temp.t list
-        }
+        } *)
     | Ret of Expr.t
   [@@deriving sexp_of]
 end

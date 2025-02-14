@@ -19,9 +19,10 @@ module Id : sig
 end
 
 module Id_gen : sig
-  type 'k t
+  type 'k t = private int ref
 
   val create : ?start:int -> unit -> 'k t
+  val of_id : 'k Id.t -> 'k t 
   val next : 'k t -> 'k Id.t
 end
 
