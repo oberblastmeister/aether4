@@ -17,6 +17,7 @@ When the file is not found:
   === subcommands ===
   
     compile                    . Compile a c0 file
+    run                        . Run a c0 file
     version                    . print version information
     help                       . explain a given subcommand (perhaps recursively)
   
@@ -33,6 +34,7 @@ result:
   === subcommands ===
   
     compile                    . Compile a c0 file
+    run                        . Run a c0 file
     version                    . print version information
     help                       . explain a given subcommand (perhaps recursively)
   

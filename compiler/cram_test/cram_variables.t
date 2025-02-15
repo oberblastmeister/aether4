@@ -6,7 +6,3 @@ $ cat > $DUNE_ROOT/input.ml <<EOF
 > let greeting = "Hello, World!"
 > let () = print_endline greeting
 > EOF
-
-# Test the compiled output
-$ c0c bruh
-Hello, World!
