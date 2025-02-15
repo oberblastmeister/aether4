@@ -1,10 +1,18 @@
 (rule
-  (targets libc0_runtime.a)
+ (targets libc0_runtime.a)
+ (deps zig-out)
+ (action
+  (copy zig-out/lib/libc0_runtime.a libc0_runtime.a)
+ )
+)
+
+(rule
+  (targets (dir zig-out))
+  (mode promote)
   (deps build.zig (source_tree src))
   (action
     (progn
       (run zig build)
-      (copy zig-out/lib/libc0_runtime.a libc0_runtime.a)
     )
   )
 )
