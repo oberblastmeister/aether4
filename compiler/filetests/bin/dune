@@ -1,0 +1,16 @@
+(executable
+ (public_name filetests)
+ (name aether4_filetests_runner)
+ (flags
+  ; turn pattern matching into error 
+  (:standard -warn-error -A+8 -w -23))
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_inline_test
+   -log-source-position))
+ (libraries
+  std
+  eio
+  eio_main
+  aether4_filetests))

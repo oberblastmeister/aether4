@@ -6,6 +6,7 @@ module Abs_x86 = Ae_abs_x86_std
 module Flat_x86 = Ae_flat_x86_std
 module Args = Ae_args
 module F = Filename
+module Path_utils = Ae_path_utils
 
 let get_self_exe_path =
   let lock = Stdlib.Mutex.create () in
