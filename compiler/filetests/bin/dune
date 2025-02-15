@@ -11,6 +11,7 @@
    -log-source-position))
  (libraries
   std
+  core_unix
   eio
   eio_main
   aether4_filetests))
