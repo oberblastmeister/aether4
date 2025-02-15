@@ -12,6 +12,7 @@
  (libraries
   std
   core_unix
+  core_unix.command_unix
   eio
   eio_main
   aether4_filetests))

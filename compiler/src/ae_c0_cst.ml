@@ -25,7 +25,7 @@ and assign =
   }
 [@@deriving sexp_of]
 
-and lvalue = Ident of string [@@deriving sexp_of]
+and lvalue = string [@@deriving sexp_of]
 
 and assign_op =
   | Eq
@@ -38,7 +38,7 @@ and assign_op =
 
 and expr =
   (* TODO: use zarith or string here instead of int *)
-  | IntConst of int
+  | IntConst of Z.t
   | Var of string
   | Neg of expr
   | Bin of

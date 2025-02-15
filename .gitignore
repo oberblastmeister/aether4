@@ -3,5 +3,6 @@ _opam/
 zig-out/
 .zig-cache/
 .filetests_cache/
+.c0_cache/
 test.s
 a.out

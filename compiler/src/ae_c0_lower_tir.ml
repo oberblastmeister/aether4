@@ -81,7 +81,7 @@ and lower_stmt st (stmt : Cst.stmt) =
 
 and lower_assign st (assign : Cst.assign) : Tir.Instr.t Bag.t =
   match assign.lvalue with
-  | Ident var ->
+  | var ->
     let temp = var_temp st var in
     let expr_i, expr = lower_expr st assign.expr in
     let bin_expr =
@@ -107,7 +107,7 @@ and lower_bin_op (op : Cst.bin_op) : Tir.Bin_op.t =
 
 and lower_expr st (expr : Cst.expr) : Tir.Expr.t Lower.t =
   match expr with
-  | IntConst i -> Bag.of_list [], Tir.Expr.IntConst (Int64.of_int i)
+  | IntConst i -> Bag.of_list [], Tir.Expr.IntConst (Z.to_int64_exn i)
   | Bin { lhs; op; rhs } ->
     let op = lower_bin_op op in
     let+ lhs = lower_expr st lhs

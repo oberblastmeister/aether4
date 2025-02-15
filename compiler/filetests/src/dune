@@ -17,4 +17,5 @@
   eio
   eio_main
   digestif.c
-  base64))
+  base64
+  ))

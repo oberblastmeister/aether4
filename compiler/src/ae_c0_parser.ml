@@ -48,13 +48,20 @@ and parse_block env : Cst.block =
 
 and parse_stmt env : Cst.stmt =
   let stmt =
-    ((fun d -> Cst.Decl d) <$> parse_decl <|> ((fun d -> Cst.Assign d) <$> parse_assign))
+    ((fun d -> Cst.Decl d)
+     <$> parse_decl
+     <|> ((fun d -> Cst.Assign d) <$> parse_assign)
+     <|> ((fun e -> Cst.Return e) <$> parse_return))
       env
   in
   Parser.expect_eq Semi
   |> Parser.cut (Sexp [%message "expected semicolon after statement"])
   |> Fn.( |> ) env;
   stmt
+
+and parse_return env : Cst.expr =
+  Parser.expect_eq Return env;
+  parse_expr env
 
 and parse_decl env : Cst.decl =
   let ty = parse_ty env in
@@ -95,7 +102,7 @@ and parse_lvalue env : Cst.lvalue =
      let lvalue = parse_lvalue env in
      Parser.expect_eq RParen env;
      lvalue)
-   <|> ((fun x -> Cst.Ident x) <$> parse_ident))
+   <|> parse_ident)
     env
 
 and parse_expr env : Cst.expr =
@@ -153,10 +160,10 @@ and parse_unary_expr env : Cst.expr =
 and parse_atom env : Cst.expr =
   ((fun d -> Cst.IntConst d) <$> parse_num <|> ((fun v -> Cst.Var v) <$> parse_ident)) env
 
-and parse_num env : int =
+and parse_num env : Z.t =
   Parser.map
     (fun s ->
-       Int.of_string_opt s
+       Z.of_string s
        |> Option.value_or_thunk ~default:(fun () ->
          Parser.error env (Sexp [%message "invalid number"])))
     (Parser.expect Token.hexnum_val <|> Parser.expect Token.decnum_val)
@@ -236,10 +243,10 @@ let%expect_test "simple assign" =
       (block
        ((stmts
          ((Assign
-           ((lvalue (Ident first)) (op MulEq)
+           ((lvalue first) (op MulEq)
             (expr (Bin (lhs (IntConst 12)) (op Add) (rhs (IntConst 12))))))
           (Assign
-           ((lvalue (Ident another)) (op ModEq)
+           ((lvalue another) (op ModEq)
             (expr (Bin (lhs (IntConst 12)) (op Div) (rhs (IntConst 12))))))))))))
     |}]
 ;;

@@ -29,7 +29,7 @@ let run_test proc workspace_root_path tests_path (name, path) =
   if Path.is_file Path.(hashed_dir_path / "a.out")
   then ()
   else (
-    let asm_content = Driver.compile_source_to_asm source in
+    let asm_content = Driver.compile_source_to_asm source |> Or_error.ok_exn in
     let out_path = Path.(hashed_dir_path / "a.out") in
     let@ asm_file = Path.with_open_out ~create:(`Or_truncate 0o777) asm_path in
     Flow.copy_string asm_content asm_file;

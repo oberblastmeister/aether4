@@ -5,4 +5,4 @@
   (pps ppx_jane ppx_inline_test))
  (flags
   (:standard -warn-error -A))
- (libraries core functional unix))
+ (libraries core functional unix zarith))

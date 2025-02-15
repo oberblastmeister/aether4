@@ -17,9 +17,15 @@
   std
   core
   core_kernel
-  core_kernel.pairing_heap
+  core_unix
+  core_unix.filename_unix
+  core_unix.command_unix
   algaeff
   zarith
   int_repr
   cmdliner
-  eio))
+  eio
+  eio_main
+  digestif.c
+  base64
+  ))
