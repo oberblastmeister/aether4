@@ -126,7 +126,12 @@ let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
 
 let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   let start_block = Name.Map.find_exn func.blocks func.start in
-  let instrs = prologue 0l ++ lower_block st start_block in
+  let instrs =
+    empty
+    +> Flat_x86.Instr.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
+    ++ prologue 0l
+    ++ lower_block st start_block
+  in
   Bag.to_list instrs
 ;;
 

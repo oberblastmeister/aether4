@@ -1,4 +1,5 @@
 open Std
+open Aether4
 module Bounded_heap = Ae_bounded_heap
 module Entity = Ae_entity_std
 module Id = Entity.Id

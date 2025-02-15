@@ -28,13 +28,16 @@ let%expect_test "nothing" =
   |};
   [%expect
     {|
-    pushq rbp
-    movq rsp, rbp
-    subq $0, rsp
-    movq $0, rax
-    movq rax, rax
-    movq rbp, rsp
-    popq rbp
+    .text
+    .globl _c0_main
+    _c0_main:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $0, %rsp
+    movq $0, %rax
+    movq %rax, %rax
+    movq %rbp, %rsp
+    popq %rbp
     ret
     |}]
 ;;
@@ -48,18 +51,21 @@ let%expect_test "add const" =
   |};
   [%expect
     {|
-    pushq rbp
-    movq rsp, rbp
-    subq $0, rsp
-    movq $1234, rdi
-    movq $123, rax
-    movq rdi, r11
-    addq rax, r11
-    movq r11, rax
-    movq $0, rax
-    movq rax, rax
-    movq rbp, rsp
-    popq rbp
+    .text
+    .globl _c0_main
+    _c0_main:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $0, %rsp
+    movq $1234, %rdi
+    movq $123, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq $0, %rax
+    movq %rax, %rax
+    movq %rbp, %rsp
+    popq %rbp
     ret
     |}]
 ;;
@@ -75,49 +81,52 @@ let%expect_test "binary operations" =
   |};
   [%expect
     {|
-    pushq rbp
-    movq rsp, rbp
-    subq $0, rsp
-    movq $12, rsi
-    movq $1234, rdi
-    movq $1234, rax
-    movq rax, r11
-    movq rdi, rax
+    .text
+    .globl _c0_main
+    _c0_main:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $0, %rsp
+    movq $12, %rsi
+    movq $1234, %rdi
+    movq $1234, %rax
+    movq %rax, %r11
+    movq %rdi, %rax
     cqo
-    idivq r11
-    movq rdx, rdi
-    movq $12, rax
-    movq rdi, r11
-    movq rax, rax
-    imulq r11
-    movq rax, rdi
-    movq $2, rax
-    movq rax, r11
-    movq rdi, rax
+    idivq %r11
+    movq %rdx, %rdi
+    movq $12, %rax
+    movq %rdi, %r11
+    movq %rax, %rax
+    imulq %r11
+    movq %rax, %rdi
+    movq $2, %rax
+    movq %rax, %r11
+    movq %rdi, %rax
     cqo
-    idivq r11
-    movq rax, rax
-    movq rsi, r11
-    addq rax, r11
-    movq r11, rdi
-    movq rdi, rdi
-    movq $12, rax
-    movq rdi, r11
-    addq rax, r11
-    movq r11, rax
-    movq rax, rsi
-    movq rdi, rdi
-    movq rax, rax
-    movq rdi, r11
-    addq rax, r11
-    movq r11, rax
-    movq rsi, r11
-    addq rax, r11
-    movq r11, rax
-    movq $0, rax
-    movq rax, rax
-    movq rbp, rsp
-    popq rbp
+    idivq %r11
+    movq %rax, %rax
+    movq %rsi, %r11
+    addq %rax, %r11
+    movq %r11, %rdi
+    movq %rdi, %rdi
+    movq $12, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rax, %rsi
+    movq %rdi, %rdi
+    movq %rax, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rsi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq $0, %rax
+    movq %rax, %rax
+    movq %rbp, %rsp
+    popq %rbp
     ret
     |}]
 ;;

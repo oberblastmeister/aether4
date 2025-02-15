@@ -1,0 +1,4 @@
+(executable
+ (public_name c0c)
+ (name c0c)
+ (libraries aether4))

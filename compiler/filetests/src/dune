@@ -1,8 +1,8 @@
-(ocamllex ae_c0_lexer_gen)
-
 (library
- (name aether4)
- (inline_tests)
+ (name aether4_filetests)
+ (inline_tests
+   (deps (source_tree ../filetests))
+ )
  (flags
   ; turn pattern matching into error 
   (:standard -warn-error -A+8 -w -23))
@@ -10,16 +10,11 @@
   (pps
    ppx_jane
    ppx_inline_test
-   ppx_deriving.enum
    -log-source-position))
  (libraries
-  parsec
+  aether4
   std
-  core
-  core_kernel
-  core_kernel.pairing_heap
-  algaeff
-  zarith
-  int_repr
-  cmdliner
-  eio))
+  eio
+  eio_main
+  digestif.c
+  base64))

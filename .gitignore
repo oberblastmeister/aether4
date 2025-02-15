@@ -1,2 +1,7 @@
 _build/
 _opam/
+zig-out/
+.zig-cache/
+.filetests_cache/
+test.s
+a.out

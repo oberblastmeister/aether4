@@ -1,3 +1,4 @@
+module Caml_unix = Unix
 include Core
 include Functional
 module Vec = Std_vec

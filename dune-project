@@ -1,4 +1,6 @@
 (lang dune 3.17)
+(using directory-targets 0.1)
+(cram enable)
 
 (name aether4)
 
@@ -40,6 +42,16 @@
    (= 2.3.0))
   (zarith
    (= 1.14))
+  (cmdliner
+   (= 1.3.0))
+  (eio
+   (= 1.2))
+  (eio_main
+   (= 1.2))
+  (digestif
+   (= 1.2.0))
+  (base64
+   (= 3.5.1))
   menhir
   )
  (tags
