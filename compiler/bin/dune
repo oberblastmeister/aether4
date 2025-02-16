@@ -9,3 +9,7 @@
   (copy %{project_root}/runtime/libc0_runtime.a libc0_runtime.a)
  )
 )
+
+(install
+ (files libc0_runtime.a)
+ (section bin))

@@ -1,8 +1,4 @@
-path: /home/brian/projects/aether4/_build/default/compiler/filetests/filetests/first.c0
-contents: int main() {
-    return 0;
-}
-
 int main() {
+    return 0;
     return 0;
 }
