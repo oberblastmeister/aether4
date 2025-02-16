@@ -5,8 +5,11 @@ let generate_rules dir base =
     [%string
       {|
 (rule
- (with-stdout-to %{base}.c0.output
-  (run %{"%{"}bin:filetests_runner} %{dir}/%{base}.c0)
+ (deps %{dir}/%{base}.c0)
+ (action
+  (with-stdout-to %{base}.c0.output
+    (run %{"%{"}bin:filetests_runner} %{dir}/%{base}.c0)
+  )
  )
 )
 

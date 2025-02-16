@@ -4,6 +4,7 @@
  (libraries aether4))
  
 (rule
+ (target libc0_runtime.a)
  (action
   (copy %{project_root}/runtime/libc0_runtime.a libc0_runtime.a)
  )
