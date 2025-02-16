@@ -1,20 +1,21 @@
 open Std
 
 let generate_rules dir base =
+  let v s = "%{" ^ s ^ "}" in
   print_endline
     [%string
       {|
 (rule
  (deps
   %{dir}/%{base}.c0
-  %{"%{"}project_root}/compiler/filetests/runner/filetests_runner.exe
+  %{v "project_root"}/compiler/filetests/runner/filetests_runner.exe
   ; filetests_runner.exe needs libc0_runtime.a so it can link it with the compiled c0 program
-  %{"%{"}project_root}/compiler/filetests/runner/libc0_runtime.a
+  %{v "project_root"}/compiler/filetests/runner/libc0_runtime.a
  )
  (action
   (with-stdout-to %{base}.c0.output
     (run 
-     %{"%{"}project_root}/compiler/filetests/runner/filetests_runner.exe
+     %{v "project_root"}/compiler/filetests/runner/filetests_runner.exe
      %{dir}/%{base}.c0
     )
   )
