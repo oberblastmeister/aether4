@@ -6,6 +6,8 @@ Cram tests are in `compiler/cram_test/**`. An example is in `simple_arithmetic.t
 
 These are meant to test the whole compiler pipeline.
 
+Each `<dir>.t` directory defines a testing directory. This directory contains a `run.t` file that executes the compiler on the file, and diffs checks if the output was different.
+
 ## Filetests
 
 Similar to cram tests, but more domain specific. Haven't implemeneted these yet. I plan to use `dune` rule generation to generate these.
