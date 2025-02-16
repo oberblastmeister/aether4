@@ -1,0 +1,14 @@
+(subdir generate
+ (rule
+  (deps (glob_files ../*.c0))
+  (action
+   (with-stdout-to dune.inc
+    (run ../../generate_dune_rules/filetests_generate_dune_rules.exe ..)
+   )
+  )
+ )
+)
+
+(subdir run
+ (dynamic_include ../generate/dune.inc)
+)
