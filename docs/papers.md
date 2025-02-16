@@ -11,3 +11,5 @@
     - Algorithm used in section 5.2
 - register allocation in ssa form
     - https://compilers.cs.uni-saarland.de/papers/ssara.pdf
+- ssa based compiler design
+    - https://pfalcon.github.io/ssabook/latest/book.pdf
