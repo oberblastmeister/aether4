@@ -66,14 +66,12 @@ let copy_file ~src ~dst =
   ()
 ;;
 
-let compile_path_to_a_out env ?cache_dir_path path =
+let compile_source_to_a_out env ?cache_dir_path source path =
   let cache_dir_path =
     Option.value cache_dir_path ~default:Path.(Stdenv.cwd env / ".c0_cache")
   in
   let name = Path.native_exn path |> Filename.basename |> Filename.chop_extension in
   let module Digest = Digestif.BLAKE2B in
-  let@ file = Path.with_open_in path in
-  let source = Flow.read_all file in
   let digest = Digest.digestv_string [ Path.native_exn path; source ] in
   let hashed_dir_path =
     let ascii_digest =
@@ -101,9 +99,13 @@ let compile_path_to_a_out env ?cache_dir_path path =
         [ Path.native_exn asm_path ]
         (Path.native_exn out_path);
       Ok (out_path, true)
-    | Error e ->
-      print_endline [%string "%{Error.to_string_hum e}"];
-      error_s [%message "Compilation error"])
+    | Error e -> Error e)
+;;
+
+let compile_path_to_a_out env ?cache_dir_path path =
+  let@ file = Path.with_open_in path in
+  let source = Flow.read_all file in
+  compile_source_to_a_out env ?cache_dir_path source path
 ;;
 
 let compile_path env ?cache_dir_path ?out_path path =

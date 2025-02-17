@@ -6,7 +6,7 @@
   (:standard -warn-error -A+8 -w -23))
  (preprocess
   (pps ppx_jane))
- (libraries std core_unix core_unix.filename_unix core_unix.sys_unix))
+ (libraries std core_unix core_unix.filename_unix core_unix.sys_unix aether4))
  
 (rule
  (target libc0_runtime.a)

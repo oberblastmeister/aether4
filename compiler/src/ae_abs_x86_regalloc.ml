@@ -9,7 +9,6 @@ module Allocation = struct
   type t = Alloc_reg.t Vreg.Table.t [@@deriving sexp_of]
 end
 
-(* module wj]gable = Entity.Name.Table *)
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
 module Mach_reg = Ae_x86_mach_reg

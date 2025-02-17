@@ -3,6 +3,30 @@ include Core
 include Functional
 module Vec = Std_vec
 
+module String = struct
+  include Core.String
+
+  let split_on t ~on = String.Search_pattern.split_on (String.Search_pattern.create on) t
+
+  let lsplit2_on_exn s ~on =
+    let pat = String.Search_pattern.create on in
+    let i = String.Search_pattern.index_exn pat ~in_:s in
+    String.subo ~len:i s, String.subo ~pos:(i + String.length on) s
+  ;;
+
+  let strip_prefix s ~prefix =
+    if String.is_prefix s ~prefix
+    then Some (String.drop_prefix s (String.length prefix))
+    else None
+  ;;
+
+  let strip_suffix s ~suffix =
+    if String.is_suffix s ~suffix
+    then Some (String.drop_suffix s (String.length suffix))
+    else None
+  ;;
+end
+
 module Z = struct
   include Z
 

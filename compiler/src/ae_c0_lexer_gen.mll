@@ -12,6 +12,8 @@ rule lex =
   parse
   | white { lex lexbuf }
   | newline { Lexing.new_line lexbuf; lex lexbuf }
+  | "//" { line_comment lexbuf }
+  | "/*" { block_comment 1 lexbuf }
   | ';' { Token.Semi }
   | '+' { Token.Plus }
   | '*' { Token.Star }
@@ -35,6 +37,19 @@ rule lex =
   | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }
+
+and line_comment =
+  parse
+  | newline { lex lexbuf }
+  | _ { line_comment lexbuf }
+  | eof { Token.Eof }
+
+and block_comment nesting =
+  parse
+  | "*/" { if nesting = 1 then lex lexbuf else block_comment (nesting - 1) lexbuf }
+  | "/*" { block_comment (nesting + 1) lexbuf }
+  | _ { block_comment nesting lexbuf }
+  | eof { Token.Eof }
 
 {
 

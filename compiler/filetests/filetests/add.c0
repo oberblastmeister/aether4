@@ -1,0 +1,15 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+  int a = 1234;
+  int b = 12;
+  int c = 12342;
+  int d = 12;
+  int e = 12341234;
+  c *= 12;
+  return a + b + c;
+}
+----
+148116

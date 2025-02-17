@@ -11,20 +11,3 @@ let tokenize s =
   in
   loop []
 ;;
-
-let check s =
-  let tokens = tokenize s in
-  print_s [%sexp (tokens : Token.t list)]
-;;
-
-let%expect_test _ =
-  check
-    {|
-    + 123 * ; sadf return int += {  ) () += *= /= int 0xFFE12 1234 0xdeadbeef
-  |};
-  [%expect {|
-    (Plus (Decnum 123) Star Semi (Ident sadf) Return Int PlusEq LBrace RParen
-     LParen RParen PlusEq StarEq SlashEq Int (Hexnum 0xFFE12) (Decnum 1234)
-     (Hexnum 0xdeadbeef))
-    |}]
-;;

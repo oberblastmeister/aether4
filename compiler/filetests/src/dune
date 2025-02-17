@@ -12,10 +12,10 @@
    ppx_inline_test
    -log-source-position))
  (libraries
-  aether4
   std
   eio
   eio_main
   digestif.c
   base64
+  aether4
   ))

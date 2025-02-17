@@ -7,9 +7,9 @@
 )
 
 (rule
-  (targets (dir zig-out))
+  (targets (dir zig-out) (dir .zig-cache))
   (mode promote)
-  (deps build.zig (source_tree src))
+  (deps (source_tree .zig-cache) build.zig (source_tree src))
   (action
     (progn
       (run zig build)

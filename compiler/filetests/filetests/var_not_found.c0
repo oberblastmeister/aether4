@@ -1,0 +1,29 @@
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    return res;
+}
+----
+("Var was not defined" (var res))
+####
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    return res;
+}
+----
+("Var was not defined" (var res))
+####
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    return res;
+}
+----
+("Var was not defined" (var res))
