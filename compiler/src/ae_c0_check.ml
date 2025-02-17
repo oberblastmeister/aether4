@@ -25,7 +25,7 @@ let rec check_expr st (expr : Cst.expr) =
     then ()
     else if Set.mem st.defined var
     then ()
-    else throw_s [%message "Var was not defined" (var : string)]
+    else throw_s [%message "Var was not initialized" (var : string)]
   | Cst.Neg e -> check_expr st e
   | Cst.Bin { lhs; op = _; rhs } ->
     check_expr st lhs;
@@ -54,7 +54,7 @@ let rec check_stmt st (stmt : Cst.stmt) =
      | Eq -> { st with defined = Set.add st.defined lvalue }
      | _ when st.found_return -> st
      | _ when Set.mem st.defined lvalue -> st
-     | _ -> throw_s [%message "Variable not defined!" (lvalue : string)])
+     | _ -> throw_s [%message "Variable was not initialized!" (lvalue : string)])
   | Assign { lvalue; _ } -> throw_s [%message "Variable not declared!" (lvalue : string)]
   | Return e ->
     check_expr st e;

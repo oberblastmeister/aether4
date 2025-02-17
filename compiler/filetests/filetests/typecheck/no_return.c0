@@ -1,0 +1,12 @@
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    int hello = 1234;
+    int another = 12;
+    int third = hello + another;
+    third += another;
+}
+----
+"Did not find return statement"

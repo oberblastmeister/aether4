@@ -1,0 +1,11 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+    int first = 23;
+    int q = first / 12;
+    return q;
+}
+----
+1

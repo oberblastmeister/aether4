@@ -1,0 +1,11 @@
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    int hello;
+    int another = hello;
+    return 1234;
+}
+----
+("Var was not initialized" (var hello))

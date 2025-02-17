@@ -3,7 +3,7 @@
   (deps (glob_files ../*.c0))
   (action
    (with-stdout-to dune.inc
-    (run ../../generate_dune_rules/filetests_generate_dune_rules.exe ..)
+    (run %{project_root}/compiler/filetests/generate_dune_rules/filetests_generate_dune_rules.exe ..)
    )
   )
  )

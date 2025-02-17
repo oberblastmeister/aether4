@@ -1,0 +1,11 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+    int first = 23;
+    int r = first % 12;
+    return r;
+}
+----
+11

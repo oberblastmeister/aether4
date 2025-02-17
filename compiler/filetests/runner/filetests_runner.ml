@@ -5,25 +5,50 @@ module Path = Eio.Path
 module Flow = Eio.Flow
 module Process = Eio.Process
 module Buf_read = Eio.Buf_read
-module Options = Filetests_options
 
-let add_output contents output =
-  let code_part =
-    let parts = String.split_on contents ~on:"----" in
-    List.hd parts |> Option.value ~default:contents
-  in
-  let expect_output =
-    code_part
+module Test = struct
+  module Options = struct
+    module Kind = struct
+      type t =
+        | CompileAndRun of { option : unit option [@sexp.option] }
+        | CompileFail of { option : unit option [@sexp.option] }
+      [@@deriving sexp]
+    end
+
+    type t = Test of Kind.t [@@deriving sexp]
+
+    let parse source =
+      let _, source = String.lsplit2_on_exn source ~on:"/*" in
+      let source, _ = String.lsplit2_on_exn source ~on:"*/" in
+      let test = t_of_sexp (Sexp.of_string source) in
+      test
+    ;;
+  end
+
+  type t =
+    { options : Options.t
+    ; source : string
+    ; expect : string
+    }
+
+  let parse contents =
+    let parts = String.lsplit2_on contents ~on:"----" in
+    let source, expect = Option.value_map ~f:Fn.id ~default:(contents, "") parts in
+    let options = Options.parse source in
+    { options; source; expect }
+  ;;
+
+  let format { source; expect; options = _ } =
+    source
     ^ (if
-         String.length code_part > 0
-         && Char.equal (String.get code_part (String.length code_part - 1)) '\n'
+         String.length source > 0
+         && Char.equal (String.get source (String.length source - 1)) '\n'
        then ""
        else "\n")
     ^ "----\n"
-    ^ output
-  in
-  expect_output
-;;
+    ^ expect
+  ;;
+end
 
 let run_test path =
   eprintf "running filetests: %s\n" path;
@@ -33,21 +58,21 @@ let run_test path =
     let@ file = Path.with_open_in Path.(Stdenv.fs env / path) in
     Flow.read_all file
   in
-  let options = Options.parse_options contents in
-  let res = Driver.compile_path_to_a_out env Path.(Stdenv.fs env / path) in
+  let test = Test.parse contents in
+  let res = Driver.compile_source_to_a_out env test.source Path.(Stdenv.fs env / path) in
   let%bind () =
-    match res, options with
+    match res, test.options with
     | Ok (a_out_path, _changed), Test (CompileAndRun _) ->
       let proc = Stdenv.process_mgr env in
       let output =
         Process.parse_out proc Buf_read.take_all [ Path.native_exn a_out_path ]
       in
-      let expect_output = add_output contents output in
-      Out_channel.print_string expect_output;
+      { test with expect = output } |> Test.format |> Out_channel.print_string;
       Ok ()
     | Error e, Test (CompileFail _) ->
-      let expect_output = add_output contents (Error.to_string_hum e) in
-      Out_channel.print_string expect_output;
+      { test with expect = Error.to_string_hum e }
+      |> Test.format
+      |> Out_channel.print_string;
       Ok ()
     | Ok _, Test (CompileFail _) ->
       error_s [%message "Expected test to fail to compile, but test compiled properly"]

@@ -8,6 +8,7 @@ int main() {
   int c = 12342;
   int d = 12;
   int e = 12341234;
+  int f = 12341234;
   c *= 12;
   return a + b + c;
 }

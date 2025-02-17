@@ -8,6 +8,13 @@ module String = struct
 
   let split_on t ~on = String.Search_pattern.split_on (String.Search_pattern.create on) t
 
+  let lsplit2_on s ~on =
+    let open Option.Let_syntax in
+    let pat = String.Search_pattern.create on in
+    let%bind i = String.Search_pattern.index pat ~in_:s in
+    Some (String.subo ~len:i s, String.subo ~pos:(i + String.length on) s)
+  ;;
+
   let lsplit2_on_exn s ~on =
     let pat = String.Search_pattern.create on in
     let i = String.Search_pattern.index_exn pat ~in_:s in
