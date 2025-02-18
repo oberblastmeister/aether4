@@ -1,0 +1,12 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+    int n = -25;
+    int q = n / 12;
+    int r = n % 12;
+    return q + r;
+}
+----
+-3

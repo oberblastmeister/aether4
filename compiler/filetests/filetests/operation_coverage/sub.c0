@@ -1,0 +1,9 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+    return 10 - 12;
+}
+----
+-2

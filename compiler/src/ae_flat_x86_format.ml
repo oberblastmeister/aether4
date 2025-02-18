@@ -89,18 +89,20 @@ let format_instr (instr : Instr.t) =
   | Pop { dst } ->
     let size = Size.Qword in
     [%string "pop%{suff size} %{op dst size}"]
+  | Lea _ -> todol [%here]
   | Ret -> [%string "ret"]
   | Directive s -> s
   | Cqo -> "cqo"
   | Label s -> [%string "%{s}:"]
   | Comment s -> [%string "# %{s}"]
-  | Lea _ -> todol [%here]
 ;;
 
 let format prog =
   let buf = Buffer.create 1000 in
-  List.iter prog ~f:(fun instr ->
-    Buffer.add_string buf "    ";
+  List.iter prog ~f:(fun (instr : Instr.t) ->
+    (match instr with
+     | Directive _ | Label _ | Comment _ -> ()
+     | _ -> Buffer.add_string buf "    ");
     format_instr instr |> Buffer.add_string buf;
     Buffer.add_char buf '\n';
     ());

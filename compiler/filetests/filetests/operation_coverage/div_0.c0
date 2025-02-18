@@ -1,0 +1,12 @@
+/*
+(Test
+ (CompileAndRun
+  (status (Signaled SIGFPE))
+ )
+)
+*/
+
+int main() {
+    return 25 / 0;
+}
+----

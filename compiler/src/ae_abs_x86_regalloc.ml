@@ -35,7 +35,9 @@ let build_graph (func : Func.t) =
   let next_id = Id_gen.of_id func.next_id in
   let find_precolored_name_or_add mach_reg =
     Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
-      let precolored_name = Name.fresh next_id in
+      let precolored_name =
+        Name.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) next_id
+      in
       Graph.add graph precolored_name;
       precolored_name)
   in
@@ -95,6 +97,11 @@ let alloc_func (func : Func.t) =
   let open Name.Table.Syntax in
   let module Color = Regalloc.Color in
   let graph, mach_reg_to_precolored_name, _next_id = build_graph func in
+  let precolored_name_to_mach_reg =
+    Hashtbl.to_alist mach_reg_to_precolored_name
+    |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
+    |> Hashtbl.of_alist_exn (module Vreg)
+  in
   let precolored =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (_, vreg) -> vreg)
@@ -103,6 +110,13 @@ let alloc_func (func : Func.t) =
   let coloring, max_color = Regalloc.color_graph graph precolored in
   let used_mach_regs = Hash_set.create (module Mach_reg) in
   let color_to_mach_reg : _ Regalloc.Color.Table.t = Id.Table.create () in
+  (* assign registers to the colors of precolored *)
+  Name.Set.iter precolored ~f:(fun precolored ->
+    let color = coloring.!(precolored) in
+    let mach_reg = Hashtbl.find_exn precolored_name_to_mach_reg precolored in
+    Hash_set.add used_mach_regs mach_reg;
+    Id.Table.set color_to_mach_reg ~key:color ~data:(Alloc_reg.InReg mach_reg);
+    ());
   let find_usable_mach_reg_and_use_up () =
     let res =
       List.find usable_mach_regs ~f:(fun usable_mach_reg ->
@@ -113,16 +127,6 @@ let alloc_func (func : Func.t) =
       ());
     res
   in
-  (* assign registers to the colors of precolored *)
-  Name.Set.iter precolored ~f:(fun precolored ->
-    let color = coloring.!(precolored) in
-    let mach_reg =
-      find_usable_mach_reg_and_use_up ()
-      |> Option.value_or_thunk ~default:(fun () ->
-        raise_s [%message "bug: Precolored register could not be allocated!"])
-    in
-    Id.Table.set color_to_mach_reg ~key:color ~data:(Alloc_reg.InReg mach_reg);
-    ());
   assert (Id.to_int max_color >= -1);
   (* assign registers to colors *)
   Iter.Infix.(0 -- Id.to_int max_color)

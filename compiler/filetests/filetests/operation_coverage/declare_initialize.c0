@@ -1,0 +1,13 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int first() {
+    int first;
+    int second;
+    first = 1234;
+    first += 1;
+    return first;
+}
+----
+1235

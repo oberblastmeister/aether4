@@ -57,6 +57,7 @@ let rec lower_program st (program : Cst.program) : Tir.Func.t =
     empty
     +> [ Tir.Instr.BlockParams { temps = [] } ]
     ++ lower_block st program.block
+    (* TODO: remove this *)
     +> [ Tir.Instr.Ret (IntConst 0L) ]
   in
   let start_block = { Tir.Block.body = Bag.to_list instrs } in
@@ -113,7 +114,9 @@ and lower_expr st (expr : Cst.expr) : Tir.Expr.t Lower.t =
     let+ lhs = lower_expr st lhs
     and+ rhs = lower_expr st rhs in
     Tir.Expr.Bin { lhs; op; rhs }
-  | Cst.Neg _ -> todo ()
+  | Cst.Neg e ->
+    let+ e = lower_expr st e in
+    Tir.Expr.Bin { lhs = IntConst 0L; op = Sub; rhs = e }
   | Cst.Var v ->
     let temp = var_temp st v in
     Bag.empty, Temp temp

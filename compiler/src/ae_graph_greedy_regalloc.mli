@@ -9,7 +9,7 @@ module Vreg := Ae_vreg_entity.Name
   This is why the add function exists to add a single Vreg.t.
 *)
 module Graph : sig
-  type t
+  type t [@@deriving sexp_of]
 
   val create : unit -> t
   val iter_vreg : t -> Vreg.t Iter.t

@@ -10,7 +10,7 @@ module Bounded_heap = Ae_bounded_heap
 open Table.Syntax
 
 module Graph = struct
-  type t = Vreg.Set.t Vreg.Table.t
+  type t = Vreg.Set.t Vreg.Table.t [@@deriving sexp_of]
 
   let create () = Table.create ()
   let add (t : t) v = Table.find_or_add t v ~default:(fun () -> Set.empty) |> ignore

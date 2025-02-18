@@ -1,3 +1,4 @@
+module Caml_sys = Sys
 module Caml_unix = Unix
 include Core
 include Functional

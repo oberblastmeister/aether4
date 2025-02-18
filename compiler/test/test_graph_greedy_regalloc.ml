@@ -48,3 +48,13 @@ let%expect_test "simple conflicts 2" =
   print_s [%message (res : Color.t Vreg.Table.t * Color.t)];
   [%expect {| (res (((first@0 2) (second@1 1) (third@2 0) (fourth@3 0)) 2)) |}]
 ;;
+
+let%expect_test "precolored" =
+  let graph = Graph.create () in
+  Graph.add graph (vreg "first");
+  Graph.add graph (vreg "rdx");
+  Graph.add_edge graph (vreg "first") (vreg "rdx");
+  let res = Regalloc.color_graph graph (Name.Set.singleton (vreg "rdx")) in
+  print_s [%message (res : Color.t Vreg.Table.t * Color.t)];
+  [%expect {| (res (((first@0 1) (rdx@4 0)) 1)) |}]
+;;

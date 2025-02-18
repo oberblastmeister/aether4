@@ -1,6 +1,6 @@
 const std = @import("std");
 
-extern fn _c0_main() u64;
+extern fn _c0_main() i64;
 
 export fn main() void {
     const res = _c0_main();
