@@ -98,7 +98,7 @@ module Test = struct
 end
 
 let run_test path =
-  eprintf "running filetests: %s\n" (Filename_unix.realpath path);
+  eprintf "filetest %s\n" (Filename_unix.realpath path);
   let open Result.Let_syntax in
   let@ env = Eio_main.run in
   let contents =

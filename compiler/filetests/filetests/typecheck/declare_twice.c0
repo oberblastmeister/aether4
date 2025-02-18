@@ -1,0 +1,9 @@
+/*
+(Test (CompileFail))
+*/
+
+int main() {
+    int first;
+    int first;
+    return 0;
+}
