@@ -6,7 +6,6 @@
 )
 */
 
-// TODO: allow the test runner to accept a floating point exception
 int main() {
     return 1234 % 0;
 }

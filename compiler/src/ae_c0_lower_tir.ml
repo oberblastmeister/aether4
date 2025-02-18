@@ -57,8 +57,6 @@ let rec lower_program st (program : Cst.program) : Tir.Func.t =
     empty
     +> [ Tir.Instr.BlockParams { temps = [] } ]
     ++ lower_block st program.block
-    (* TODO: remove this *)
-    +> [ Tir.Instr.Ret (IntConst 0L) ]
   in
   let start_block = { Tir.Block.body = Bag.to_list instrs } in
   let func : Tir.Func.t =
