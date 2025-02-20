@@ -1,6 +1,6 @@
 open Std
 module Id = Ae_entity_id
-module Name = Ae_entity_name
+module Ident = Ae_entity_ident
 module Witness = Ae_entity_witness
 
 module Id_gen = struct
@@ -22,9 +22,9 @@ module Set = Ae_entity_set
 module Intern = Ae_entity_intern
 
 module type S = sig
-  module Id : sig
-    module Witness : Ae_entity_witness.S
+  module Witness : Ae_entity_witness.S
 
+  module Id : sig
     type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
 
     module Table : module type of Id.Table.Make (Witness)
@@ -32,19 +32,19 @@ module type S = sig
     module Set : module type of Id.Set.Make (Witness)
   end
 
-  module Name : sig
-    type t = Id.Witness.t Name.t [@@deriving sexp_of, equal, compare, hash]
+  module Ident : sig
+    type t = Witness.t Ident.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Table : module type of Name.Table.Make (Id.Witness)
-    module Map : module type of Name.Map.Make (Id.Witness)
-    module Set : module type of Name.Set.Make (Id.Witness)
+    module Table : module type of Ident.Table.Make (Witness)
+    module Map : module type of Ident.Map.Make (Witness)
+    module Set : module type of Ident.Set.Make (Witness)
   end
 end
 
 module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
-  module Id = struct
-    module Witness = Witness
+  module Witness = Witness
 
+  module Id = struct
     module T = struct
       type t = Witness.t Id.t
 
@@ -63,23 +63,23 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     module Set = Id.Set.Make (Witness)
   end
 
-  module Name = struct
+  module Ident = struct
     module T = struct
-      type t = Id.Witness.t Name.t
+      type t = Witness.t Ident.t
 
-      let sexp_of_t t = Name.sexp_of_t sexp_of_opaque t
-      let t_of_sexp t = Name.t_of_sexp opaque_of_sexp t
-      let equal x y = Int.equal x.Name.id y.Name.id
-      let compare x y = Int.compare x.Name.id y.Name.id
-      let hash_fold_t s x = Int.hash_fold_t s x.Name.id
-      let hash x = Int.hash x.Name.id
-      let to_int t = (t.Name.id :> int)
+      let sexp_of_t t = Ident.sexp_of_t sexp_of_opaque t
+      let t_of_sexp t = Ident.t_of_sexp opaque_of_sexp t
+      let equal x y = Int.equal x.Ident.id y.Ident.id
+      let compare x y = Int.compare x.Ident.id y.Ident.id
+      let hash_fold_t s x = Int.hash_fold_t s x.Ident.id
+      let hash x = Int.hash x.Ident.id
+      let to_int t = (t.Ident.id :> int)
     end
 
     include T
-    module Table = Name.Table.Make (Id.Witness)
-    module Map = Name.Map.Make (Id.Witness)
-    module Set = Name.Set.Make (Witness)
+    module Table = Ident.Table.Make (Witness)
+    module Map = Ident.Map.Make (Witness)
+    module Set = Ident.Set.Make (Witness)
   end
 end
 

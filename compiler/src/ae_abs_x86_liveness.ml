@@ -2,7 +2,7 @@ open Std
 open Ae_abs_x86_types
 module Use_defs = Ae_abs_x86_use_defs
 module Entity = Ae_entity_std
-module Table = Entity.Name.Table
+module Table = Entity.Ident.Table
 open Table.Syntax
 
 type t = unit Vreg.Table.t

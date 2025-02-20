@@ -1,11 +1,11 @@
 open Std
 module Entity = Ae_entity_std
 module Vreg_entity = Ae_vreg_entity
-module Vreg = Ae_vreg_entity.Name
+module Vreg = Ae_vreg_entity.Ident
 module Vreg_id = Vreg_entity.Id
 module Id = Entity.Id
-module Table = Entity.Name.Table
-module Set = Entity.Name.Set
+module Table = Entity.Ident.Table
+module Set = Entity.Ident.Set
 module Bounded_heap = Ae_bounded_heap
 open Table.Syntax
 
@@ -88,7 +88,7 @@ let%expect_test _ =
 ;;
 
 let color_graph_with_ordering ordering (graph : Graph.t) (precolored : Vreg.Set.t) =
-  let vreg_to_color : Color.t Vreg.Table.t = Entity.Name.Table.create () in
+  let vreg_to_color : Color.t Vreg.Table.t = Entity.Ident.Table.create () in
   let max_color : Color.t ref = ref @@ Id.unchecked_of_int (-1) in
   (* color the precolored vregs *)
   (* each precolored vreg conflicts with all other precolored vregs *)

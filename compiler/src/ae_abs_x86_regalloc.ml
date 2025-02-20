@@ -3,7 +3,7 @@ open Ae_abs_x86_types
 module Use_defs = Ae_abs_x86_use_defs
 module Entity = Ae_entity_std
 module Id = Entity.Id
-module Name = Entity.Name
+module Ident = Entity.Ident
 
 module Allocation = struct
   type t = Alloc_reg.t Vreg.Table.t [@@deriving sexp_of]
@@ -28,15 +28,15 @@ let iter_pairs xs ~f =
 
 let build_graph (func : Func.t) =
   let block = Func.get_start_block func in
-  let live_out = Name.Table.create () in
+  let live_out = Ident.Table.create () in
   let graph = Graph.create () in
   let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
-  assert (not (Graph.mem graph (Name.create "next_id" func.next_id)));
+  assert (not (Graph.mem graph (Ident.create "next_id" func.next_id)));
   let next_id = Id_gen.of_id func.next_id in
   let find_precolored_name_or_add mach_reg =
     Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
       let precolored_name =
-        Name.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) next_id
+        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) next_id
       in
       Graph.add graph precolored_name;
       precolored_name)
@@ -63,7 +63,7 @@ let build_graph (func : Func.t) =
       fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
     in
     (* add interference edges *)
-    Name.Table.iter_keys live_out
+    Ident.Table.iter_keys live_out
     |> Iter.filter ~f:can_add_edge_to
     |> Iter.iter ~f:(fun live ->
       List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
@@ -94,7 +94,7 @@ let build_graph (func : Func.t) =
 let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 
 let alloc_func (func : Func.t) =
-  let open Name.Table.Syntax in
+  let open Ident.Table.Syntax in
   let module Color = Regalloc.Color in
   let graph, mach_reg_to_precolored_name, _next_id = build_graph func in
   let precolored_name_to_mach_reg =
@@ -105,13 +105,13 @@ let alloc_func (func : Func.t) =
   let precolored =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (_, vreg) -> vreg)
-    |> Name.Set.of_list_exn
+    |> Ident.Set.of_list_exn
   in
   let coloring, max_color = Regalloc.color_graph graph precolored in
   let used_mach_regs = Hash_set.create (module Mach_reg) in
   let color_to_mach_reg : _ Regalloc.Color.Table.t = Id.Table.create () in
   (* assign registers to the colors of precolored *)
-  Name.Set.iter precolored ~f:(fun precolored ->
+  Ident.Set.iter precolored ~f:(fun precolored ->
     let color = coloring.!(precolored) in
     let mach_reg = Hashtbl.find_exn precolored_name_to_mach_reg precolored in
     Hash_set.add used_mach_regs mach_reg;
@@ -143,7 +143,7 @@ let alloc_func (func : Func.t) =
     Id.Table.set color_to_mach_reg ~key:color ~data:allocation;
     ());
   (* finally, assign registers to vregs *)
-  let allocation : _ Vreg.Table.t = Name.Table.create () in
+  let allocation : _ Vreg.Table.t = Ident.Table.create () in
   Graph.iter_vreg graph ~f:(fun vreg ->
     let color = coloring.!(vreg) in
     let alloc_reg = Id.Table.find_exn color_to_mach_reg color in

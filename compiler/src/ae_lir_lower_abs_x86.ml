@@ -4,23 +4,23 @@ module Entity = Ae_entity_std
 module Id_gen = Entity.Id_gen
 module Abs_x86 = Ae_abs_x86_std
 module Bag = Ae_data_bag
-module Table = Entity.Name.Table
-module Name = Entity.Name
+module Table = Entity.Ident.Table
+module Ident = Entity.Ident
 
 let empty = Bag.empty
 
 open Bag.Syntax
 
 type st =
-  { gen : Abs_x86.Vreg_entity.Id.Witness.t Id_gen.t
+  { gen : Abs_x86.Vreg_entity.Witness.t Id_gen.t
   ; lir_to_abs_x86 : Abs_x86.Vreg.t Lir.Temp.Table.t
   }
 
 let create_state () =
-  { gen = Id_gen.create (); lir_to_abs_x86 = Entity.Name.Table.create () }
+  { gen = Id_gen.create (); lir_to_abs_x86 = Entity.Ident.Table.create () }
 ;;
 
-let fresh_temp ?name st : Abs_x86.Vreg.t = Entity.Name.fresh ?name st.gen
+let fresh_temp ?name st : Abs_x86.Vreg.t = Entity.Ident.fresh ?name st.gen
 
 let get_vreg st temp =
   Table.find_or_add st.lir_to_abs_x86 temp ~default:(fun () ->
@@ -76,7 +76,7 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
 
 let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
   let name = func.name in
-  let blocks = Name.Map.map func.blocks ~f:(lower_block st) in
+  let blocks = Ident.Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
   let next_id = Id_gen.next st.gen in
   { name; blocks; start; next_id }

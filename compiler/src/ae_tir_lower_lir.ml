@@ -11,22 +11,22 @@ open Lower.Syntax
 let empty = Bag.empty
 
 type st =
-  { gen : Lir.Temp_entity.Id.Witness.t Id_gen.t
-  ; tir_to_lir : (Tir.Temp_entity.Id.Witness.t, Lir.Temp.t) Entity.Name.Table.t
+  { gen : Lir.Temp_entity.Witness.t Id_gen.t
+  ; tir_to_lir : (Tir.Temp_entity.Witness.t, Lir.Temp.t) Entity.Ident.Table.t
   }
 
-let create_state () = { gen = Id_gen.create (); tir_to_lir = Entity.Name.Table.create () }
+let create_state () = { gen = Id_gen.create (); tir_to_lir = Entity.Ident.Table.create () }
 
 let get_temp t (temp : Tir.Temp.t) : Lir.Temp.t =
-  Entity.Name.Table.find_or_add t.tir_to_lir temp ~default:(fun () ->
+  Entity.Ident.Table.find_or_add t.tir_to_lir temp ~default:(fun () ->
     let id = Id_gen.next t.gen in
-    let temp = Entity.Name.create temp.name id in
+    let temp = Entity.Ident.create temp.name id in
     temp)
 ;;
 
 let fresh_temp ?(name = "fresh") t : Lir.Temp.t =
   let id = Id_gen.next t.gen in
-  Entity.Name.create name id
+  Entity.Ident.create name id
 ;;
 
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
@@ -72,7 +72,7 @@ let lower_block st (block : Tir.Block.t) : Lir.Block.t =
 
 let lower_func st (func : Tir.Func.t) : Lir.Func.t =
   let name = func.name in
-  let blocks = func.blocks |> Entity.Name.Map.map ~f:(lower_block st) in
+  let blocks = func.blocks |> Entity.Ident.Map.map ~f:(lower_block st) in
   let start = func.start in
   let next_id = Id_gen.next st.gen in
   { name; blocks; start; next_id = Entity.Id.unchecked_coerce next_id }

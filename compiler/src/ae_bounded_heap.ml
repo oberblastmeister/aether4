@@ -27,7 +27,7 @@ type t =
 [@@deriving sexp_of]
 
 module Doubly_linked = Entity.Doubly_linked.Make (struct
-    module Witness = Vreg_entity.Id.Witness
+    module Witness = Vreg_entity.Witness
 
     module Data = struct
       type t = Entry.t

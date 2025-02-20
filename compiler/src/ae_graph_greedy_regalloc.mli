@@ -1,6 +1,6 @@
 open Std
 module Entity := Ae_entity_std
-module Vreg := Ae_vreg_entity.Name
+module Vreg := Ae_vreg_entity.Ident
 
 (*
    All Vreg.t must be added to the interference graph,

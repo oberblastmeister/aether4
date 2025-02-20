@@ -6,9 +6,9 @@ open struct
 end
 
 module Temp_entity = Entity.Make ()
-module Temp = Temp_entity.Name
+module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
-module Label = Label_entity.Name
+module Label = Label_entity.Ident
 
 (* TODO: change this to use one mega Prim op type *)
 module Bin_op = struct

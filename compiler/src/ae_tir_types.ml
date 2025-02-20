@@ -1,3 +1,7 @@
+(*
+  TODO, remove the next_id field and track that inside of the Table.
+  The table should be able to give out next_id as needed.
+*)
 open Std
 
 open struct
@@ -5,9 +9,9 @@ open struct
 end
 
 module Temp_entity = Entity.Make ()
-module Temp = Temp_entity.Name
+module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
-module Label = Label_entity.Name
+module Label = Label_entity.Ident
 
 module Bin_op = struct
   type t =

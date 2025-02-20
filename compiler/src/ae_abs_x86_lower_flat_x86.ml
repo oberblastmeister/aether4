@@ -1,7 +1,7 @@
 open Std
 module Abs_x86 = Ae_abs_x86_types
 module Entity = Ae_entity_std
-module Name = Entity.Name
+module Ident = Entity.Ident
 module Flat_x86 = Ae_flat_x86_types
 module Bag = Ae_data_bag
 module Regalloc = Ae_abs_x86_regalloc
@@ -19,7 +19,7 @@ type st =
 let create_state allocation = { allocation; label_id = 0 }
 
 let get_vreg t vreg =
-  Name.Table.find_exn t.allocation vreg
+  Ident.Table.find_exn t.allocation vreg
   |> Abs_x86.Alloc_reg.inreg_val
   |> Option.value_or_thunk ~default:(fun () ->
     raise_s
@@ -125,7 +125,7 @@ let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
 ;;
 
 let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
-  let start_block = Name.Map.find_exn func.blocks func.start in
+  let start_block = Ident.Map.find_exn func.blocks func.start in
   let instrs =
     empty
     +> Flat_x86.Instr.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]

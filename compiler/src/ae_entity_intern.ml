@@ -1,9 +1,9 @@
 open Std
-module Name = Ae_entity_name
+module Ident = Ae_entity_ident
 
 module String_to_name = struct
   type 'w t =
-    { map : 'w Name.t String.Table.t
+    { map : 'w Ident.t String.Table.t
     ; mutable id : int
     }
   [@@deriving sexp_of]
@@ -13,7 +13,7 @@ module String_to_name = struct
   let intern (t : _ t) key =
     Hashtbl.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
-      let name : _ Name.t = { name = key; id } in
+      let name : _ Ident.t = { name = key; id } in
       t.id <- id + 1;
       name)
   ;;
@@ -27,19 +27,19 @@ module String_to_name = struct
   end
 end
 
-module Name_to_name = struct
+module Ident_to_name = struct
   type ('w1, 'w2) t =
-    { map : ('w1, 'w2 Name.t) Name.Table.t
+    { map : ('w1, 'w2 Ident.t) Ident.Table.t
     ; mutable id : int
     }
 
   let intern (t : ('w1, 'w2) t) key =
-    Name.Table.find_or_add t.map key ~default:(fun () ->
+    Ident.Table.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
-      let name : _ Name.t = { name = key.name; id } in
+      let name : _ Ident.t = { name = key.name; id } in
       t.id <- id + 1;
       name)
   ;;
 
-  let find_exn t key = Name.Table.find_exn t.map key
+  let find_exn t key = Ident.Table.find_exn t.map key
 end

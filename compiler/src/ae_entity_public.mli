@@ -22,11 +22,11 @@ module Id_gen : sig
   type 'k t = private int ref
 
   val create : ?start:int -> unit -> 'k t
-  val of_id : 'k Id.t -> 'k t 
+  val of_id : 'k Id.t -> 'k t
   val next : 'k t -> 'k Id.t
 end
 
-module Name : sig
+module Ident : sig
   type 'k t =
     { name : string
     ; id : 'k Id.t
@@ -46,26 +46,26 @@ module Intern : sig
     type 'w t [@@deriving sexp_of]
 
     val create : unit -> 'w t
-    val intern : 'w t -> string -> 'w Name.t
-    val find_exn : 'w t -> string -> 'w Name.t
+    val intern : 'w t -> string -> 'w Ident.t
+    val find_exn : 'w t -> string -> 'w Ident.t
 
     module Make_global (Witness : T) () : sig
-      val intern : string -> Witness.t Name.t
-      val find_exn : string -> Witness.t Name.t
+      val intern : string -> Witness.t Ident.t
+      val find_exn : string -> Witness.t Ident.t
     end
   end
 
-  module Name_to_name : sig
+  module Ident_to_name : sig
     type ('w1, 'w2) t
 
-    val intern : ('w1, 'w2) t -> 'w1 Name.t -> 'w2 Name.t
+    val intern : ('w1, 'w2) t -> 'w1 Ident.t -> 'w2 Ident.t
   end
 end
 
 module type S = sig
-  module Id : sig
-    module Witness : Ae_entity_witness.S
+  module Witness : Ae_entity_witness.S
 
+  module Id : sig
     type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
 
     module Table : module type of Id.Table.Make (Witness)
@@ -73,12 +73,12 @@ module type S = sig
     module Set : module type of Id.Set.Make (Witness)
   end
 
-  module Name : sig
-    type t = Id.Witness.t Name.t [@@deriving sexp_of, equal, compare, hash]
+  module Ident : sig
+    type t = Witness.t Ident.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Table : module type of Name.Table.Make (Id.Witness)
-    module Map : module type of Name.Map.Make (Id.Witness)
-    module Set : module type of Name.Set.Make (Id.Witness)
+    module Table : module type of Ident.Table.Make (Witness)
+    module Map : module type of Ident.Map.Make (Witness)
+    module Set : module type of Ident.Set.Make (Witness)
   end
 end
 

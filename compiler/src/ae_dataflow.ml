@@ -2,7 +2,7 @@ open Std
 
 open struct
   module Label_entity = Ae_label_entity
-  module Label = Label_entity.Name
+  module Label = Label_entity.Ident
   module Graph = Ae_data_graph_std
 end
 

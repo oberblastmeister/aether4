@@ -16,9 +16,9 @@ module Lower = Ae_monad_bag_writer.Make (struct
 open Lower.Syntax
 
 type st =
-  { gen : Tir.Temp_entity.Id.Witness.t Id_gen.t
+  { gen : Tir.Temp_entity.Witness.t Id_gen.t
   ; var_to_temp : Temp.t String.Table.t
-  ; label_gen : Tir.Label_entity.Id.Witness.t Id_gen.t
+  ; label_gen : Tir.Label_entity.Witness.t Id_gen.t
   }
 
 let create_state () =
@@ -31,13 +31,13 @@ let create_state () =
 let var_temp t var =
   Hashtbl.find_or_add t.var_to_temp var ~default:(fun () ->
     let id = Id_gen.next t.gen in
-    let temp = { Entity.Name.id; name = var } in
+    let temp = { Entity.Ident.id; name = var } in
     temp)
 ;;
 
 let fresh_temp t : Temp.t =
   let id = Id_gen.next t.gen in
-  Entity.Name.create "fresh" id
+  Entity.Ident.create "fresh" id
 ;;
 
 let assign_op_to_op_exn (op_assign : Cst.assign_op) : Cst.bin_op =
@@ -52,7 +52,7 @@ let assign_op_to_op_exn (op_assign : Cst.assign_op) : Cst.bin_op =
 
 let rec lower_program st (program : Cst.program) : Tir.Func.t =
   let name = program.name in
-  let start_label = Id_gen.next st.label_gen |> Entity.Name.create "start" in
+  let start_label = Id_gen.next st.label_gen |> Entity.Ident.create "start" in
   let instrs =
     empty
     +> [ Tir.Instr.BlockParams { temps = [] } ]
@@ -61,7 +61,7 @@ let rec lower_program st (program : Cst.program) : Tir.Func.t =
   let start_block = { Tir.Block.body = Bag.to_list instrs } in
   let func : Tir.Func.t =
     { name
-    ; blocks = Entity.Name.Map.singleton start_label start_block
+    ; blocks = Entity.Ident.Map.singleton start_label start_block
     ; start = start_label
     ; next_id = Id_gen.next st.gen
     }

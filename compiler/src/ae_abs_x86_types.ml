@@ -5,12 +5,12 @@ open struct
 end
 
 module Vreg_entity = Ae_vreg_entity
-module Vreg = Vreg_entity.Name
+module Vreg = Vreg_entity.Ident
 module Label_entity = Ae_label_entity
-module Label = Label_entity.Name
+module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot_entity = Entity.Make ()
-module Stack_slot = Stack_slot_entity.Name
+module Stack_slot = Stack_slot_entity.Ident
 
 module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
@@ -78,7 +78,7 @@ module Func = struct
   [@@deriving sexp_of]
 
   let get_start_block func =
-    Entity.Name.Map.find func.blocks func.start
+    Entity.Ident.Map.find func.blocks func.start
     |> Option.value_or_thunk ~default:(fun () ->
       raise_s
         [%message "invariant broken: start block did not exist" (func.start : Label.t)])
