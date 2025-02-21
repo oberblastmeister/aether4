@@ -1,5 +1,5 @@
 (*
-  TODO, remove the next_id field and track that inside of the Table.
+   TODO, remove the next_id field and track that inside of the Table.
   The table should be able to give out next_id as needed.
 *)
 open Std
@@ -71,4 +71,25 @@ module Func = struct
     ; next_id : Temp_entity.Id.t
     }
   [@@deriving sexp_of]
+end
+
+(*
+   notes
+  we want a transaction data structures.
+*)
+module Block_transaction = struct
+  type t =
+    | Insert of
+        { index : int
+        ; instr : Instr.t
+        }
+    | Remove of int
+end
+
+module Func_transaction = struct
+  type t =
+    { mutable next_temp_id : Temp_entity.Id.t
+    ; mutable next_label_id : Label_entity.Id.t
+    ; mutable block_operations : Block_transaction.t list Label.Map.t
+    }
 end

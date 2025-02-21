@@ -9,8 +9,9 @@ module Vreg = Vreg_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
-module Stack_slot_entity = Entity.Make ()
+module Stack_slot_entity = Ae_stack_slot_entity
 module Stack_slot = Stack_slot_entity.Ident
+
 
 module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]

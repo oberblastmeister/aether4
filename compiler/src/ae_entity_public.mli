@@ -16,6 +16,8 @@ module Id : sig
   module Table : Table.S_phantom with type 'w Key.t = 'w t
   module Map : Map.S_phantom with type 'w Key.t = 'w t
   module Set : Set.S_phantom with type 'w Key.t = 'w t
+
+  val add_table : 'a -> ('w, 'a) Table.t -> 'w t
 end
 
 module Id_gen : sig
@@ -39,6 +41,8 @@ module Ident : sig
   module Table : Table.S_phantom with type 'w Key.t = 'w t
   module Map : Map.S_phantom with type 'w Key.t = 'w t
   module Set : Set.S_phantom with type 'w Key.t = 'w t
+
+  val add_table : ?name:string -> 'a -> ('w, 'a) Table.t -> 'w t
 end
 
 module Intern : sig
@@ -71,6 +75,7 @@ module type S = sig
     module Table : module type of Id.Table.Make (Witness)
     module Map : module type of Id.Map.Make (Witness)
     module Set : module type of Id.Set.Make (Witness)
+    include Base.Comparable.S with type t := t
   end
 
   module Ident : sig
@@ -79,6 +84,7 @@ module type S = sig
     module Table : module type of Ident.Table.Make (Witness)
     module Map : module type of Ident.Map.Make (Witness)
     module Set : module type of Ident.Set.Make (Witness)
+    include Base.Comparable.S with type t := t
   end
 end
 

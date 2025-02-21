@@ -1,0 +1,22 @@
+/*
+(Test (CompileAndRun))
+*/
+
+int main() {
+    int a = 10;
+    int b = 12;
+    int c = 13;
+    int d = 14;
+    a *= 2;
+    b /= 2;
+    c %= 3;
+    d /= 3; 
+    // a = 20; b = 6; c = 1; d = 4
+    int another = a + b;
+    another += c;
+    another += d;
+    d *= another;
+    return a + b + c + d;
+}
+----
+151

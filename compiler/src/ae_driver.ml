@@ -12,6 +12,7 @@ module Process = Eio.Process
 module File = Eio.File
 module Flow = Eio.Flow
 module Fs = Eio.Fs
+module Stack_builder = Ae_stack_builder
 
 module Emit = struct
   type t =
@@ -78,7 +79,8 @@ let compile_source_to_asm ?(emit = []) source =
   if mem emit Emit.Lir then print_s [%sexp (lir : Lir.Func.t)];
   let abs_x86 = Lir.Lower_abs_x86.lower lir in
   if mem emit Emit.Abs_asm then print_s [%sexp (abs_x86 : Abs_x86.Func.t)];
-  let alloc = Abs_x86.Regalloc.alloc_func abs_x86 in
+  let stack_builder = Stack_builder.create () in
+  let alloc = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
   let asm = Abs_x86.Lower_flat_x86.lower alloc abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
   if mem emit Emit.Asm then print_endline formatted_asm;

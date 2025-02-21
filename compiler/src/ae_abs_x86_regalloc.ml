@@ -4,6 +4,7 @@ module Use_defs = Ae_abs_x86_use_defs
 module Entity = Ae_entity_std
 module Id = Entity.Id
 module Ident = Entity.Ident
+module Stack_builder = Ae_stack_builder
 
 module Allocation = struct
   type t = Alloc_reg.t Vreg.Table.t [@@deriving sexp_of]
@@ -33,6 +34,7 @@ let build_graph (func : Func.t) =
   let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
   assert (not (Graph.mem graph (Ident.create "next_id" func.next_id)));
   let next_id = Id_gen.of_id func.next_id in
+  let precolored_id_start = func.next_id in
   let find_precolored_name_or_add mach_reg =
     Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
       let precolored_name =
@@ -87,16 +89,16 @@ let build_graph (func : Func.t) =
        ()
      | _ -> ());
     ());
-  graph, mach_reg_to_precolored_name, Id_gen.next next_id
+  graph, mach_reg_to_precolored_name, precolored_id_start, Id_gen.next next_id
 ;;
 
 (* TODO: add in callee saved later *)
 let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 
-let alloc_func (func : Func.t) =
+let alloc_func stack_builder (func : Func.t) =
   let open Ident.Table.Syntax in
   let module Color = Regalloc.Color in
-  let graph, mach_reg_to_precolored_name, _next_id = build_graph func in
+  let graph, mach_reg_to_precolored_name, prev_next_id, next_id = build_graph func in
   let precolored_name_to_mach_reg =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
@@ -108,24 +110,25 @@ let alloc_func (func : Func.t) =
     |> Ident.Set.of_list_exn
   in
   let coloring, max_color = Regalloc.color_graph graph precolored in
-  let used_mach_regs = Hash_set.create (module Mach_reg) in
   let color_to_mach_reg : _ Regalloc.Color.Table.t = Id.Table.create () in
   (* assign registers to the colors of precolored *)
-  Ident.Set.iter precolored ~f:(fun precolored ->
-    let color = coloring.!(precolored) in
-    let mach_reg = Hashtbl.find_exn precolored_name_to_mach_reg precolored in
-    Hash_set.add used_mach_regs mach_reg;
-    Id.Table.set color_to_mach_reg ~key:color ~data:(Alloc_reg.InReg mach_reg);
-    ());
-  let find_usable_mach_reg_and_use_up () =
-    let res =
-      List.find usable_mach_regs ~f:(fun usable_mach_reg ->
-        not (Hash_set.mem used_mach_regs usable_mach_reg))
-    in
-    Option.iter res ~f:(fun reg ->
-      Hash_set.add used_mach_regs reg;
+  let find_usable_mach_reg_and_use_up =
+    let used_mach_regs = Hash_set.create (module Mach_reg) in
+    Ident.Set.iter precolored ~f:(fun precolored ->
+      let color = coloring.!(precolored) in
+      let mach_reg = Hashtbl.find_exn precolored_name_to_mach_reg precolored in
+      Hash_set.add used_mach_regs mach_reg;
+      Id.Table.set color_to_mach_reg ~key:color ~data:(Alloc_reg.InReg mach_reg);
       ());
-    res
+    fun () ->
+      let res =
+        List.find usable_mach_regs ~f:(fun usable_mach_reg ->
+          not (Hash_set.mem used_mach_regs usable_mach_reg))
+      in
+      Option.iter res ~f:(fun reg ->
+        Hash_set.add used_mach_regs reg;
+        ());
+      res
   in
   assert (Id.to_int max_color >= -1);
   (* assign registers to colors *)
@@ -136,15 +139,20 @@ let alloc_func (func : Func.t) =
   |> Iter.iter ~f:(fun color ->
     let mach_reg = find_usable_mach_reg_and_use_up () in
     let allocation =
-      Option.value_or_thunk mach_reg ~default:(fun () ->
-        raise_s [%message "TODO: handle spilling into stack slots" [%here]])
-      |> Alloc_reg.inreg
+      match mach_reg with
+      | None ->
+        let slot = Stack_builder.alloc ~name:"reg_spill" stack_builder 8 in
+        Alloc_reg.Spilled slot
+      | Some mach_reg -> Alloc_reg.InReg mach_reg
     in
     Id.Table.set color_to_mach_reg ~key:color ~data:allocation;
     ());
   (* finally, assign registers to vregs *)
   let allocation : _ Vreg.Table.t = Ident.Table.create () in
-  Graph.iter_vreg graph ~f:(fun vreg ->
+  Graph.iter_vreg graph
+  (* not precolored, because they were just created locally *)
+  |> Iter.filter ~f:(fun vreg -> Vreg_entity.Id.(vreg.id < prev_next_id))
+  |> Iter.iter ~f:(fun vreg ->
     let color = coloring.!(vreg) in
     let alloc_reg = Id.Table.find_exn color_to_mach_reg color in
     allocation.!(vreg) <- alloc_reg;

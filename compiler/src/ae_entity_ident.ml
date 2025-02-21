@@ -36,3 +36,10 @@ end
 module Map = Entity_map.Make_phantom (Arg)
 module Table = Entity_table.Make_phantom (Arg)
 module Set = Entity_set.Make_phantom (Arg)
+
+let add_table ?(name = "fresh") data table =
+  let index = Table.max_index table + 1 in
+  let ident = { name; id = index } in
+  Table.add_exn table ~key:ident ~data;
+  ident
+;;

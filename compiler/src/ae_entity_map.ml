@@ -15,9 +15,9 @@ module type Key_phantom = sig
 end
 
 module type Key = sig
-  type t
+  type t [@@deriving sexp_of]
 
-  include Key_phantom with type 'w t := t
+  val to_int : t -> int
 end
 
 module type S_phantom_without_make = sig
@@ -28,7 +28,7 @@ module type S_phantom_without_make = sig
   val empty : ('w, 'a) t
   val singleton : 'w Key.t -> 'a -> ('w, 'a) t
   val find : ('w, 'a) t -> 'w Key.t -> 'a option
-  val find_exn  : ('w, 'a) t -> 'w Key.t -> 'a
+  val find_exn : ('w, 'a) t -> 'w Key.t -> 'a
   val set : ('w, 'a) t -> key:'w Key.t -> data:'a -> ('w, 'a) t
   val mem : ('w, 'a) t -> 'w Key.t -> bool
   val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
@@ -75,12 +75,15 @@ end
 
 module Make (Key : Key) : S = struct
   module Key' = struct
-    include Key
-
     type 'w t = Key.t
+
+    let to_int k = Key.to_int k
+    let sexp_of_t _ k = Key.sexp_of_t k
   end
 
   include Make_phantom (Key')
 
   type nonrec 'a t = (Nothing.t, 'a) t
 end
+
+module Int_table = Make (Int)

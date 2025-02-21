@@ -30,6 +30,7 @@ module type S = sig
     module Table : module type of Id.Table.Make (Witness)
     module Map : module type of Id.Map.Make (Witness)
     module Set : module type of Id.Set.Make (Witness)
+    include Base.Comparable.S with type t := t
   end
 
   module Ident : sig
@@ -38,6 +39,7 @@ module type S = sig
     module Table : module type of Ident.Table.Make (Witness)
     module Map : module type of Ident.Map.Make (Witness)
     module Set : module type of Ident.Set.Make (Witness)
+    include Base.Comparable.S with type t := t
   end
 end
 
@@ -58,6 +60,7 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     end
 
     include T
+    include Base.Comparable.Make (T)
     module Table = Id.Table.Make (Witness)
     module Map = Id.Map.Make (Witness)
     module Set = Id.Set.Make (Witness)
@@ -77,6 +80,7 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     end
 
     include T
+    include Base.Comparable.Make (T)
     module Table = Ident.Table.Make (Witness)
     module Map = Ident.Map.Make (Witness)
     module Set = Ident.Set.Make (Witness)

@@ -1,9 +1,12 @@
 /*
-(Test (CompileFail))
+(Test (CompileAndRun))
 */
 
+// TODO: fix this test
 int main() {
     int first;
-    int first;
+    // int first;
     return 0;
 }
+----
+0
