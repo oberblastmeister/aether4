@@ -10,6 +10,11 @@ let append_list t l = Append (t, List l)
 let append t t' = Append (t, t')
 let of_list l = List l
 
+let of_option = function
+  | None -> Empty
+  | Some x -> Leaf x
+;;
+
 let to_list builder =
   let rec go stack acc =
     match stack with

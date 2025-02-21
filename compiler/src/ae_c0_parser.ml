@@ -21,6 +21,15 @@ let parse_ty env =
 
 let parse_ident env = Parser.expect Token.ident_val env
 
+let parens p env =
+  Parser.expect_eq LParen env;
+  let res = p env in
+  Parser.expect_eq RParen
+  |> Parser.cut (Sexp [%message "expected closing RParen"])
+  |> Fn.( |> ) env;
+  res
+;;
+
 let rec parse_program env : Cst.program =
   ((fun env ->
      let ty =
@@ -48,8 +57,10 @@ and parse_block env : Cst.block =
 
 and parse_stmt env : Cst.stmt =
   let stmt =
-    ((fun d -> Cst.Decl d)
-     <$> parse_decl
+    (parse_if
+     <|> parse_for
+     <|> parse_while
+     <|> ((fun d -> Cst.Decl d) <$> parse_decl)
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
      <|> ((fun e -> Cst.Return e) <$> parse_return))
       env
@@ -58,6 +69,55 @@ and parse_stmt env : Cst.stmt =
   |> Parser.cut (Sexp [%message "expected semicolon after statement"])
   |> Fn.( |> ) env;
   stmt
+
+and parse_if env : Cst.stmt =
+  Parser.expect_eq If env;
+  let cond =
+    parens parse_expr
+    |> Parser.cut (Sexp [%message "expected condition expression for if"])
+    |> Fn.( |> ) env
+  in
+  let body1 =
+    parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env
+  in
+  let body2 =
+    Parser.optional
+      (fun env ->
+         Parser.expect_eq Else env;
+         parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env)
+      env
+  in
+  Cst.If { cond; body1; body2 }
+
+and parse_while env : Cst.stmt =
+  Parser.expect_eq While env;
+  let cond =
+    parens parse_expr
+    |> Parser.cut (Sexp [%message "expected while condition expression"])
+    |> Fn.( |> ) env
+  in
+  let body =
+    parse_stmt |> Parser.cut (Sexp [%message "expected while stmt"]) |> Fn.( |> ) env
+  in
+  Cst.While { cond; body }
+
+and parse_for env : Cst.stmt =
+  Parser.expect_eq For env;
+  let paren =
+    parens parse_for_paren
+    |> Parser.cut (Sexp [%message "expected for parens"])
+    |> Fn.( |> ) env
+  in
+  let body =
+    parse_stmt |> Parser.cut (Sexp [%message "expected for stmt"]) |> Fn.( |> ) env
+  in
+  Cst.For { paren; body }
+
+and parse_for_paren env : Cst.for_paren =
+  let init = parse_stmt env in
+  let cond = parse_expr env in
+  let incr = parse_stmt env in
+  { init; cond; incr }
 
 and parse_return env : Cst.expr =
   Parser.expect_eq Return env;

@@ -31,6 +31,10 @@ rule lex =
   | '{' { Token.LBrace }
   | '}' { Token.RBrace }
   | "return" { Token.Return }
+  | "if" { Token.If }
+  | "else" { Token.Else }
+  | "while" { Token.While }
+  | "for" { Token.For }
   | "int" { Token.Int }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
   | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }

@@ -59,6 +59,7 @@ let rec check_stmt st (stmt : Cst.stmt) =
   | Return e ->
     check_expr st e;
     { st with found_return = true }
+  | _ -> todol [%here]
 
 and check_block st (block : Cst.block) =
   let st' = List.fold_left ~init:st ~f:(fun st stmt -> check_stmt st stmt) block.stmts in

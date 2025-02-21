@@ -7,6 +7,7 @@ val append_list : 'a t -> 'a list -> 'a t
 val append : 'a t -> 'a t -> 'a t
 val to_list : 'a t -> 'a list
 val concat : 'a t list -> 'a t
+val of_option : 'a option -> 'a t
 val empty : 'a t
 
 module Syntax : sig

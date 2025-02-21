@@ -5,8 +5,6 @@ module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
 module Lir = Ae_lir_types
 open Bag.Syntax
-module Lower = Ae_monad_bag_writer.Make (Lir.Instr)
-open Lower.Syntax
 
 let empty = Bag.empty
 
@@ -15,7 +13,9 @@ type st =
   ; tir_to_lir : (Tir.Temp_entity.Witness.t, Lir.Temp.t) Entity.Ident.Table.t
   }
 
-let create_state () = { gen = Id_gen.create (); tir_to_lir = Entity.Ident.Table.create () }
+let create_state () =
+  { gen = Id_gen.create (); tir_to_lir = Entity.Ident.Table.create () }
+;;
 
 let get_temp t (temp : Tir.Temp.t) : Lir.Temp.t =
   Entity.Ident.Table.find_or_add t.tir_to_lir temp ~default:(fun () ->
@@ -38,31 +38,28 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Mod -> Mod
 ;;
 
-let rec lower_expr : _ -> Tir.Expr.t -> Lir.Expr.t Lower.t =
-  fun st expr ->
-  match expr with
-  | IntConst i -> Lower.pure (Lir.Expr.IntConst i)
-  | Bin { lhs; op; rhs } ->
-    let+ lhs = lower_expr st lhs
-    and+ rhs = lower_expr st rhs in
-    let op = lower_bin_op op in
-    Lir.Expr.Bin { lhs; op; rhs }
-  | Temp temp ->
-    let temp = get_temp st temp in
-    Lower.pure (Lir.Expr.Temp temp)
-;;
-
 let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
   match instr with
   | BlockParams { temps } ->
     empty +> [ Lir.Instr.BlockParams { temps = List.map temps ~f:(get_temp st) } ]
-  | Assign { temp; e } ->
-    let temp = get_temp st temp in
-    let e_instr, e = lower_expr st e in
-    e_instr +> [ Lir.Instr.Assign { temp; e } ]
-  | Ret e ->
-    let e_instr, e = lower_expr st e in
-    e_instr +> [ Lir.Instr.Ret e ]
+  | IntConst { dst; const } ->
+    let dst = get_temp st dst in
+    empty +> Lir.Instr.[ IntConst { dst; const } ]
+  | Copy { dst; src } ->
+    let dst = get_temp st dst in
+    let src = get_temp st src in
+    empty +> Lir.Instr.[ Copy { dst; src } ]
+  | Bin { dst; op; src1; src2 } ->
+    let dst = get_temp st dst in
+    let src1 = get_temp st src1 in
+    let src2 = get_temp st src2 in
+    let op = lower_bin_op op in
+    let instr = Lir.Instr.Bin { dst; op; src1; src2 } in
+    empty +> [ instr ]
+  | Ret { src } ->
+    let src = get_temp st src in
+    empty +> Lir.Instr.[ Ret { src } ]
+  | _ -> todol [%here]
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =

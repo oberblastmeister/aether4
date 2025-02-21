@@ -1,5 +1,5 @@
 open Std
-module Cst := Ae_c0_cst
+module Ast := Ae_c0_ast
 module Tir := Ae_tir_types
 
-val lower : Cst.program -> Tir.Func.t
+val lower : Ast.program -> Tir.Func.t

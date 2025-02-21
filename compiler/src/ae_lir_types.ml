@@ -25,35 +25,24 @@ module Ty = struct
   type t = Int [@@deriving sexp_of]
 end
 
-module Expr = struct
-  type t =
-    | IntConst of int64
-    | Bin of
-        { lhs : t
-        ; op : Bin_op.t
-        ; rhs : t
-        }
-    | Temp of Temp.t
-  [@@deriving sexp_of]
-end
-
 module Instr = struct
   type t =
     | BlockParams of { temps : Temp.t list }
-    | Assign of
-        { temp : Temp.t
-        ; e : Expr.t
+    | IntConst of
+        { dst : Temp.t
+        ; const : int64
         }
-    (* | JumpCond of
-        { cond : Expr.t
-        ; l1 : Label.t
-        ; l2 : Label.t
+    | Bin of
+        { dst : Temp.t
+        ; op : Bin_op.t
+        ; src1 : Temp.t
+        ; src2 : Temp.t
         }
-    | Jump of
-        { l : Label.t
-        ; args : Temp.t list
-        } *)
-    | Ret of Expr.t
+    | Copy of
+        { dst : Temp.t
+        ; src : Temp.t
+        }
+    | Ret of { src : Temp.t }
   [@@deriving sexp_of]
 end
 

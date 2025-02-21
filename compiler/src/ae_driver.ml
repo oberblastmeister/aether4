@@ -73,7 +73,8 @@ let compile_source_to_asm ?(emit = []) source =
     |> Result.map_error ~f:(function Sexp s ->
         Error.tag_s (Error.create_s s) ~tag:[%message "Parse error"])
   in
-  let%bind () = C0.Check.check_program program in
+  let%bind program = C0.Cst_elaborate_ast.elaborate_program program in
+  (* let%bind () = C0.Check.check_program program in *)
   let tir = C0.Lower_tree_ir.lower program in
   let lir = Tir.Lower_lir.lower tir in
   if mem emit Emit.Lir then print_s [%sexp (lir : Lir.Func.t)];

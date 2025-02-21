@@ -1,21 +1,35 @@
 open Std
 
 type ty = Int [@@deriving sexp_of]
+type var = string [@@deriving sexp_of]
 
-type program =
-  { ty : ty
-  ; name : string
-  ; block : block
-  }
-[@@deriving sexp_of]
-
-and block = { stmts : stmt list } [@@deriving sexp_of]
+type block = { stmts : stmt list } [@@deriving sexp_of]
 
 and stmt =
   | Decl of decl
   | Block of block
   | Assign of assign
   | Return of expr
+  | If of
+      { cond : expr
+      ; body1 : stmt
+      ; body2 : stmt option
+      }
+  | While of
+      { cond : expr
+      ; body : stmt
+      }
+  | For of
+      { paren : for_paren
+      ; body : stmt
+      }
+[@@deriving sexp_of]
+
+and for_paren =
+  { init : stmt
+  ; cond : expr
+  ; incr : stmt
+  }
 [@@deriving sexp_of]
 
 and assign =
@@ -37,7 +51,6 @@ and assign_op =
 [@@deriving sexp_of]
 
 and expr =
-  (* TODO: use zarith or string here instead of int *)
   | IntConst of Z.t
   | Var of string
   | Neg of expr
@@ -60,5 +73,12 @@ and decl =
   { ty : ty
   ; name : string
   ; expr : expr option
+  }
+[@@deriving sexp_of]
+
+type program =
+  { ty : ty
+  ; name : string
+  ; block : block
   }
 [@@deriving sexp_of]

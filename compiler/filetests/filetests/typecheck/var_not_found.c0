@@ -6,4 +6,4 @@ int main() {
     return res;
 }
 ----
-("Var was not initialized" (var res))
+("Variable not found" (var res))

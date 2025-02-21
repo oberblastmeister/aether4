@@ -22,6 +22,10 @@ type t =
   | RBrace
   | Return
   | Int
+  | If
+  | Else
+  | While
+  | For
   | Unknown of string
   | Eof
 [@@deriving sexp_of, equal, compare, variants]
