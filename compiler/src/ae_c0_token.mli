@@ -22,6 +22,7 @@ type t =
   | RBrace
   | Return
   | Int
+  | Bool
   | If
   | Else
   | While

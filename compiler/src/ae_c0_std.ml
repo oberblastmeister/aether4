@@ -5,4 +5,5 @@ module Check = Ae_c0_check
 module Lexer = Ae_c0_lexer
 module Parser = Ae_c0_parser
 module Lower_tree_ir = Ae_c0_lower_tir
+module Elaborate_types = Ae_c0_elaborate_types
 module Cst_elaborate_ast = Ae_c0_cst_elaborate_ast

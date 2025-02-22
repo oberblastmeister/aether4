@@ -37,25 +37,29 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
 
 let epilogue =
   empty
-  +> Flat_x86.Instr.[ Mov { dst = Reg RSP; src = Reg RBP }; Pop { dst = Reg RBP }; Ret ]
+  +> Flat_x86.Instr.
+       [ Mov { dst = Reg RSP; src = Reg RBP; size = Qword }
+       ; Pop { dst = Reg RBP; size = Qword }
+       ; Ret
+       ]
 ;;
 
 let prologue stack_size =
   empty
   +> Flat_x86.Instr.
-       [ Push { src = Reg RBP }
-       ; Mov { dst = Reg RBP; src = Reg RSP }
-       ; Sub { dst = Reg RSP; src = Imm stack_size }
+       [ Push { src = Reg RBP; size = Qword }
+       ; Mov { dst = Reg RBP; src = Reg RSP; size = Qword }
+       ; Sub { dst = Reg RSP; src = Imm stack_size; size = Qword }
        ]
 ;;
 
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
   | BlockMov _ -> empty
-  | Mov { src; dst } ->
+  | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
-    Flat_x86.Instr.(empty +> [ Mov { src; dst } ])
+    Flat_x86.Instr.(empty +> [ Mov { src; dst; size } ])
   | MovAbs { dst; src } ->
     let dst = lower_operand st dst in
     Flat_x86.Instr.(empty +> [ MovAbs { dst; src } ])
@@ -63,22 +67,23 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let dst = lower_operand st dst in
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
+    let size = Flat_x86.Size.Qword in
     (match op with
      | Add ->
        Flat_x86.Instr.(
          empty
          +> [ (* ok because src2 is never allocated with scratch *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1 }
-            ; Add { dst = Reg Mach_reg.scratch; src = src2 }
-            ; Mov { dst; src = Reg Mach_reg.scratch }
+              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
+            ; Add { dst = Reg Mach_reg.scratch; src = src2; size }
+            ; Mov { dst; src = Reg Mach_reg.scratch; size }
             ])
      | Sub ->
        Flat_x86.Instr.(
          empty
          +> [ (* ok because src2 is never allocated with scratch *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1 }
-            ; Sub { dst = Reg Mach_reg.scratch; src = src2 }
-            ; Mov { dst; src = Reg Mach_reg.scratch }
+              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
+            ; Sub { dst = Reg Mach_reg.scratch; src = src2; size }
+            ; Mov { dst; src = Reg Mach_reg.scratch; size }
             ])
      | Imul ->
        Flat_x86.Instr.(
@@ -86,37 +91,37 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
          +> [ (* must move to scratch first before moving src2 to RAX,
                            because src1 may refer to RAX
               *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1 }
-            ; Mov { dst = Reg RAX; src = src2 }
-            ; Imul { src = Reg Mach_reg.scratch }
+              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
+            ; Mov { dst = Reg RAX; src = src2; size }
+            ; Imul { src = Reg Mach_reg.scratch; size }
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RAX }
+            ; Mov { dst; src = Reg RAX; size }
             ])
      | Idiv ->
        Flat_x86.Instr.(
          empty
-         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2 }
-            ; Mov { dst = Reg RAX; src = src1 }
+         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2; size }
+            ; Mov { dst = Reg RAX; src = src1; size }
             ; (* sign extend RAX into RDX:RAX *)
               Cqo
-            ; Idiv { src = Reg Mach_reg.scratch }
+            ; Idiv { src = Reg Mach_reg.scratch; size }
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RAX }
+            ; Mov { dst; src = Reg RAX; size }
             ])
      | Imod ->
        Flat_x86.Instr.(
          empty
-         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2 }
-            ; Mov { dst = Reg RAX; src = src1 }
+         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2; size }
+            ; Mov { dst = Reg RAX; src = src1; size }
             ; (* sign extend RAX into RDX:RAX *)
               Cqo
-            ; Idiv { src = Reg Mach_reg.scratch }
+            ; Idiv { src = Reg Mach_reg.scratch; size }
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RDX }
+            ; Mov { dst; src = Reg RDX; size }
             ]))
-  | Ret { src } ->
+  | Ret { src; size } ->
     let src = lower_operand st src in
-    Flat_x86.Instr.(empty +> [ Mov { dst = Reg RAX; src } ] ++ epilogue)
+    Flat_x86.Instr.(empty +> [ Mov { dst = Reg RAX; src; size } ] ++ epilogue)
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =

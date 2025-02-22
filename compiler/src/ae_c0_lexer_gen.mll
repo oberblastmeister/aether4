@@ -36,6 +36,7 @@ rule lex =
   | "while" { Token.While }
   | "for" { Token.For }
   | "int" { Token.Int }
+  | "bool" { Token.Bool }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
   | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }
   | decnum { Token.Decnum (Lexing.lexeme lexbuf) }

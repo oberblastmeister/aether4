@@ -33,6 +33,8 @@ module type S_phantom_without_make = sig
   val mem : ('w, 'a) t -> 'w Key.t -> bool
   val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
   val iter : ('w, 'a) t -> 'a Iter.t
+  val iter_keys : ('w, 'a) t -> 'w Key.t Iter.t
+  val of_alist_exn : ('w Key.t * 'a) list -> ('w, 'a) t
 end
 
 module type S_phantom = sig
@@ -63,6 +65,12 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let set t ~key ~data = Map.set t ~key:(Key.to_int key) ~data:{ Entry.key; data }
   let mem t k = Map.mem t (Key.to_int k)
   let iter t ~f = Map.iter t ~f:(fun e -> f e.Entry.data)
+  let iter_keys t ~f = Map.iter t ~f:(fun e -> f e.Entry.key)
+
+  let of_alist_exn l =
+    List.map l ~f:(fun (key, data) -> Key.to_int key, Entry.{ key; data })
+    |> Int.Map.of_alist_exn
+  ;;
 
   module Make (Witness : Ae_entity_witness.S) = struct
     open struct

@@ -1,6 +1,9 @@
 open Std
 
-type ty = Int [@@deriving sexp_of]
+type ty =
+  | Int
+  | Bool
+[@@deriving sexp_of, equal, compare]
 
 module Var = struct
   module T = struct
@@ -50,12 +53,16 @@ and lvalue = var [@@deriving sexp_of]
 and block = stmt list [@@deriving sexp_of]
 
 and expr =
-  | Var of var
+  | Var of
+      { var : var
+      ; ty : ty option
+      }
   | IntConst of int64
   | Bin of
       { lhs : expr
       ; op : bin_op
       ; rhs : expr
+      ; ty : ty option
       }
 [@@deriving sexp_of]
 
@@ -73,3 +80,8 @@ type program =
   ; block : block
   }
 [@@deriving sexp_of]
+
+let expr_ty_exn = function
+  | Var { ty; _ } | Bin { ty; _ } -> Option.value_exn ty
+  | IntConst _ -> Int
+;;

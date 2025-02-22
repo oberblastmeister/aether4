@@ -4,6 +4,7 @@ open struct
   module Entity = Ae_entity_std
 end
 
+module Size = Ae_x86_size
 module Vreg_entity = Ae_vreg_entity
 module Vreg = Vreg_entity.Ident
 module Label_entity = Ae_label_entity
@@ -11,7 +12,6 @@ module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot_entity = Ae_stack_slot_entity
 module Stack_slot = Stack_slot_entity.Ident
-
 
 module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
@@ -44,10 +44,11 @@ end
 
 module Instr = struct
   type t =
-    | BlockMov of { temps : Vreg.t list }
+    | BlockMov of { temps : (Vreg.t * Size.t) list }
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
+        ; size : Size.t
         }
     | MovAbs of
         { dst : Operand.t
@@ -59,7 +60,10 @@ module Instr = struct
         ; src1 : Operand.t
         ; src2 : Operand.t
         }
-    | Ret of { src : Operand.t }
+    | Ret of
+        { src : Operand.t
+        ; size : Size.t
+        }
   [@@deriving sexp_of]
 end
 

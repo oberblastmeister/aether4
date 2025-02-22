@@ -22,12 +22,19 @@ module Bin_op = struct
 end
 
 module Ty = struct
-  type t = Int [@@deriving sexp_of]
+  type t =
+    | I64
+    | I1
+  [@@deriving sexp_of]
+end
+
+module Unary_op = struct
+  type t = Copy of Ty.t [@@deriving sexp_of]
 end
 
 module Instr = struct
   type t =
-    | BlockParams of { temps : Temp.t list }
+    | BlockParams of { temps : (Temp.t * Ty.t) list }
     | IntConst of
         { dst : Temp.t
         ; const : int64
@@ -38,11 +45,15 @@ module Instr = struct
         ; src1 : Temp.t
         ; src2 : Temp.t
         }
-    | Copy of
+    | Unary of
         { dst : Temp.t
+        ; op : Unary_op.t
         ; src : Temp.t
         }
-    | Ret of { src : Temp.t }
+    | Ret of
+        { src : Temp.t
+        ; ty : Ty.t
+        }
   [@@deriving sexp_of]
 end
 

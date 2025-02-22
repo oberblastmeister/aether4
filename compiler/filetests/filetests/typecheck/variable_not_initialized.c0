@@ -8,4 +8,4 @@ int main() {
     return 1234;
 }
 ----
-("Var was not initialized" (var hello))
+("Variable was used before initialized" (var hello@0))

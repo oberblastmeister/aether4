@@ -36,6 +36,13 @@ module type S_phantom_without_make = sig
   val length : ('w, 'v) t -> int
   val max_index : ('w, 'v) t -> int
 
+  val of_iter_accum
+    :  ?size:int
+    -> ('w Key.t * 'a) Iter.t
+    -> init:'acc
+    -> f:('acc -> 'a -> 'acc)
+    -> ('w, 'acc) t
+
   module Syntax : sig
     val ( .!() ) : ('w, 'a) t -> 'w Key.t -> 'a
     val ( .!()<- ) : ('w, 'a) t -> 'w Key.t -> 'a -> unit
@@ -214,6 +221,15 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     ;;
 
     let iteri t ~f = Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.iter ~f
+
+    let of_iter_accum ?size i ~init ~f =
+      let t = create ?size () in
+      Iter.iter i ~f:(fun (k, v) ->
+        update t k ~f:(function
+          | None -> f init v
+          | Some acc -> f acc v));
+      t
+    ;;
 
     module Syntax = struct
       let ( .!() ) = find_exn

@@ -11,12 +11,6 @@ open Bag.Syntax
 
 let empty = Bag.empty
 
-module Lower = Ae_monad_bag_writer.Make (struct
-    type t = Tir.Instr.t
-  end)
-
-open Lower.Syntax
-
 type st =
   { gen : Tir.Temp_entity.Witness.t Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
@@ -40,6 +34,12 @@ let var_temp t var =
 let fresh_temp ?(name = "fresh") t : Temp.t =
   let id = Id_gen.next t.gen in
   Entity.Ident.create name id
+;;
+
+let lower_ty (ty : Ast.ty) : Tir.Ty.t =
+  match ty with
+  | Int -> Int
+  | Bool -> Bool
 ;;
 
 let rec lower_program st (program : Ast.program) : Tir.Func.t =
@@ -75,8 +75,9 @@ and lower_stmt st (stmt : Ast.stmt) =
 
 and lower_return st expr =
   let dst = fresh_temp ~name:"ret" st in
+  let ty = Ast.expr_ty_exn expr in
   let expr_i = lower_expr st dst expr in
-  expr_i +> Tir.Instr.[ Ret { src = dst } ]
+  expr_i +> Tir.Instr.[ Ret { src = dst; ty = lower_ty ty } ]
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
@@ -89,16 +90,16 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
 and lower_expr st (dst : Temp.t) (expr : Ast.expr) : Tir.Instr.t Bag.t =
   match expr with
   | IntConst const -> empty +> Tir.Instr.[ IntConst { dst; const } ]
-  | Bin { lhs; op; rhs } ->
+  | Bin { lhs; op; rhs; ty = _ } ->
     let src1 = fresh_temp ~name:"lhs" st in
     let src2 = fresh_temp ~name:"rhs" st in
     let lhs_i = lower_expr st src1 lhs in
     let rhs_i = lower_expr st src2 rhs in
     let op = lower_bin_op op in
     empty ++ lhs_i ++ rhs_i +> Tir.Instr.[ Bin { dst; src1; op; src2 } ]
-  | Ast.Var v ->
-    let src = var_temp st v in
-    empty +> Tir.Instr.[ Copy { dst; src } ]
+  | Ast.Var { var; ty } ->
+    let src = var_temp st var in
+    empty +> Tir.Instr.[ Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src } ]
 ;;
 
 let lower p =

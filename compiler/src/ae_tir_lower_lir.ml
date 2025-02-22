@@ -38,17 +38,27 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Mod -> Mod
 ;;
 
+let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
+  match ty with
+  | Int -> I64
+  | Bool -> I1
+;;
+
 let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
   match instr with
   | BlockParams { temps } ->
-    empty +> [ Lir.Instr.BlockParams { temps = List.map temps ~f:(get_temp st) } ]
+    empty
+    +> [ Lir.Instr.BlockParams
+           { temps = List.map ~f:(fun (temp, ty) -> get_temp st temp, lower_ty ty) temps }
+       ]
   | IntConst { dst; const } ->
     let dst = get_temp st dst in
     empty +> Lir.Instr.[ IntConst { dst; const } ]
-  | Copy { dst; src } ->
+  | Unary { dst; op; src } ->
     let dst = get_temp st dst in
     let src = get_temp st src in
-    empty +> Lir.Instr.[ Copy { dst; src } ]
+    (match op with
+     | Copy ty -> empty +> Lir.Instr.[ Unary { dst; op = Copy (lower_ty ty); src } ])
   | Bin { dst; op; src1; src2 } ->
     let dst = get_temp st dst in
     let src1 = get_temp st src1 in
@@ -56,10 +66,10 @@ let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
     let op = lower_bin_op op in
     let instr = Lir.Instr.Bin { dst; op; src1; src2 } in
     empty +> [ instr ]
-  | Ret { src } ->
+  | Ret { src; ty } ->
     let src = get_temp st src in
-    empty +> Lir.Instr.[ Ret { src } ]
-  | _ -> todol [%here]
+    let ty = lower_ty ty in
+    empty +> Lir.Instr.[ Ret { src; ty } ]
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =

@@ -6,7 +6,7 @@ let check s =
   let module Lexer = Ae_c0_lexer in
   let tokens = Lexer.tokenize s in
   let program = C0.Parser.parse tokens in
-  print_s [%sexp (program : (C0.Cst.program, C0.Parser.Error.t) result)];
+  print_s [%sexp (program : C0.Cst.program Or_error.t)];
   ()
 ;;
 
@@ -51,6 +51,32 @@ let%expect_test "simple decl" =
             (expr
              ((Bin (lhs (Bin (lhs (IntConst 1234)) (op Add) (rhs (IntConst 12))))
                (op Add) (rhs (IntConst 12)))))))))))))
+    |}]
+;;
+
+let%expect_test "simple control flow" =
+  check
+    {|
+    int main() {
+      int i = 1234;
+      if (b) {
+        another = 1243;
+      }
+    }
+  |};
+  [%expect
+    {|
+    (Ok
+     ((ty Int) (name main)
+      (block
+       ((stmts
+         ((Decl ((ty Int) (name i) (expr ((IntConst 1234)))))
+          (If (cond (Var b))
+           (body1
+            (Block
+             ((stmts
+               ((Assign ((lvalue another) (op Eq) (expr (IntConst 1243)))))))))
+           (body2 ()))))))))
     |}]
 ;;
 

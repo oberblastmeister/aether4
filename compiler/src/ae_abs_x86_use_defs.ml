@@ -34,8 +34,8 @@ module Instr = struct
   let operand_use_defs (instr : Abs_x86.Instr.t) ~on_def ~on_use =
     match instr with
     | BlockMov { temps } ->
-      List.iter temps ~f:(fun temp -> on_def (Abs_x86.Operand.Reg temp))
-    | Mov { dst; src } ->
+      List.iter temps ~f:(fun (temp, _size) -> on_def (Abs_x86.Operand.Reg temp))
+    | Mov { dst; src; size = _ } ->
       on_use src;
       on_def dst;
       ()
@@ -47,7 +47,7 @@ module Instr = struct
       on_use src2;
       on_def dst;
       ()
-    | Ret { src } ->
+    | Ret { src; size = _ } ->
       on_use src;
       ()
   ;;

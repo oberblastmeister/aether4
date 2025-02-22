@@ -14,9 +14,8 @@ module Parser = Parsec.Make (struct
 
 open Parser.Syntax
 
-let parse_ty env =
-  Parser.expect_eq Int env;
-  Cst.Int
+let parse_ty env : Cst.ty =
+  (Parser.expect_eq Int $> Cst.Int <|> (Parser.expect_eq Bool $> Cst.Bool)) env
 ;;
 
 let parse_ident env = Parser.expect Token.ident_val env
@@ -60,7 +59,16 @@ and parse_stmt env : Cst.stmt =
     (parse_if
      <|> parse_for
      <|> parse_while
-     <|> ((fun d -> Cst.Decl d) <$> parse_decl)
+     <|> ((fun b -> Cst.Block b) <$> parse_block)
+     <|> parse_semi_stmt)
+      env
+  in
+  stmt
+
+and parse_semi_stmt env : Cst.stmt =
+  let res =
+    ((fun d -> Cst.Decl d)
+     <$> parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
      <|> ((fun e -> Cst.Return e) <$> parse_return))
       env
@@ -68,7 +76,7 @@ and parse_stmt env : Cst.stmt =
   Parser.expect_eq Semi
   |> Parser.cut (Sexp [%message "expected semicolon after statement"])
   |> Fn.( |> ) env;
-  stmt
+  res
 
 and parse_if env : Cst.stmt =
   Parser.expect_eq If env;
@@ -234,4 +242,5 @@ let parse tokens =
   let stream = Stream.of_chunk tokens in
   Parser.with_env stream (fun env -> parse_program env)
   |> Parsec.Parse_result.to_result_exn
+  |> Result.map_error ~f:(fun (Sexp s) -> Core.Error.create_s s)
 ;;

@@ -65,30 +65,14 @@ let format_instr (instr : Instr.t) =
   let op = format_operand in
   let suff = suffix_of_size in
   match instr with
-  | Add { dst; src } ->
-    let size = Size.Qword in
-    [%string "add%{suff size} %{op src size}, %{op dst size}"]
-  | Sub { dst; src } ->
-    let size = Size.Qword in
-    [%string "sub%{suff size} %{op src size}, %{op dst size}"]
-  | Imul { src } ->
-    let size = Size.Qword in
-    [%string "imul%{suff size} %{op src size}"]
-  | Idiv { src } ->
-    let size = Size.Qword in
-    [%string "idiv%{suff size} %{op src size}"]
-  | Mov { dst; src } ->
-    let size = Size.Qword in
-    [%string "mov%{suff size} %{op src size}, %{op dst size}"]
-  | MovAbs { dst; src } ->
-    let size = Size.Qword in
-    [%string "movabsq %{src#Int64}, %{op dst size}"]
-  | Push { src } ->
-    let size = Size.Qword in
-    [%string "push%{suff size} %{op src size}"]
-  | Pop { dst } ->
-    let size = Size.Qword in
-    [%string "pop%{suff size} %{op dst size}"]
+  | Add { dst; src; size } -> [%string "add%{suff size} %{op src size}, %{op dst size}"]
+  | Sub { dst; src; size } -> [%string "sub%{suff size} %{op src size}, %{op dst size}"]
+  | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
+  | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
+  | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
+  | MovAbs { dst; src } -> [%string "movabsq %{src#Int64}, %{op dst Size.Qword}"]
+  | Push { src; size } -> [%string "push%{suff size} %{op src size}"]
+  | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
   | Lea _ -> todol [%here]
   | Ret -> [%string "ret"]
   | Directive s -> s

@@ -1,0 +1,2 @@
+diff:
+    dune promotion diff

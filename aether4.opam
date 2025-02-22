@@ -28,6 +28,7 @@ depends: [
   "digestif" {= "1.2.0"}
   "base64" {= "3.5.1"}
   "menhir"
+  "shexp" {= "v0.17.0"}
   "odoc" {with-doc}
 ]
 build: [

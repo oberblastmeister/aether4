@@ -21,6 +21,7 @@ let create_state () =
 
 let elab_ty _st (ty : Cst.ty) : Ast.ty =
   match ty with
+  | Bool -> Bool
   | Int -> Int
 ;;
 
@@ -62,7 +63,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
              [ Declare { ty; var = tmp }
              ; Assign { lvalue = tmp; expr }
              ; Declare { ty; var }
-             ; Assign { lvalue = var; expr = Var tmp }
+             ; Assign { lvalue = var; expr = Var { var = tmp; ty = None } }
              ]
     in
     stmts, st'
@@ -70,7 +71,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   | Assign { lvalue; op; expr } ->
     let expr = elab_expr st expr in
     let lvalue = elab_var st lvalue in
-    let bin_expr op = Ast.(Bin { lhs = Var lvalue; op; rhs = expr }) in
+    let bin_expr op =
+      Ast.(Bin { lhs = Var { var = lvalue; ty = None }; op; rhs = expr; ty = None })
+    in
     let expr =
       match op with
       | Eq -> expr
@@ -115,15 +118,15 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     |> IntConst
   | Var var ->
     let var = elab_var st var in
-    Var var
+    Var { var; ty = None }
   | Neg expr ->
     let expr = elab_expr st expr in
-    Bin { lhs = IntConst 0L; op = Sub; rhs = expr }
+    Bin { lhs = IntConst 0L; op = Sub; rhs = expr; ty = None }
   | Bin { lhs; op; rhs } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in
     let op = elab_bin_op op in
-    Bin { lhs; op; rhs }
+    Bin { lhs; op; rhs; ty = None }
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with

@@ -1,6 +1,6 @@
 open Std
 
-type ty = Int [@@deriving sexp_of]
+type ty = Int | Bool [@@deriving sexp_of]
 type var = string [@@deriving sexp_of]
 
 type block = { stmts : stmt list } [@@deriving sexp_of]

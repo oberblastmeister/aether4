@@ -158,6 +158,11 @@ module Make (Arg : Arg) = struct
       p env |> ignore;
       x
     ;;
+
+    let ( $> ) p x env =
+      p env |> ignore;
+      x
+    ;;
   end
 
   let optional p = Syntax.(Option.some <$> p <|> pure None)

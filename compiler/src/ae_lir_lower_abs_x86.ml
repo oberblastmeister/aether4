@@ -30,20 +30,32 @@ let get_vreg st temp =
 let get_operand st temp = Abs_x86.Operand.Reg (get_vreg st temp)
 let fresh_operand ?name st = Abs_x86.Operand.Reg (fresh_temp ?name st)
 
+let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
+  match ty with
+  | I64 -> Qword
+  | I1 -> Byte
+;;
+
 let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
   match instr with
   | BlockParams { temps } ->
-    empty +> [ Abs_x86.Instr.BlockMov { temps = List.map temps ~f:(get_vreg st) } ]
+    empty
+    +> [ Abs_x86.Instr.BlockMov
+           { temps = List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty) }
+       ]
   | IntConst { dst; const } when Option.is_some (Int32.of_int64 const) ->
     let dst = get_operand st dst in
-    empty +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const) } ]
+    empty
+    +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword } ]
   | IntConst { dst; const } ->
     let dst = get_operand st dst in
     empty +> Abs_x86.Instr.[ MovAbs { dst; src = const } ]
-  | Copy { dst; src } ->
-    let dst = get_operand st dst in
-    let src = get_operand st src in
-    empty +> Abs_x86.Instr.[ Mov { dst; src } ]
+  | Unary { dst; op; src } ->
+    (match op with
+     | Copy ty ->
+       let dst = get_operand st dst in
+       let src = get_operand st src in
+       empty +> Abs_x86.Instr.[ Mov { dst; src; size = lower_ty ty } ])
   | Bin { dst; src1; op; src2 } ->
     let dst = get_operand st dst in
     let src1 = get_operand st src1 in
@@ -57,10 +69,9 @@ let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
       | Mod -> Imod
     in
     empty +> [ Abs_x86.Instr.Bin { dst; src1; op; src2 } ]
-  | Lir.Instr.Ret { src } ->
+  | Ret { src; ty } ->
     let src = get_operand st src in
-    empty +> [ Abs_x86.Instr.Ret { src } ]
-  | _ -> todol [%here]
+    empty +> [ Abs_x86.Instr.Ret { src; size = lower_ty ty } ]
 ;;
 
 let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =

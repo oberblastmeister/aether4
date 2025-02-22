@@ -2,7 +2,15 @@ module Caml_sys = Sys
 module Caml_unix = Unix
 include Core
 include Functional
-module Vec = Std_vec
+
+module Vec = struct
+  include Vec
+
+  let fold_right vec ~init ~f =
+    let rec go acc i = if i >= 0 then go (f (Vec.get vec i) acc) (i - 1) else acc in
+    go init (Vec.length vec - 1)
+  ;;
+end
 
 module String = struct
   include Core.String
@@ -73,5 +81,6 @@ module Z = struct
 end
 
 let ( let@ ) f x = f x
+let ( @> ) = Functional.Fold.( @> )
 let todo ?loc () = raise_s [%message "TODO" (loc : Source_code_position.t option)]
 let todol loc = raise_s [%message "TODO" (loc : Source_code_position.t)]
