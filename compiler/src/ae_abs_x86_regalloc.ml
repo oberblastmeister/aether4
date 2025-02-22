@@ -28,7 +28,7 @@ let iter_pairs xs ~f =
 ;;
 
 let build_graph (func : Func.t) =
-  let block = Func.get_start_block func in
+  let block = Func.start_block func in
   let live_out = Ident.Table.create () in
   let graph = Graph.create () in
   let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
@@ -43,8 +43,8 @@ let build_graph (func : Func.t) =
       Graph.add graph precolored_name;
       precolored_name)
   in
-  Block.iter_instrs_backwards block ~f:(fun instr ->
-    let defs = Use_defs.Instr.iter_defs instr |> Iter.to_list in
+  Block.iter_bwd block ~f:(fun instr ->
+    let defs = Use_defs.Instr.iter_defs instr.i |> Iter.to_list in
     (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
     List.iter defs ~f:(fun def ->
       Graph.add graph def;
@@ -52,16 +52,7 @@ let build_graph (func : Func.t) =
     (* ensure that multiple defs interfere with each other *)
     iter_pairs defs ~f:(fun (def1, def2) -> Graph.add_edge graph def1 def2);
     let can_add_edge_to =
-      let currently_defining =
-        (*
-           dst and src in movs are in the same equivalence class.
-          We want these two to be allocated the same register,
-          so add src as currently_defining, even though this is not actually the case.
-        *)
-        match instr with
-        | Instr.Mov { src = Operand.Reg src; _ } -> src :: defs
-        | _ -> defs
-      in
+      let currently_defining = defs in
       fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
     in
     (* add interference edges *)
@@ -69,17 +60,17 @@ let build_graph (func : Func.t) =
     |> Iter.filter ~f:can_add_edge_to
     |> Iter.iter ~f:(fun live ->
       List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
-      Use_defs.Instr.iter_mach_reg_defs instr ~f:(fun mach_reg ->
+      Use_defs.Instr.iter_mach_reg_defs instr.i ~f:(fun mach_reg ->
         let precolored_name = find_precolored_name_or_add mach_reg in
         Graph.add_edge graph precolored_name live;
         ());
       ());
-    Ae_abs_x86_liveness.transfer live_out instr;
+    Ae_abs_x86_liveness.transfer live_out instr.i;
     (*
        for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
       we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
     *)
-    (match instr with
+    (match instr.i with
      | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
        let rax_name = find_precolored_name_or_add RAX in
        let rdx_name = find_precolored_name_or_add RDX in

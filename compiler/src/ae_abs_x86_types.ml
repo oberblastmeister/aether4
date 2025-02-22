@@ -12,6 +12,7 @@ module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot_entity = Ae_stack_slot_entity
 module Stack_slot = Stack_slot_entity.Ident
+module Generic_ir = Ae_generic_ir_std
 
 module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
@@ -42,9 +43,18 @@ module Bin_op = struct
   [@@deriving sexp_of]
 end
 
+module Block_call = struct
+  type t =
+    { label : Label.t
+    ; args : Vreg.t list
+    }
+  [@@deriving sexp_of]
+end
+
 module Instr = struct
   type t =
     | BlockMov of { temps : (Vreg.t * Size.t) list }
+    | Nop
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
@@ -60,32 +70,36 @@ module Instr = struct
         ; src1 : Operand.t
         ; src2 : Operand.t
         }
+    | Jump of Block_call.t
+    | CondJump of
+        { cond : Vreg.t
+        ; b1 : Block_call.t
+        ; b2 : Block_call.t
+        }
     | Ret of
         { src : Operand.t
         ; size : Size.t
         }
   [@@deriving sexp_of]
-end
 
-module Block = struct
-  type t = { body : Instr.t list } [@@deriving sexp_of]
+  let nop = Nop
 
-  let iter_instrs_backwards block ~f = List.rev block.body |> List.iter ~f
-end
-
-module Func = struct
-  type t =
-    { name : string
-    ; blocks : Block.t Label.Map.t
-    ; start : Label.t
-    ; next_id : Vreg_entity.Id.t
-    }
-  [@@deriving sexp_of]
-
-  let get_start_block func =
-    Entity.Ident.Map.find func.blocks func.start
-    |> Option.value_or_thunk ~default:(fun () ->
-      raise_s
-        [%message "invariant broken: start block did not exist" (func.start : Label.t)])
+  let is_nop = function
+    | Nop -> true
+    | _ -> false
   ;;
+
+  let iter_uses _ = todol [%here]
+  let iter_defs _ = todol [%here]
+  let jumps _ = todol [%here]
 end
+
+include Generic_ir.Make_ir (struct
+    module Instr = Instr
+
+    module Func_data = struct
+      type t = unit [@@deriving sexp_of]
+    end
+
+    module Temp_entity = Vreg_entity
+  end)

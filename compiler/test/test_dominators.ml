@@ -7,41 +7,16 @@ module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 module Graph = Ae_data_graph_std
 module Intern = Entity.Intern.String_to_name.Make_global (Label_entity.Witness) ()
+module Entity_graph_utils = Ae_entity_graph_utils
 
 let lab = Intern.intern
-
-let get_pred_table ({ succs; all_nodes } : _ Graph.t) =
-  let preds = Ident.Table.create () in
-  Iter.iter all_nodes ~f:(fun n ->
-    succs n
-    |> Iter.iter ~f:(fun n' ->
-      Ident.Table.update preds n' ~f:(fun o ->
-        Option.value_map ~default:[ n ] ~f:(List.cons n) o)));
-  preds
-;;
 
 let graph xs =
   let succ_table =
     xs |> List.map ~f:(fun (n, ns) -> lab n, List.map ~f:lab ns) |> Ident.Table.of_list
   in
-  let g =
-    Graph.
-      { succs =
-          (fun n ->
-            Ident.Table.find succ_table n
-            |> Option.value_map ~default:Iter.empty ~f:List.iter)
-      ; all_nodes = Ident.Table.iter_keys succ_table
-      }
-  in
-  let pred_table = get_pred_table g in
-  Graph.Bi.
-    { succs = g.succs
-    ; preds =
-        (fun n ->
-          Ident.Table.find pred_table n
-          |> Option.value_map ~default:Iter.empty ~f:List.iter)
-    ; all_nodes = g.all_nodes
-    }
+  let g = Entity_graph_utils.graph_of_adj_table succ_table in
+  Entity_graph_utils.to_bi g
 ;;
 
 type test =
@@ -71,7 +46,7 @@ let%expect_test _ =
     ((idoms ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2)))
      (frontier ((4@0 ((3 1@3))) (3@1 ((4 2@4))) (1@3 ((4 2@4))) (2@4 ((3 1@3)))))
      (domtree ((start@2 (2@4 1@3 3@1 4@0)))))
-    |}]
+     |}]
 ;;
 
 (* Figure 4 *)

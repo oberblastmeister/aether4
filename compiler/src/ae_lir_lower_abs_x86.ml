@@ -36,6 +36,10 @@ let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
   | I1 -> Byte
 ;;
 
+let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
+  { label = b.label; args = List.map b.args ~f:(get_vreg st) }
+;;
+
 let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
   match instr with
   | BlockParams { temps } ->
@@ -43,6 +47,15 @@ let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
     +> [ Abs_x86.Instr.BlockMov
            { temps = List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty) }
        ]
+  | Nop -> empty +> [ Abs_x86.Instr.Nop ]
+  | Jump b ->
+    let b = lower_block_call st b in
+    empty +> Abs_x86.Instr.[ Jump b ]
+  | CondJump { cond; b1; b2 } ->
+    let cond = get_vreg st cond in
+    let b1 = lower_block_call st b1 in
+    let b2 = lower_block_call st b2 in
+    empty +> Abs_x86.Instr.[ CondJump { cond; b1; b2 } ]
   | IntConst { dst; const } when Option.is_some (Int32.of_int64 const) ->
     let dst = get_operand st dst in
     empty
@@ -75,8 +88,15 @@ let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
 ;;
 
 let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
-  let body = List.map block.body ~f:(lower_instr st) |> Bag.concat |> Bag.to_list in
-  { body }
+  let body =
+    block
+    |> Lir.Block.instrs
+    |> Arrayp.to_list
+    |> List.map ~f:(fun i -> lower_instr st i.i |> Bag.map ~f:Abs_x86.Instr'.create)
+    |> Bag.concat
+    |> Bag.to_arrayp
+  in
+  Abs_x86.Block.of_array body
 ;;
 
 let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =

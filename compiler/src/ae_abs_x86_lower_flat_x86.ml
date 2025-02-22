@@ -56,6 +56,8 @@ let prologue stack_size =
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
   | BlockMov _ -> empty
+  | Nop -> empty
+  | Jump _ | CondJump _ -> todol [%here]
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
@@ -125,7 +127,13 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
-  let instrs = block.body |> List.map ~f:(lower_instr st) |> Bag.concat in
+  let instrs =
+    block
+    |> Abs_x86.Block.instrs
+    |> Arrayp.to_list
+    |> List.map ~f:(fun instr -> lower_instr st instr.i)
+    |> Bag.concat
+  in
   instrs
 ;;
 

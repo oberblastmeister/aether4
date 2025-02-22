@@ -44,8 +44,21 @@ let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
   | Bool -> I1
 ;;
 
+let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =
+  { label = b.label; args = List.map b.args ~f:(get_temp st) }
+;;
+
 let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
   match instr with
+  | Nop -> empty
+  | Jump b ->
+    let b = lower_block_call st b in
+    empty +> Lir.Instr.[ Jump b ]
+  | CondJump { cond; b1; b2 } ->
+    let cond = get_temp st cond in
+    let b1 = lower_block_call st b1 in
+    let b2 = lower_block_call st b2 in
+    empty +> Lir.Instr.[ CondJump { cond; b1; b2 } ]
   | BlockParams { temps } ->
     empty
     +> [ Lir.Instr.BlockParams
@@ -73,8 +86,14 @@ let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =
-  let body = List.map block.body ~f:(lower_instr st) |> Bag.concat |> Bag.to_list in
-  { body }
+  let body =
+    Arrayp.to_list (Tir.Block.instrs block)
+    |> List.map ~f:(fun instr -> lower_instr st instr.i)
+    |> Bag.concat
+    |> Bag.to_arrayp
+  in
+  let body = Arrayp.map body ~f:(fun i -> Lir.Instr'.create i) in
+  Lir.Block.of_array body
 ;;
 
 let lower_func st (func : Tir.Func.t) : Lir.Func.t =

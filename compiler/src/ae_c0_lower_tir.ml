@@ -48,7 +48,9 @@ let rec lower_program st (program : Ast.program) : Tir.Func.t =
   let instrs =
     empty +> [ Tir.Instr.BlockParams { temps = [] } ] ++ lower_block st program.block
   in
-  let start_block = { Tir.Block.body = Bag.to_list instrs } in
+  let start_block =
+    instrs |> Bag.to_arrayp |> Arrayp.map ~f:Tir.Instr'.create |> Tir.Block.of_array
+  in
   let func : Tir.Func.t =
     { name
     ; blocks = Entity.Ident.Map.singleton start_label start_block

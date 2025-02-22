@@ -35,6 +35,11 @@ module type S_phantom_without_make = sig
   val iter : ('w, 'a) t -> 'a Iter.t
   val iter_keys : ('w, 'a) t -> 'w Key.t Iter.t
   val of_alist_exn : ('w Key.t * 'a) list -> ('w, 'a) t
+
+  module Syntax : sig
+    val ( .%() ) : ('w, 'a) t -> 'w Key.t -> 'a
+    val ( .%()<- ) : ('w, 'a) t -> 'w Key.t -> 'a -> ('w, 'a) t
+  end
 end
 
 module type S_phantom = sig
@@ -71,6 +76,11 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     List.map l ~f:(fun (key, data) -> Key.to_int key, Entry.{ key; data })
     |> Int.Map.of_alist_exn
   ;;
+
+  module Syntax = struct
+    let ( .%() ) = find_exn
+    let ( .%()<- ) t key data = set t ~key ~data
+  end
 
   module Make (Witness : Ae_entity_witness.S) = struct
     open struct

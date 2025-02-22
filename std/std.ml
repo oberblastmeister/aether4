@@ -12,6 +12,26 @@ module Vec = struct
   ;;
 end
 
+module Arrayp = struct
+  include Array.Permissioned
+
+  let iteri_rev t ~f =
+    let i = ref (Array.Permissioned.length t - 1) in
+    while !i > 0 do
+      f !i (Array.Permissioned.get t !i);
+      decr i;
+      ()
+    done;
+    ()
+  ;;
+end
+
+type 'a iarray = ('a, immutable) Arrayp.t
+
+let sexp_of_iarray f (t : _ iarray) = Array.Permissioned.sexp_of_t f sexp_of_opaque t
+let ( .@() ) = Arrayp.get
+let ( .@()<- ) = Arrayp.set
+
 module String = struct
   include Core.String
 

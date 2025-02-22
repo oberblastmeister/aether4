@@ -12,6 +12,7 @@ module Temp_entity = Entity.Make ()
 module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
+module Generic_ir = Ae_generic_ir_std
 
 module Bin_op = struct
   type t =
@@ -34,9 +35,18 @@ module Unary_op = struct
   type t = Copy of Ty.t [@@deriving sexp_of]
 end
 
+module Block_call = struct
+  type t =
+    { label : Label.t
+    ; args : Temp.t list
+    }
+  [@@deriving sexp_of]
+end
+
 module Instr = struct
   type t =
     | BlockParams of { temps : (Temp.t * Ty.t) list }
+    | Nop
     | Bin of
         { dst : Temp.t
         ; op : Bin_op.t
@@ -52,44 +62,36 @@ module Instr = struct
         { dst : Temp.t
         ; const : int64
         }
+    | Jump of Block_call.t
+    | CondJump of
+        { cond : Temp.t
+        ; b1 : Block_call.t
+        ; b2 : Block_call.t
+        }
     | Ret of
         { src : Temp.t
         ; ty : Ty.t
         }
   [@@deriving sexp_of]
+
+  let nop = Nop
+
+  let is_nop = function
+    | Nop -> true
+    | _ -> false
+  ;;
+
+  let iter_uses _ = todol [%here]
+  let iter_defs _ = todol [%here]
+  let jumps _ = todol [%here]
 end
 
-module Block = struct
-  type t = { body : Instr.t list } [@@deriving sexp_of]
-end
+include Generic_ir.Make_ir (struct
+    module Instr = Instr
 
-module Func = struct
-  type t =
-    { name : string
-    ; blocks : Block.t Label.Map.t
-    ; start : Label.t
-    ; next_id : Temp_entity.Id.t
-    }
-  [@@deriving sexp_of]
-end
+    module Func_data = struct
+      type t = unit [@@deriving sexp_of]
+    end
 
-(*
-   notes
-  we want a transaction data structures
-*)
-module Block_transaction = struct
-  type t =
-    | Insert of
-        { index : int
-        ; instr : Instr.t
-        }
-    | Remove of int
-end
-
-module Func_transaction = struct
-  type t =
-    { mutable next_temp_id : Temp_entity.Id.t
-    ; mutable next_label_id : Label_entity.Id.t
-    ; mutable block_operations : Block_transaction.t list Label.Map.t
-    }
-end
+    module Temp_entity = Temp_entity
+  end)
