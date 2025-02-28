@@ -48,15 +48,18 @@ let fresh_label ?(name = "fresh") t : Label.t =
 ;;
 
 let add_block t label instrs =
-  let block = Tir.Block.create label (Bag.to_arrayp instrs) in
+  let block =
+    Tir.Block.create
+      label
+      (Bag.to_arrayp (empty +> [ ins (BlockParams { temps = [] }) ] ++ instrs))
+  in
   t.blocks <- block :: t.blocks;
   ()
 ;;
 
 let add_fresh_block ?name t instrs : Label.t =
   let label = fresh_label ?name t in
-  let block = Tir.Block.create label (Bag.to_arrayp instrs) in
-  t.blocks <- block :: t.blocks;
+  add_block t label instrs;
   label
 ;;
 

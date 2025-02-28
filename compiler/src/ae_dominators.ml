@@ -141,4 +141,8 @@ module Frontier = struct
   let find (t : t) label =
     Table.find t label |> Option.value_map ~f:Ident.Set.to_list ~default:[]
   ;;
+
+  let find_iter (t : t) label =
+    Table.find t label |> Option.value_map ~f:Ident.Set.iter ~default:Iter.empty
+  ;;
 end

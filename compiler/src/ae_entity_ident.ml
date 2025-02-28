@@ -14,6 +14,7 @@ end
 
 include T
 
+let to_id t = t.id
 let unchecked_coerce { name; id } = { name; id = Id.unchecked_coerce id }
 let create name id = { name; id }
 
@@ -23,6 +24,7 @@ let fresh ?(name = "fresh") gen =
   { name; id }
 ;;
 
+let freshen gen t = fresh ~name:t.name gen
 let to_string name = [%string "%{name.name}@%{name.id#Int}"]
 let sexp_of_t _ name = Sexp.Atom (to_string name)
 

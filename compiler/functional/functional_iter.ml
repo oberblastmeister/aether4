@@ -24,6 +24,17 @@ let while_ cond =
   ()
 ;;
 
+let while_some cond ~f =
+  let rec loop () =
+    match cond () with
+    | None -> ()
+    | Some x ->
+      f x;
+      loop ()
+  in
+  loop ()
+;;
+
 let empty ~f:_ = ()
 let singleton x ~f = f x
 

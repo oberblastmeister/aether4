@@ -9,6 +9,8 @@ open struct
 end
 
 module Make (Ir : Ir) = struct
+  open Ir.Std
+
   open struct
     module Temp = Ir.Arg.Temp_entity.Ident
   end
@@ -30,7 +32,7 @@ module Make (Ir : Ir) = struct
     type t = Temp.Set.t Label.Table.t [@@deriving sexp_of]
   end
 
-  let compute_defs_and_upward_exposed func =
+  let compute_defs_and_upward_exposed_maybe ?(compute_upward_exposed : unit option) func =
     let module Table = Ident.Table in
     let open Table.Syntax in
     let defs : Label.t list Temp.Table.t = Table.create () in
@@ -44,7 +46,8 @@ module Make (Ir : Ir) = struct
       let didn't_add_upward_exposed_yet temp =
         not (is_on_top upward_exposed ~equal:Label.equal ~key:temp ~data:block.label)
       in
-      begin
+      if Option.is_some compute_upward_exposed
+      then begin
         let@ use = for_ @@ Instr.iter_uses instr.i in
         if no_definition_yet use && didn't_add_upward_exposed_yet use
         then begin
@@ -62,7 +65,16 @@ module Make (Ir : Ir) = struct
     defs, upward_exposed
   ;;
 
-  let compute_non_ssa_live_list (pred_table : Adj_table.t) func =
+  let compute_defs_and_upward_exposed func =
+    compute_defs_and_upward_exposed_maybe ~compute_upward_exposed:() func
+  ;;
+
+  let compute_def_blocks func =
+    let defs, _ = compute_defs_and_upward_exposed_maybe func in
+    defs
+  ;;
+
+  let compute_non_ssa_live_list ~(pred_table : Adj_table.t) func =
     let module Table = Ident.Table in
     let open Table.Syntax in
     let block_mark : _ Label.Table.t = Table.create () in
@@ -122,8 +134,8 @@ module Make (Ir : Ir) = struct
     live_in, live_out
   ;;
 
-  let compute_non_ssa pred_table func =
-    let live_in, live_out = compute_non_ssa_live_list pred_table func in
+  let compute_non_ssa ~pred_table func =
+    let live_in, live_out = compute_non_ssa_live_list ~pred_table func in
     ( Ident.Table.map ~f:Ident.Set.of_list_exn live_in
     , Ident.Table.map ~f:Ident.Set.of_list_exn live_out )
   ;;

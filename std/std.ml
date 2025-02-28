@@ -108,8 +108,6 @@ module Z = struct
   let equal = Z.equal
 end
 
-let ( let@ ) f x = f x
-let ( @> ) = Functional.Fold.( @> )
-let for_ = Iter.for_
+include Functional.Syntax
 let todo ?loc () = raise_s [%message "TODO" (loc : Source_code_position.t option)]
 let todol loc = raise_s [%message "TODO" (loc : Source_code_position.t)]

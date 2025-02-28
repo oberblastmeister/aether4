@@ -7,7 +7,7 @@ module Tir = Ae_tir_std
 let check s =
   let tir = Driver.compile_source_to_tir s |> Or_error.ok_exn in
   let pred_table = Tir.Func.pred_table tir in
-  let live_in, live_out = Tir.Liveness.compute_non_ssa pred_table tir in
+  let live_in, live_out = Tir.Liveness.compute_non_ssa ~pred_table tir in
   print_s
     [%message (live_in : Tir.Liveness.Live_set.t) (live_out : Tir.Liveness.Live_set.t)];
   ()

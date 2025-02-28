@@ -6,13 +6,13 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
+  module Generic_ir = Ae_generic_ir_std
 end
 
 module Temp_entity = Entity.Make ()
 module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
-module Generic_ir = Ae_generic_ir_std
 
 module Bin_op = struct
   type t =
@@ -42,16 +42,7 @@ module Nullary_op = struct
   [@@deriving sexp_of]
 end
 
-module Block_call = struct
-  type t =
-    { label : Label.t
-    ; args : Temp.t list
-    }
-  [@@deriving sexp_of]
-
-  let create ?(args = []) label = { label; args }
-  let iter_uses t ~f = List.iter t.args ~f
-end
+module Block_call = Ae_block_call.Make (Temp_entity)
 
 module Instr = struct
   type t =
@@ -135,8 +126,53 @@ module Instr = struct
     match instr with
     | Nop | BlockParams _ | Bin _ | Unary _ | Nullary _ -> None
     | Ret _ -> Some []
-    | Jump b -> Some [ b.label ]
-    | CondJump { cond = _; b1; b2 } -> Some [ b1.label; b2.label ]
+    | Jump b -> Some [ b ]
+    | CondJump { cond = _; b1; b2 } -> Some [ b1; b2 ]
+  ;;
+
+  let map_block_calls (instr : t) ~f =
+    match instr with
+    | Jump b -> Jump (f b)
+    | CondJump { cond; b1; b2 } -> CondJump { cond; b1 = f b1; b2 = f b2 }
+    | _ -> instr
+  ;;
+
+  let map_uses (instr : t) ~f =
+    match instr with
+    | Nop -> Nop
+    | BlockParams _ -> instr
+    | Bin p ->
+      let src1 = f p.src1 in
+      let src2 = f p.src2 in
+      Bin { p with src1; src2 }
+    | Unary p ->
+      let src = f p.src in
+      Unary { p with src }
+    | Nullary _ -> instr
+    | Jump j ->
+      let j = Block_call.map_uses j ~f in
+      Jump j
+    | CondJump { cond; b1; b2 } ->
+      let cond = f cond in
+      let b1 = Block_call.map_uses b1 ~f in
+      let b2 = Block_call.map_uses b2 ~f in
+      CondJump { cond; b1; b2 }
+    | Ret p ->
+      let src = f p.src in
+      Ret { p with src }
+  ;;
+
+  let map_defs (instr : t) ~f =
+    match instr with
+    | BlockParams p ->
+      BlockParams { p with temps = (List.map & Tuple2.map_fst) p.temps ~f }
+    | Nop -> Nop
+    | Bin p -> Bin { p with dst = f p.dst }
+    | Unary p -> Unary { p with dst = f p.dst }
+    | Nullary p -> Nullary { p with dst = f p.dst }
+    | Jump _ -> instr
+    | CondJump _ -> instr
+    | Ret _ -> instr
   ;;
 end
 

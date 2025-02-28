@@ -3,13 +3,13 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
+  module Generic_ir = Ae_generic_ir_std
 end
 
 module Temp_entity = Entity.Make ()
 module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
-module Generic_ir = Ae_generic_ir_std
 
 (* TODO: change this to use one mega Prim op type *)
 module Bin_op = struct
@@ -33,13 +33,7 @@ module Unary_op = struct
   type t = Copy of Ty.t [@@deriving sexp_of]
 end
 
-module Block_call = struct
-  type t =
-    { label : Label.t
-    ; args : Temp.t list
-    }
-  [@@deriving sexp_of]
-end
+module Block_call = Ae_block_call.Make (Temp_entity)
 
 module Instr = struct
   type t =
@@ -83,6 +77,8 @@ module Instr = struct
   let iter_uses _ = todol [%here]
   let iter_defs _ = todol [%here]
   let jumps _ = todol [%here]
+  let map_uses _ = todol [%here]
+  let map_defs _ = todol [%here]
 end
 
 module Ir = Generic_ir.Make_ir (struct
@@ -95,5 +91,5 @@ module Ir = Generic_ir.Make_ir (struct
     module Temp_entity = Temp_entity
   end)
 
-include Ir
 module Liveness = Generic_ir.Liveness.Make (Ir)
+include Ir

@@ -2,6 +2,7 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
+  module Generic_ir = Ae_generic_ir_std
 end
 
 module Size = Ae_x86_size
@@ -12,7 +13,6 @@ module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot_entity = Ae_stack_slot_entity
 module Stack_slot = Stack_slot_entity.Ident
-module Generic_ir = Ae_generic_ir_std
 
 module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
@@ -43,13 +43,7 @@ module Bin_op = struct
   [@@deriving sexp_of]
 end
 
-module Block_call = struct
-  type t =
-    { label : Label.t
-    ; args : Vreg.t list
-    }
-  [@@deriving sexp_of]
-end
+module Block_call = Ae_block_call.Make (Vreg_entity)
 
 module Instr = struct
   type t =
@@ -92,14 +86,20 @@ module Instr = struct
   let iter_uses _ = todol [%here]
   let iter_defs _ = todol [%here]
   let jumps _ = todol [%here]
+  let map_uses _ = todol [%here]
+  let map_defs _ = todol [%here]
 end
 
-include Generic_ir.Make_ir (struct
+module Ir = Generic_ir.Make_ir (struct
     module Instr = Instr
+    module Temp_entity = Vreg_entity
 
     module Func_data = struct
       type t = unit [@@deriving sexp_of]
     end
-
-    module Temp_entity = Vreg_entity
   end)
+
+module Instr' = Ir.Instr'
+module Func = Ir.Func
+module Block = Ir.Block
+module Edit = Ir.Edit

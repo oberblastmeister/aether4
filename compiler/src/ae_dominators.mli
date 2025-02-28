@@ -24,5 +24,6 @@ module Frontier : sig
   type t [@@deriving sexp_of]
 
   val find : t -> Label.t -> Label.t list
+  val find_iter : t -> Label.t -> Label.t Iter.t
   val compute : Immediate.t -> Label.t Graph.Bi.t -> t
 end

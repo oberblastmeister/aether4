@@ -11,10 +11,13 @@ open struct
 end
 
 module Make_ir (Arg : Arg) = struct
-  open Arg
   module Arg = Arg
-  module Temp_entity = Arg.Temp_entity
+  open Arg
   module Temp = Temp_entity.Ident
+
+  module Instr_ext = struct
+    let jumps_labels i = Instr.jumps i |> (Option.map & List.map) ~f:(fun b -> b.label)
+  end
 
   module Instr' = struct
     module T = struct
@@ -30,6 +33,7 @@ module Make_ir (Arg : Arg) = struct
 
     include T
 
+    let map t ~f = { t with i = f t.i }
     let create_unindexed ?info i = { i; index = -1; info }
     let invalid_nop = { i = Instr.nop; index = -1; info = None }
 
@@ -105,7 +109,7 @@ module Make_ir (Arg : Arg) = struct
       func.blocks
       |> Entity.Ident.Map.map ~f:(fun b ->
         let i = Block.find_jump b in
-        Instr.jumps i.i
+        Instr_ext.jumps_labels i.i
         |> Option.value_exn
              ~error:(Error.create "should be a jump instruction" i Instr'.sexp_of_t))
     ;;
@@ -116,7 +120,7 @@ module Make_ir (Arg : Arg) = struct
       |> List.map ~f:(fun (lab, b) ->
         let i = Block.find_jump b in
         ( lab
-        , Instr.jumps i.i
+        , Instr_ext.jumps_labels i.i
           |> Option.value_exn
                ~error:(Error.create "should be a jump instruction" i Instr'.sexp_of_t) ))
     ;;
@@ -168,5 +172,53 @@ module Make_ir (Arg : Arg) = struct
       let res = Arrayp.of_array res in
       { block with body = res }
     ;;
+  end
+
+  module Multi_edit = struct
+    type t = Edit.t list Label.Table.t [@@deriving sexp_of]
+
+    let create () = Ident.Table.create ()
+
+    let add_insert t label instr =
+      Ident.Table.add_multi t ~key:label ~data:(Edit.insert instr);
+      ()
+    ;;
+
+    let add_edits t label edits =
+      Ident.Table.update t label ~f:(Option.value_map ~default:[] ~f:(List.append edits))
+    ;;
+
+    let add_remove t label instr =
+      Ident.Table.add_multi t ~key:label ~data:(Edit.remove instr);
+      ()
+    ;;
+
+    let add_replace t label instr =
+      add_remove t label instr;
+      add_insert t label instr;
+      ()
+    ;;
+
+    let apply_blocks ?no_sort t blocks =
+      Ident.Map.map blocks ~f:(fun block ->
+        let edit = Ident.Table.find_multi t block.Block.label |> List.rev in
+        Edit.apply ?no_sort edit block)
+    ;;
+  end
+
+  module Std = struct
+    module Instr = struct
+      include Instr
+      include Instr_ext
+    end
+
+    module Instr' = Instr'
+    module Block = Block
+    module Adj_map = Adj_map
+    module Adj_table = Adj_table
+    module Func = Func
+    module Edit = Edit
+    module Temp_entity = Arg.Temp_entity
+    module Temp = Temp_entity.Ident
   end
 end
