@@ -84,7 +84,7 @@ module Instr = struct
   let jumps _ = todol [%here]
 end
 
-include Generic_ir.Make_ir (struct
+module Ir = Generic_ir.Make_ir (struct
     module Instr = Instr
 
     module Func_data = struct
@@ -93,3 +93,6 @@ include Generic_ir.Make_ir (struct
 
     module Temp_entity = Temp_entity
   end)
+
+include Ir
+module Liveness = Generic_ir.Liveness.Make (Ir)

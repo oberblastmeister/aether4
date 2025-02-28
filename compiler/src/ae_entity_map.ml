@@ -8,17 +8,7 @@ module Entry = struct
   [@@deriving sexp_of, compare, equal]
 end
 
-module type Key_phantom = sig
-  type 'w t [@@deriving sexp_of]
-
-  val to_int : 'w t -> int
-end
-
-module type Key = sig
-  type t [@@deriving sexp_of]
-
-  val to_int : t -> int
-end
+open Ae_entity_sigs
 
 module type S_phantom_without_make = sig
   module Key : Key_phantom
@@ -34,6 +24,7 @@ module type S_phantom_without_make = sig
   val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
   val iter : ('w, 'a) t -> 'a Iter.t
   val iter_keys : ('w, 'a) t -> 'w Key.t Iter.t
+  val to_alist : ('w, 'a) t -> ('w Key.t * 'a) list
   val of_alist_exn : ('w Key.t * 'a) list -> ('w, 'a) t
 
   module Syntax : sig
@@ -68,6 +59,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let find_exn t k = (Map.find_exn t (Key.to_int k)).Entry.data
   let map t ~f = Map.map t ~f:(fun e -> { e with Entry.data = f e.Entry.data })
   let set t ~key ~data = Map.set t ~key:(Key.to_int key) ~data:{ Entry.key; data }
+  let to_alist t = Map.to_alist t |> List.map ~f:(fun (_, e) -> e.Entry.key, e.data)
   let mem t k = Map.mem t (Key.to_int k)
   let iter t ~f = Map.iter t ~f:(fun e -> f e.Entry.data)
   let iter_keys t ~f = Map.iter t ~f:(fun e -> f e.Entry.key)
@@ -91,7 +83,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   end
 end
 
-module Make (Key : Key) : S = struct
+module Make (Key : Key) : S with type 'w Key.t = Key.t = struct
   module Key' = struct
     type 'w t = Key.t
 

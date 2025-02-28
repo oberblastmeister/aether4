@@ -226,7 +226,12 @@ and parse_unary_expr env : Cst.expr =
     env
 
 and parse_atom env : Cst.expr =
-  ((fun d -> Cst.IntConst d) <$> parse_num <|> ((fun v -> Cst.Var v) <$> parse_ident)) env
+  ((fun d -> Cst.IntConst d)
+   <$> parse_num
+   <|> (Parser.expect_eq True $> Cst.BoolConst true)
+   <|> (Parser.expect_eq False $> Cst.BoolConst false)
+   <|> ((fun v -> Cst.Var v) <$> parse_ident))
+    env
 
 and parse_num env : Z.t =
   Parser.map

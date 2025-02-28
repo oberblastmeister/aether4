@@ -23,7 +23,7 @@ let check_ty_eq _st ty ty' =
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Var { var; ty = _ } -> Var { var; ty = Some (var_ty st var) }
-  | IntConst _ -> expr
+  | IntConst _ | BoolConst _ -> expr
   | Bin { lhs; op; rhs; ty = _ } ->
     (match op with
      | Add | Sub | Mul | Div | Mod ->

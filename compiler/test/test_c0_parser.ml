@@ -102,3 +102,23 @@ let%expect_test "simple assign" =
             (expr (Bin (lhs (IntConst 12)) (op Div) (rhs (IntConst 12))))))))))))
     |}]
 ;;
+
+let%expect_test "bool" =
+  check {|
+    int main() {
+          int first = 0;
+          int second = 1234;
+          bool third = true;
+          return first + second;
+        }
+  |};
+  [%expect {|
+    (Ok
+     ((ty Int) (name main)
+      (block
+       ((stmts
+         ((Decl ((ty Int) (name first) (expr ((IntConst 0)))))
+          (Decl ((ty Int) (name second) (expr ((IntConst 1234)))))
+          (Decl ((ty Bool) (name third) (expr ((BoolConst true)))))
+          (Return (Bin (lhs (Var first)) (op Add) (rhs (Var second))))))))))
+    |}]

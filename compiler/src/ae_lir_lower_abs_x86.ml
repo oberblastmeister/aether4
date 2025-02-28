@@ -6,21 +6,26 @@ module Abs_x86 = Ae_abs_x86_std
 module Bag = Ae_data_bag
 module Table = Entity.Ident.Table
 module Ident = Entity.Ident
+module Label_entity = Ae_label_entity
 
 let empty = Bag.empty
 
 open Bag.Syntax
 
 type st =
-  { gen : Abs_x86.Vreg_entity.Witness.t Id_gen.t
+  { temp_gen : Abs_x86.Vreg_entity.Witness.t Id_gen.t
+  ; label_gen : Label_entity.Witness.t Id_gen.t
   ; lir_to_abs_x86 : Abs_x86.Vreg.t Lir.Temp.Table.t
   }
 
-let create_state () =
-  { gen = Id_gen.create (); lir_to_abs_x86 = Entity.Ident.Table.create () }
+let create_state func =
+  { temp_gen = Id_gen.create ()
+  ; lir_to_abs_x86 = Entity.Ident.Table.create ()
+  ; label_gen = Id_gen.of_id func.Lir.Func.next_label_id
+  }
 ;;
 
-let fresh_temp ?name st : Abs_x86.Vreg.t = Entity.Ident.fresh ?name st.gen
+let fresh_temp ?name st : Abs_x86.Vreg.t = Entity.Ident.fresh ?name st.temp_gen
 
 let get_vreg st temp =
   Table.find_or_add st.lir_to_abs_x86 temp ~default:(fun () ->
@@ -92,22 +97,23 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
     block
     |> Lir.Block.instrs
     |> Arrayp.to_list
-    |> List.map ~f:(fun i -> lower_instr st i.i |> Bag.map ~f:Abs_x86.Instr'.create)
+    |> List.map ~f:(fun i ->
+      lower_instr st i.i |> Bag.map ~f:Abs_x86.Instr'.create_unindexed)
     |> Bag.concat
     |> Bag.to_arrayp
   in
-  Abs_x86.Block.of_array body
+  Abs_x86.Block.create block.label body
 ;;
 
 let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
   let name = func.name in
   let blocks = Ident.Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
-  let next_id = Id_gen.next st.gen in
-  { name; blocks; start; next_id }
+  let next_temp_id = Id_gen.next st.temp_gen in
+  { name; blocks; start; next_temp_id; next_label_id = func.next_label_id }
 ;;
 
 let lower func =
-  let st = create_state () in
+  let st = create_state func in
   lower_func st func
 ;;

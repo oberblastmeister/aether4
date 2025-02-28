@@ -1,4 +1,6 @@
 open Std
+open Aether4
+module Driver = Ae_driver
 module Stack_builder = Ae_stack_builder
 module C0 = Ae_c0_std
 module Tir = Ae_tir_std
@@ -7,10 +9,7 @@ module Abs_x86 = Ae_abs_x86_std
 module Flat_x86 = Ae_flat_x86_std
 
 let check s =
-  let tokens = C0.Lexer.tokenize s in
-  let program = C0.Parser.parse tokens |> Result.ok |> Option.value_exn in
-  let program = C0.Cst_elaborate_ast.elaborate_program program |> Or_error.ok_exn in
-  let tir = C0.Lower_tree_ir.lower program in
+  let tir = Driver.compile_source_to_tir s |> Or_error.ok_exn in
   let lir = Tir.Lower_lir.lower tir in
   let abs_x86 = Lir.lower lir in
   let stack_builder = Stack_builder.create () in

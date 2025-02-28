@@ -58,6 +58,7 @@ and expr =
       ; ty : ty option
       }
   | IntConst of int64
+  | BoolConst of bool
   | Bin of
       { lhs : expr
       ; op : bin_op
@@ -84,4 +85,5 @@ type program =
 let expr_ty_exn = function
   | Var { ty; _ } | Bin { ty; _ } -> Option.value_exn ty
   | IntConst _ -> Int
+  | BoolConst _ -> Bool
 ;;

@@ -30,6 +30,8 @@
    (= v0.17.0))
   (core_unix
    (= v0.17.0))
+  (containers
+   (= 3.15))
   (ppx_deriving
    (= 6.0.3))
   (ppx_jane

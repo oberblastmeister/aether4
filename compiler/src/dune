@@ -17,6 +17,7 @@
   std
   core
   core_kernel
+  containers-data
   core_unix
   core_unix.filename_unix
   core_unix.command_unix

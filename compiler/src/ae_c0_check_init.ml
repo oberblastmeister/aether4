@@ -20,7 +20,7 @@ and iter_expr_uses (expr : Ast.expr) ~f =
   | Var { var; ty = _ } ->
     f var;
     ()
-  | IntConst _ -> ()
+  | IntConst _ | BoolConst _ -> ()
   | Bin { lhs; op = _; rhs; ty = _ } ->
     iter_expr_uses lhs ~f;
     iter_expr_uses rhs ~f;

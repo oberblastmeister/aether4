@@ -32,13 +32,13 @@ let build_graph (func : Func.t) =
   let live_out = Ident.Table.create () in
   let graph = Graph.create () in
   let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
-  assert (not (Graph.mem graph (Ident.create "next_id" func.next_id)));
-  let next_id = Id_gen.of_id func.next_id in
-  let precolored_id_start = func.next_id in
+  assert (not (Graph.mem graph (Ident.create "next_temp_id" func.next_temp_id)));
+  let next_temp_id = Id_gen.of_id func.next_temp_id in
+  let precolored_id_start = func.next_temp_id in
   let find_precolored_name_or_add mach_reg =
     Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
       let precolored_name =
-        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) next_id
+        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) next_temp_id
       in
       Graph.add graph precolored_name;
       precolored_name)
@@ -80,7 +80,7 @@ let build_graph (func : Func.t) =
        ()
      | _ -> ());
     ());
-  graph, mach_reg_to_precolored_name, precolored_id_start, Id_gen.next next_id
+  graph, mach_reg_to_precolored_name, precolored_id_start, Id_gen.next next_temp_id
 ;;
 
 (* TODO: add in callee saved later *)
@@ -89,7 +89,7 @@ let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 let alloc_func stack_builder (func : Func.t) =
   let open Ident.Table.Syntax in
   let module Color = Regalloc.Color in
-  let graph, mach_reg_to_precolored_name, prev_next_id, next_id = build_graph func in
+  let graph, mach_reg_to_precolored_name, prev_next_temp_id, next_temp_id = build_graph func in
   let precolored_name_to_mach_reg =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
@@ -142,7 +142,7 @@ let alloc_func stack_builder (func : Func.t) =
   let allocation : _ Vreg.Table.t = Ident.Table.create () in
   Graph.iter_vreg graph
   (* not precolored, because they were just created locally *)
-  |> Iter.filter ~f:(fun vreg -> Vreg_entity.Id.(vreg.id < prev_next_id))
+  |> Iter.filter ~f:(fun vreg -> Vreg_entity.Id.(vreg.id < prev_next_temp_id))
   |> Iter.iter ~f:(fun vreg ->
     let color = coloring.!(vreg) in
     let alloc_reg = Id.Table.find_exn color_to_mach_reg color in

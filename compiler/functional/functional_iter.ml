@@ -5,6 +5,7 @@ type ('a, 'b) t2 = f:('a -> 'b -> unit) -> unit
 
 let of_fn it = fun ~f -> it f
 let to_fn it = fun f -> it ~f
+let for_ = to_fn
 let uncurry t2 = fun ~f -> t2 ~f:(fun x y -> f (x, y))
 
 let to_list_rev t =

@@ -24,6 +24,14 @@ module Arrayp = struct
     done;
     ()
   ;;
+
+  let unchecked_coerce
+    : 'a. ('a, _) Array.Permissioned.t -> ('a, [< _ perms ]) Array.Permissioned.t
+    =
+    Obj.magic
+  ;;
+
+  let unchecked_of_array a = unchecked_coerce (of_array_id a)
 end
 
 type 'a iarray = ('a, immutable) Arrayp.t
@@ -102,5 +110,6 @@ end
 
 let ( let@ ) f x = f x
 let ( @> ) = Functional.Fold.( @> )
+let for_ = Iter.for_
 let todo ?loc () = raise_s [%message "TODO" (loc : Source_code_position.t option)]
 let todol loc = raise_s [%message "TODO" (loc : Source_code_position.t)]

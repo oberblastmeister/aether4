@@ -1,6 +1,6 @@
 open Std
-
-(* module Cst = Ae_c0_cst *)
+module Label_entity = Ae_label_entity
+module Label = Label_entity.Ident
 module Ast = Ae_c0_ast
 module Tir = Ae_tir_types
 module Entity = Ae_entity_std
@@ -12,13 +12,13 @@ open Bag.Syntax
 let empty = Bag.empty
 
 type st =
-  { gen : Tir.Temp_entity.Witness.t Id_gen.t
+  { temp_gen : Tir.Temp_entity.Witness.t Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
   ; label_gen : Tir.Label_entity.Witness.t Id_gen.t
   }
 
 let create_state () =
-  { gen = Id_gen.create ()
+  { temp_gen = Id_gen.create ()
   ; var_to_temp = Ast.Var.Table.create ()
   ; label_gen = Id_gen.create ()
   }
@@ -26,13 +26,18 @@ let create_state () =
 
 let var_temp t var =
   Hashtbl.find_or_add t.var_to_temp var ~default:(fun () ->
-    let id = Id_gen.next t.gen in
+    let id = Id_gen.next t.temp_gen in
     let temp = { Entity.Ident.id; name = var.name } in
     temp)
 ;;
 
 let fresh_temp ?(name = "fresh") t : Temp.t =
-  let id = Id_gen.next t.gen in
+  let id = Id_gen.next t.temp_gen in
+  Entity.Ident.create name id
+;;
+
+let fresh_label ?(name = "fresh") t : Label.t =
+  let id = Id_gen.next t.label_gen in
   Entity.Ident.create name id
 ;;
 
@@ -49,13 +54,19 @@ let rec lower_program st (program : Ast.program) : Tir.Func.t =
     empty +> [ Tir.Instr.BlockParams { temps = [] } ] ++ lower_block st program.block
   in
   let start_block =
-    instrs |> Bag.to_arrayp |> Arrayp.map ~f:Tir.Instr'.create |> Tir.Block.of_array
+    instrs
+    |> Bag.to_arrayp
+    |> Arrayp.map ~f:Tir.Instr'.create_unindexed
+    |> Tir.Block.create start_label
   in
+  let next_temp_id = Id_gen.next st.temp_gen in
+  let next_label_id = Id_gen.next st.label_gen in
   let func : Tir.Func.t =
     { name
     ; blocks = Entity.Ident.Map.singleton start_label start_block
     ; start = start_label
-    ; next_id = Id_gen.next st.gen
+    ; next_temp_id
+    ; next_label_id
     }
   in
   func
@@ -92,6 +103,7 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
 and lower_expr st (dst : Temp.t) (expr : Ast.expr) : Tir.Instr.t Bag.t =
   match expr with
   | IntConst const -> empty +> Tir.Instr.[ IntConst { dst; const } ]
+  | BoolConst _ -> todol [%here]
   | Bin { lhs; op; rhs; ty = _ } ->
     let src1 = fresh_temp ~name:"lhs" st in
     let src2 = fresh_temp ~name:"rhs" st in

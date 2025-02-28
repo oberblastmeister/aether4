@@ -64,9 +64,8 @@ let link_files_with_runtime mgr paths out_path =
      @ [ "-o"; out_path ])
 ;;
 
-let compile_source_to_asm ?(emit = []) source =
+let compile_source_to_tir source =
   let open Result.Let_syntax in
-  let mem = List.mem ~equal:Emit.equal in
   let tokens = C0.Lexer.tokenize source in
   let%bind program =
     C0.Parser.parse tokens
@@ -76,6 +75,13 @@ let compile_source_to_asm ?(emit = []) source =
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
   let tir = C0.Lower_tree_ir.lower program in
+  return tir
+;;
+
+let compile_source_to_asm ?(emit = []) source =
+  let open Result.Let_syntax in
+  let mem = List.mem ~equal:Emit.equal in
+  let%bind tir = compile_source_to_tir source in
   let lir = Tir.Lower_lir.lower tir in
   if mem emit Emit.Lir then print_s [%sexp (lir : Lir.Func.t)];
   let abs_x86 = Lir.Lower_abs_x86.lower lir in

@@ -23,6 +23,8 @@ type t =
   | Return
   | Int
   | Bool
+  | True
+  | False
   | If
   | Else
   | While

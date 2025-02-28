@@ -9,14 +9,14 @@ let empty = Bag.empty
 exception Exn of Sexp.t
 
 type st =
-  { next_id : int ref
+  { next_temp_id : int ref
   ; context : Ast.var String.Map.t
   }
 
 let create_state () =
-  let next_id = ref 0 in
+  let next_temp_id = ref 0 in
   let context = String.Map.empty in
-  { next_id; context }
+  { next_temp_id; context }
 ;;
 
 let elab_ty _st (ty : Cst.ty) : Ast.ty =
@@ -34,8 +34,8 @@ let elab_var st (var : Cst.var) : Ast.var =
 ;;
 
 let fresh_var st (var : Cst.var) : Ast.var =
-  let id : int = !(st.next_id) in
-  st.next_id := id + 1;
+  let id : int = !(st.next_temp_id) in
+  st.next_temp_id := id + 1;
   { name = var; id }
 ;;
 
@@ -116,6 +116,7 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     |> Option.value_or_thunk ~default:(fun () ->
       throw_s [%message "Int did not fit in 64 bits" (i : Z.t)])
     |> IntConst
+  | BoolConst b -> BoolConst b
   | Var var ->
     let var = elab_var st var in
     Var { var; ty = None }
