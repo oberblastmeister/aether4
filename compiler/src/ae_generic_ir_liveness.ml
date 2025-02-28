@@ -72,14 +72,16 @@ module Make (Ir : Ir) = struct
     let rec up_and_mark (label : Label.t) (temp : Temp.t) =
       if
         let not_added_in_live_out_yet =
-          is_on_top live_out ~equal:Temp.equal ~key:label ~data:temp
+          not (is_on_top live_out ~equal:Temp.equal ~key:label ~data:temp)
         in
         not_added_in_live_out_yet
       then begin
         Table.add_multi live_out ~key:label ~data:temp
       end;
       if
-        let killed_in_block = Temp.equal block_mark.!(label) temp in
+        let killed_in_block =
+          Table.find block_mark label |> [%equal: Temp.t option] (Some temp)
+        in
         killed_in_block
       then ()
       else if
@@ -95,9 +97,8 @@ module Make (Ir : Ir) = struct
       end
     in
     begin
-      let@ temp = for_ @@ Table.iter_keys defs_table in
-      let defs = defs_table.!(temp) in
-      let upward_exposed = upward_exposed_table.!(temp) in
+      let@ temp, defs = for_ @@ Table.iteri defs_table in
+      let upward_exposed = Table.find_multi upward_exposed_table temp in
       begin
         let@ def_in = for_ @@ List.iter defs in
         block_mark.!(def_in) <- temp

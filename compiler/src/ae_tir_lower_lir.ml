@@ -8,12 +8,15 @@ module Lir = Ae_lir_types
 open Bag.Syntax
 
 let empty = Bag.empty
+let ins = Lir.Instr'.create_unindexed
 
 type st =
   { temp_gen : Lir.Temp_entity.Witness.t Id_gen.t
   ; label_gen : Label_entity.Witness.t Id_gen.t
   ; tir_to_lir : (Tir.Temp_entity.Witness.t, Lir.Temp.t) Entity.Ident.Table.t
   }
+
+type instrs = Lir.Instr'.t Bag.t
 
 let create_state func =
   { temp_gen = Id_gen.create ()
@@ -53,51 +56,61 @@ let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =
   { label = b.label; args = List.map b.args ~f:(get_temp st) }
 ;;
 
-let lower_instr st (instr : Tir.Instr.t) : Lir.Instr.t Bag.t =
-  match instr with
+let lower_instr st (instr : Tir.Instr'.t) : instrs =
+  match instr.i with
   | Nop -> empty
   | Jump b ->
     let b = lower_block_call st b in
-    empty +> Lir.Instr.[ Jump b ]
+    empty +> [ ins (Jump b) ]
   | CondJump { cond; b1; b2 } ->
     let cond = get_temp st cond in
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
-    empty +> Lir.Instr.[ CondJump { cond; b1; b2 } ]
+    empty +> [ ins (CondJump { cond; b1; b2 }) ]
   | BlockParams { temps } ->
     empty
-    +> [ Lir.Instr.BlockParams
-           { temps = List.map ~f:(fun (temp, ty) -> get_temp st temp, lower_ty ty) temps }
+    +> [ ins
+           (Lir.Instr.BlockParams
+              { temps =
+                  List.map ~f:(fun (temp, ty) -> get_temp st temp, lower_ty ty) temps
+              })
        ]
-  | IntConst { dst; const } ->
+  | Nullary { dst; op } ->
     let dst = get_temp st dst in
-    empty +> Lir.Instr.[ IntConst { dst; const } ]
+    (match op with
+     | IntConst const -> empty +> [ ins (IntConst { dst; const; ty = I1 }) ]
+     | BoolConst const ->
+       let const =
+         match const with
+         | true -> 1L
+         | false -> 0L
+       in
+       empty +> [ ins (IntConst { dst; const; ty = I64 }) ])
   | Unary { dst; op; src } ->
     let dst = get_temp st dst in
     let src = get_temp st src in
     (match op with
-     | Copy ty -> empty +> Lir.Instr.[ Unary { dst; op = Copy (lower_ty ty); src } ])
+     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ])
   | Bin { dst; op; src1; src2 } ->
     let dst = get_temp st dst in
     let src1 = get_temp st src1 in
     let src2 = get_temp st src2 in
     let op = lower_bin_op op in
-    let instr = Lir.Instr.Bin { dst; op; src1; src2 } in
+    let instr = ins (Bin { dst; op; src1; src2 }) in
     empty +> [ instr ]
   | Ret { src; ty } ->
     let src = get_temp st src in
     let ty = lower_ty ty in
-    empty +> Lir.Instr.[ Ret { src; ty } ]
+    empty +> [ ins (Ret { src; ty }) ]
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =
   let body =
     Arrayp.to_list (Tir.Block.instrs block)
-    |> List.map ~f:(fun instr -> lower_instr st instr.i)
+    |> List.map ~f:(lower_instr st)
     |> Bag.concat
     |> Bag.to_arrayp
   in
-  let body = Arrayp.map body ~f:(fun i -> Lir.Instr'.create_unindexed i) in
   Lir.Block.create block.label body
 ;;
 

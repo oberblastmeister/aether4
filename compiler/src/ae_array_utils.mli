@@ -1,1 +1,1 @@
-val apply_inserts : 'a -> (int * 'a) list -> 'a array -> 'a array
+val apply_inserts : ?no_sort:unit -> 'a -> (int * 'a) list -> 'a array -> 'a array

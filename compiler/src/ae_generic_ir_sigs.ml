@@ -49,7 +49,8 @@ module type Ir = sig
   end
 
   module Block : sig
-    type t =
+    (* private so that we make sure to get the indices correct *)
+    type t = private
       { label : Label.t
       ; body : Instr'.t iarray
       }
@@ -96,6 +97,6 @@ module type Ir = sig
 
     val insert : Instr'.t -> t
     val remove : Instr'.t -> t
-    val apply : t list -> Block.t -> Block.t
+    val apply : ?no_sort:unit -> t list -> Block.t -> Block.t
   end
 end

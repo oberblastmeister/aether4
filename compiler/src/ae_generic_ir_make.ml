@@ -149,7 +149,7 @@ module Make_ir (Arg : Arg) = struct
     let insert i = Insert i
     let remove i = Remove i
 
-    let apply edit (block : Block.t) =
+    let apply ?no_sort edit (block : Block.t) =
       let inserts, removes =
         List.partition_map
           ~f:(function
@@ -160,7 +160,7 @@ module Make_ir (Arg : Arg) = struct
       let inserts = List.map ~f:(fun i -> i.index, i) inserts in
       let body = Arrayp.to_array block.body in
       List.iter removes ~f:(fun i -> Array.set body i.index Instr'.invalid_nop);
-      let body = Ae_array_utils.apply_inserts Instr'.invalid_nop inserts body in
+      let body = Ae_array_utils.apply_inserts ?no_sort Instr'.invalid_nop inserts body in
       let res =
         Array.filter_mapi body ~f:(fun index instr ->
           if Instr.is_nop instr.i then None else Some { instr with index })

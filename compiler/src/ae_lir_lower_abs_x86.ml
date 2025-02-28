@@ -45,8 +45,8 @@ let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
   { label = b.label; args = List.map b.args ~f:(get_vreg st) }
 ;;
 
-let lower_instr st (instr : Lir.Instr.t) : Abs_x86.Instr.t Bag.t =
-  match instr with
+let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
+  match instr.i with
   | BlockParams { temps } ->
     empty
     +> [ Abs_x86.Instr.BlockMov
@@ -98,7 +98,7 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
     |> Lir.Block.instrs
     |> Arrayp.to_list
     |> List.map ~f:(fun i ->
-      lower_instr st i.i |> Bag.map ~f:Abs_x86.Instr'.create_unindexed)
+      lower_instr st i |> Bag.map ~f:Abs_x86.Instr'.create_unindexed)
     |> Bag.concat
     |> Bag.to_arrayp
   in

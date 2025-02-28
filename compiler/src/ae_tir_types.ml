@@ -35,12 +35,22 @@ module Unary_op = struct
   type t = Copy of Ty.t [@@deriving sexp_of]
 end
 
+module Nullary_op = struct
+  type t =
+    | IntConst of int64
+    | BoolConst of bool
+  [@@deriving sexp_of]
+end
+
 module Block_call = struct
   type t =
     { label : Label.t
     ; args : Temp.t list
     }
   [@@deriving sexp_of]
+
+  let create ?(args = []) label = { label; args }
+  let iter_uses t ~f = List.iter t.args ~f
 end
 
 module Instr = struct
@@ -58,9 +68,9 @@ module Instr = struct
         ; op : Unary_op.t
         ; src : Temp.t
         }
-    | IntConst of
+    | Nullary of
         { dst : Temp.t
-        ; const : int64
+        ; op : Nullary_op.t
         }
     | Jump of Block_call.t
     | CondJump of
@@ -81,9 +91,53 @@ module Instr = struct
     | _ -> false
   ;;
 
-  let iter_uses _ = todol [%here]
-  let iter_defs _ = todol [%here]
-  let jumps _ = todol [%here]
+  let iter_uses (instr : t) ~f =
+    match instr with
+    | BlockParams { temps = _ } | Nop -> ()
+    | Bin { dst = _; op = _; src1; src2 } ->
+      f src1;
+      f src2;
+      ()
+    | Unary { dst = _; op = _; src } ->
+      f src;
+      ()
+    | Nullary { dst = _; op = _ } -> ()
+    | Jump b ->
+      Block_call.iter_uses b ~f;
+      ()
+    | CondJump { cond; b1; b2 } ->
+      f cond;
+      Block_call.iter_uses b1 ~f;
+      Block_call.iter_uses b2 ~f;
+      ()
+    | Ret { src; ty = _ } ->
+      f src;
+      ()
+  ;;
+
+  let iter_defs (instr : t) ~f =
+    match instr with
+    | BlockParams { temps } -> List.iter temps ~f:(fun (temp, _) -> f temp)
+    | Nop -> ()
+    | Bin { dst; op = _; src1 = _; src2 = _ } ->
+      f dst;
+      ()
+    | Unary { dst; op = _; src = _ } ->
+      f dst;
+      ()
+    | Nullary { dst; op = _ } ->
+      f dst;
+      ()
+    | Jump _ | CondJump _ | Ret _ -> ()
+  ;;
+
+  let jumps (instr : t) =
+    match instr with
+    | Nop | BlockParams _ | Bin _ | Unary _ | Nullary _ -> None
+    | Ret _ -> Some []
+    | Jump b -> Some [ b.label ]
+    | CondJump { cond = _; b1; b2 } -> Some [ b1.label; b2.label ]
+  ;;
 end
 
 module Ir = Generic_ir.Make_ir (struct

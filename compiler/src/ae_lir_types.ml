@@ -48,6 +48,7 @@ module Instr = struct
     | IntConst of
         { dst : Temp.t
         ; const : int64
+        ; ty : Ty.t
         }
     | Bin of
         { dst : Temp.t
