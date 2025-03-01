@@ -34,9 +34,9 @@ module Instr = struct
   let operand_use_defs (instr : Abs_x86.Instr.t) ~on_def ~on_use =
     match instr with
     | Nop -> ()
-    | BlockMov { temps } ->
+    | Block_params { temps } ->
       List.iter temps ~f:(fun (temp, _size) -> on_def (Abs_x86.Operand.Reg temp))
-    | Jump _ | CondJump _ -> todol [%here]
+    | Jump _ | Cond_jump _ -> todol [%here]
     | Mov { dst; src; size = _ } ->
       on_use src;
       on_def dst;
@@ -78,7 +78,7 @@ module Instr = struct
          f Mach_reg.RAX;
          f Mach_reg.RDX;
          ())
-    | Instr.BlockMov _ | Jump _ | CondJump _ | Instr.Mov _ | Instr.MovAbs _ -> ()
+    | Instr.Block_params _ | Jump _ | Cond_jump _ | Instr.Mov _ | Instr.MovAbs _ -> ()
     | Instr.Ret _ -> f Mach_reg.RAX
   ;;
 end

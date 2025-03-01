@@ -70,10 +70,12 @@ module Intern : sig
     val create : unit -> 'w t
     val intern : 'w t -> string -> 'w Ident.t
     val find_exn : 'w t -> string -> 'w Ident.t
+    val next_id : 'w t -> 'w Id.t
 
     module Make_global (Witness : T) () : sig
       val intern : string -> Witness.t Ident.t
       val find_exn : string -> Witness.t Ident.t
+      val next_id : unit -> 'w Id.t
     end
   end
 

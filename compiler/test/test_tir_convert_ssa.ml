@@ -11,8 +11,9 @@ let check s =
   let func = Driver.compile_source_to_tir s |> Or_error.ok_exn in
   let placements = Tir.Convert_ssa.compute_phi_placements func in
   print_s [%message (placements : Tir.Temp.t list Label.Table.t)];
-  let func = Ae_tir_convert_ssa.convert func in
+  let func = Tir.Convert_ssa.convert func in
   print_s [%message (func : Tir.Func.t)];
+  Tir.Check_ssa.check func |> Or_error.ok_exn;
   ()
 ;;
 
@@ -33,12 +34,13 @@ let%expect_test "smoke" =
                 another = bl;
                 first += second;
               }
+              bool final = another;
               return first + second;
           }
       |};
   [%expect
     {|
-    (placements ((join@0 (second@4 first@3))))
+    (placements ((join@0 (another@7 second@4 first@3))))
     (func
      ((name main)
       (blocks
@@ -47,90 +49,96 @@ let%expect_test "smoke" =
           (data
            ((label join@0)
             (body
-             (((i (BlockParams (temps ((second@49 Int) (first@50 Int)))))
+             (((i
+                (Block_params
+                 (temps ((another@51 Bool) (second@52 Int) (first@53 Int)))))
                (index 0) (info ()))
-              ((i (Unary (dst lhs@51) (op (Copy Int)) (src first@50))) (index 2)
+              ((i (Unary (dst tmp@54) (op (Copy Bool)) (src another@51)))
+               (index 1) (info ()))
+              ((i (Unary (dst final@55) (op (Copy Bool)) (src tmp@54))) (index 2)
                (info ()))
-              ((i (Unary (dst rhs@52) (op (Copy Int)) (src second@49))) (index 4)
+              ((i (Unary (dst lhs@56) (op (Copy Int)) (src first@53))) (index 3)
                (info ()))
-              ((i (Bin (dst ret@53) (op Add) (src1 lhs@51) (src2 rhs@52)))
-               (index 6) (info ()))
-              ((i (Ret (src ret@53) (ty Int))) (index 8) (info ()))))))))
+              ((i (Unary (dst rhs@57) (op (Copy Int)) (src second@52))) (index 4)
+               (info ()))
+              ((i (Bin (dst ret@58) (op Add) (src1 lhs@56) (src2 rhs@57)))
+               (index 5) (info ()))
+              ((i (Ret (src ret@58) (ty Int))) (index 6) (info ()))))))))
         (1
          ((key then@1)
           (data
            ((label then@1)
             (body
-             (((i (BlockParams (temps ()))) (index 0) (info ()))
-              ((i (Unary (dst lhs@43) (op (Copy Int)) (src first@25))) (index 2)
+             (((i (Block_params (temps ()))) (index 0) (info ()))
+              ((i (Unary (dst lhs@45) (op (Copy Int)) (src first@27))) (index 1)
                (info ()))
-              ((i (Unary (dst rhs@44) (op (Copy Int)) (src third@33))) (index 4)
+              ((i (Unary (dst rhs@46) (op (Copy Int)) (src third@35))) (index 2)
                (info ()))
-              ((i (Bin (dst first@45) (op Add) (src1 lhs@43) (src2 rhs@44)))
+              ((i (Bin (dst first@47) (op Add) (src1 lhs@45) (src2 rhs@46)))
+               (index 3) (info ()))
+              ((i (Unary (dst lhs@48) (op (Copy Int)) (src second@31))) (index 4)
+               (info ()))
+              ((i (Nullary (dst rhs@49) (op (IntConst 1)))) (index 5) (info ()))
+              ((i (Bin (dst second@50) (op Add) (src1 lhs@48) (src2 rhs@49)))
                (index 6) (info ()))
-              ((i (Unary (dst lhs@46) (op (Copy Int)) (src second@29))) (index 8)
-               (info ()))
-              ((i (Nullary (dst rhs@47) (op (IntConst 1)))) (index 10) (info ()))
-              ((i (Bin (dst second@48) (op Add) (src1 lhs@46) (src2 rhs@47)))
-               (index 12) (info ()))
-              ((i (Jump ((label join@0) (args (second@48 first@45))))) (index 14)
-               (info ()))))))))
+              ((i (Jump ((label join@0) (args (another@37 second@50 first@47)))))
+               (index 7) (info ()))))))))
         (2
          ((key else@2)
           (data
            ((label else@2)
             (body
-             (((i (BlockParams (temps ()))) (index 0) (info ()))
-              ((i (Unary (dst another@39) (op (Copy Bool)) (src bl@37)))
-               (index 2) (info ()))
-              ((i (Unary (dst lhs@40) (op (Copy Int)) (src first@25))) (index 4)
+             (((i (Block_params (temps ()))) (index 0) (info ()))
+              ((i (Unary (dst another@41) (op (Copy Bool)) (src bl@39)))
+               (index 1) (info ()))
+              ((i (Unary (dst lhs@42) (op (Copy Int)) (src first@27))) (index 2)
                (info ()))
-              ((i (Unary (dst rhs@41) (op (Copy Int)) (src second@29))) (index 6)
+              ((i (Unary (dst rhs@43) (op (Copy Int)) (src second@31))) (index 3)
                (info ()))
-              ((i (Bin (dst first@42) (op Add) (src1 lhs@40) (src2 rhs@41)))
-               (index 8) (info ()))
-              ((i (Jump ((label join@0) (args (second@29 first@42))))) (index 10)
-               (info ()))))))))
+              ((i (Bin (dst first@44) (op Add) (src1 lhs@42) (src2 rhs@43)))
+               (index 4) (info ()))
+              ((i (Jump ((label join@0) (args (another@41 second@31 first@44)))))
+               (index 5) (info ()))))))))
         (3
          ((key start@3)
           (data
            ((label start@3)
             (body
-             (((i (BlockParams (temps ()))) (index 0) (info ()))
-              ((i (BlockParams (temps ()))) (index 2) (info ()))
-              ((i (Nullary (dst tmp@24) (op (IntConst 1342)))) (index 4)
+             (((i (Block_params (temps ()))) (index 0) (info ()))
+              ((i (Block_params (temps ()))) (index 1) (info ()))
+              ((i (Nullary (dst tmp@26) (op (IntConst 1342)))) (index 2)
                (info ()))
-              ((i (Unary (dst first@25) (op (Copy Int)) (src tmp@24))) (index 6)
+              ((i (Unary (dst first@27) (op (Copy Int)) (src tmp@26))) (index 3)
                (info ()))
-              ((i (Nullary (dst tmp@26) (op (IntConst 0)))) (index 8) (info ()))
-              ((i (Unary (dst unused@27) (op (Copy Int)) (src tmp@26)))
+              ((i (Nullary (dst tmp@28) (op (IntConst 0)))) (index 4) (info ()))
+              ((i (Unary (dst unused@29) (op (Copy Int)) (src tmp@28))) (index 5)
+               (info ()))
+              ((i (Nullary (dst tmp@30) (op (IntConst 1234)))) (index 6)
+               (info ()))
+              ((i (Unary (dst second@31) (op (Copy Int)) (src tmp@30))) (index 7)
+               (info ()))
+              ((i (Unary (dst lhs@32) (op (Copy Int)) (src first@27))) (index 8)
+               (info ()))
+              ((i (Unary (dst rhs@33) (op (Copy Int)) (src second@31))) (index 9)
+               (info ()))
+              ((i (Bin (dst tmp@34) (op Add) (src1 lhs@32) (src2 rhs@33)))
                (index 10) (info ()))
-              ((i (Nullary (dst tmp@28) (op (IntConst 1234)))) (index 12)
+              ((i (Unary (dst third@35) (op (Copy Int)) (src tmp@34))) (index 11)
                (info ()))
-              ((i (Unary (dst second@29) (op (Copy Int)) (src tmp@28)))
-               (index 14) (info ()))
-              ((i (Unary (dst lhs@30) (op (Copy Int)) (src first@25))) (index 16)
+              ((i (Nullary (dst tmp@36) (op (BoolConst true)))) (index 12)
                (info ()))
-              ((i (Unary (dst rhs@31) (op (Copy Int)) (src second@29)))
-               (index 18) (info ()))
-              ((i (Bin (dst tmp@32) (op Add) (src1 lhs@30) (src2 rhs@31)))
-               (index 20) (info ()))
-              ((i (Unary (dst third@33) (op (Copy Int)) (src tmp@32))) (index 22)
+              ((i (Unary (dst another@37) (op (Copy Bool)) (src tmp@36)))
+               (index 13) (info ()))
+              ((i (Nullary (dst tmp@38) (op (BoolConst false)))) (index 14)
                (info ()))
-              ((i (Nullary (dst tmp@34) (op (BoolConst true)))) (index 24)
+              ((i (Unary (dst bl@39) (op (Copy Bool)) (src tmp@38))) (index 15)
                (info ()))
-              ((i (Unary (dst another@35) (op (Copy Bool)) (src tmp@34)))
-               (index 26) (info ()))
-              ((i (Nullary (dst tmp@36) (op (BoolConst false)))) (index 28)
-               (info ()))
-              ((i (Unary (dst bl@37) (op (Copy Bool)) (src tmp@36))) (index 30)
-               (info ()))
-              ((i (Unary (dst cond@38) (op (Copy Bool)) (src another@35)))
-               (index 32) (info ()))
+              ((i (Unary (dst cond@40) (op (Copy Bool)) (src another@37)))
+               (index 16) (info ()))
               ((i
-                (CondJump (cond cond@38) (b1 ((label then@1) (args ())))
+                (Cond_jump (cond cond@40) (b1 ((label then@1) (args ())))
                  (b2 ((label else@2) (args ())))))
-               (index 34) (info ()))))))))))
-      (start start@3) (next_temp_id 54) (next_label_id 4)))
+               (index 17) (info ()))))))))))
+      (start start@3) (next_temp_id 59) (next_label_id 4)))
     |}]
 ;;

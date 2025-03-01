@@ -8,5 +8,4 @@ module Syntax = struct
   let ( let@: ) f x = f ~f:x
   let ( @> ) = Fold.( @> )
   let ( & ) = Functional_map.( & )
-  let for_ = Iter.for_
 end

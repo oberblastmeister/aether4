@@ -3,4 +3,4 @@ type t =
   | Word
   | Dword
   | Qword
-[@@deriving sexp_of]
+[@@deriving sexp_of, equal, compare]

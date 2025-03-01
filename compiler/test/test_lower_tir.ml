@@ -36,7 +36,7 @@ let%expect_test "smoke" =
          (data
           ((label join@0)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Unary (dst ret@0) (op (Copy Int)) (src first@1))) (index 1)
               (info ()))
              ((i (Ret (src ret@0) (ty Int))) (index 2) (info ()))))))))
@@ -45,7 +45,7 @@ let%expect_test "smoke" =
          (data
           ((label then@1)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Unary (dst lhs@4) (op (Copy Int)) (src first@1))) (index 1)
               (info ()))
              ((i (Unary (dst rhs@5) (op (Copy Int)) (src third@6))) (index 2)
@@ -58,7 +58,7 @@ let%expect_test "smoke" =
          (data
           ((label else@2)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Unary (dst another@3) (op (Copy Bool)) (src bl@7))) (index 1)
               (info ()))
              ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))))))))
@@ -67,8 +67,8 @@ let%expect_test "smoke" =
          (data
           ((label start@3)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
-             ((i (BlockParams (temps ()))) (index 1) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
+             ((i (Block_params (temps ()))) (index 1) (info ()))
              ((i (Nullary (dst tmp@15) (op (IntConst 1342)))) (index 2)
               (info ()))
              ((i (Unary (dst first@1) (op (Copy Int)) (src tmp@15))) (index 3)
@@ -96,7 +96,7 @@ let%expect_test "smoke" =
              ((i (Unary (dst cond@2) (op (Copy Bool)) (src another@3)))
               (index 14) (info ()))
              ((i
-               (CondJump (cond cond@2) (b1 ((label then@1) (args ())))
+               (Cond_jump (cond cond@2) (b1 ((label then@1) (args ())))
                 (b2 ((label else@2) (args ())))))
               (index 15) (info ()))))))))))
      (start start@3) (next_temp_id 16) (next_label_id 4))
@@ -127,7 +127,7 @@ let%expect_test "while" =
          (data
           ((label join@0)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Unary (dst ret@0) (op (Copy Int)) (src third@1))) (index 1)
               (info ()))
              ((i (Ret (src ret@0) (ty Int))) (index 2) (info ()))))))))
@@ -136,7 +136,7 @@ let%expect_test "while" =
          (data
           ((label then@1)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Nullary (dst first@4) (op (IntConst 1)))) (index 1) (info ()))
              ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))))))))
        (2
@@ -144,7 +144,7 @@ let%expect_test "while" =
          (data
           ((label else@2)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
              ((i (Nullary (dst another@3) (op (BoolConst false)))) (index 1)
               (info ()))
              ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))))))))
@@ -153,8 +153,8 @@ let%expect_test "while" =
          (data
           ((label start@3)
            (body
-            (((i (BlockParams (temps ()))) (index 0) (info ()))
-             ((i (BlockParams (temps ()))) (index 1) (info ()))
+            (((i (Block_params (temps ()))) (index 0) (info ()))
+             ((i (Block_params (temps ()))) (index 1) (info ()))
              ((i (Nullary (dst tmp@11) (op (IntConst 1342)))) (index 2)
               (info ()))
              ((i (Unary (dst first@4) (op (Copy Int)) (src tmp@11))) (index 3)
@@ -178,7 +178,7 @@ let%expect_test "while" =
              ((i (Unary (dst cond@2) (op (Copy Bool)) (src another@3)))
               (index 12) (info ()))
              ((i
-               (CondJump (cond cond@2) (b1 ((label then@1) (args ())))
+               (Cond_jump (cond cond@2) (b1 ((label then@1) (args ())))
                 (b2 ((label else@2) (args ())))))
               (index 13) (info ()))))))))))
      (start start@3) (next_temp_id 12) (next_label_id 4))

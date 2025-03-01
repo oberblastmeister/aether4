@@ -47,20 +47,20 @@ let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
 
 let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
   match instr.i with
-  | BlockParams { temps } ->
+  | Block_params { temps } ->
     empty
-    +> [ Abs_x86.Instr.BlockMov
+    +> [ Abs_x86.Instr.Block_params
            { temps = List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty) }
        ]
   | Nop -> empty +> [ Abs_x86.Instr.Nop ]
   | Jump b ->
     let b = lower_block_call st b in
     empty +> Abs_x86.Instr.[ Jump b ]
-  | CondJump { cond; b1; b2 } ->
+  | Cond_jump { cond; b1; b2 } ->
     let cond = get_vreg st cond in
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
-    empty +> Abs_x86.Instr.[ CondJump { cond; b1; b2 } ]
+    empty +> Abs_x86.Instr.[ Cond_jump { cond; b1; b2 } ]
   | IntConst { dst; const } when Option.is_some (Int32.of_int64 const) ->
     let dst = get_operand st dst in
     empty

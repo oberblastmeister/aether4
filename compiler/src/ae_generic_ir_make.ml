@@ -12,11 +12,16 @@ end
 
 module Make_ir (Arg : Arg) = struct
   module Arg = Arg
+
+  (* very important! *)
+  (* the open Arg must be after the module alias *)
   open Arg
   module Temp = Temp_entity.Ident
 
   module Instr_ext = struct
-    let jumps_labels i = Instr.jumps i |> (Option.map & List.map) ~f:(fun b -> b.label)
+    let jumps_labels i =
+      Instr.get_jumps i |> (Option.map & List.map) ~f:(fun b -> b.label)
+    ;;
   end
 
   module Instr' = struct
@@ -33,7 +38,9 @@ module Make_ir (Arg : Arg) = struct
 
     include T
 
+    let instr t = t.i
     let map t ~f = { t with i = f t.i }
+    let create ?info i index = { i; index; info }
     let create_unindexed ?info i = { i; index = -1; info }
     let invalid_nop = { i = Instr.nop; index = -1; info = None }
 
@@ -71,9 +78,16 @@ module Make_ir (Arg : Arg) = struct
       Arrayp.find_mapi t.body ~f:(fun i _ ->
         let i = len - i - 1 in
         let x = t.body.@(i) in
-        Option.map (Instr.jumps x.i) ~f:(Fn.const x))
-      |> Option.value_or_thunk ~default:(fun () ->
-        raise_s [%message "Could not find jump instruction in block" (t : t)])
+        Option.map (Instr.get_jumps x.i) ~f:(Fn.const x))
+      |> Option.value_exn
+           ~error:(Error.create "Could not find jump instruction in block" t sexp_of_t)
+    ;;
+
+    let find_block_params t =
+      Arrayp.find t.body ~f:(fun instr -> Instr.is_block_params instr.i)
+      |> Option.value_exn
+           ~error:
+             (Error.create "Could not find block params instruction in block" t sexp_of_t)
     ;;
 
     module Table = Entity.Table.Make (T)
@@ -141,6 +155,11 @@ module Make_ir (Arg : Arg) = struct
         (Option.value_or_thunk graph ~default:(fun () -> bi_graph t))
     ;;
 
+    let compute_dom_tree ?graph t =
+      let idoms = compute_idoms ?graph t in
+      Dominators.Tree.of_immediate idoms
+    ;;
+
     let iter_blocks t = t.blocks |> Ident.Map.iter
   end
 
@@ -148,29 +167,44 @@ module Make_ir (Arg : Arg) = struct
     type t =
       | Insert of Instr'.t
       | Remove of Instr'.t
+      | Replace of Instr'.t
     [@@deriving sexp_of]
 
     let insert i = Insert i
     let remove i = Remove i
+    let replace i = Replace i
 
     let apply ?no_sort edit (block : Block.t) =
-      let inserts, removes =
-        List.partition_map
+      let inserts, removes, replaces =
+        List.partition3_map
           ~f:(function
-            | Insert x -> First x
-            | Remove x -> Second x)
+            | Insert x -> `Fst x
+            | Remove x -> `Snd x
+            | Replace x -> `Trd x)
           edit
       in
       let inserts = List.map ~f:(fun i -> i.index, i) inserts in
-      let body = Arrayp.to_array block.body in
-      List.iter removes ~f:(fun i -> Array.set body i.index Instr'.invalid_nop);
-      let body = Ae_array_utils.apply_inserts ?no_sort Instr'.invalid_nop inserts body in
-      let res =
-        Array.filter_mapi body ~f:(fun index instr ->
-          if Instr.is_nop instr.i then None else Some { instr with index })
+      let instrs = Arrayp.to_array block.body in
+      List.iter removes ~f:(fun i -> Array.set instrs i.index Instr'.invalid_nop);
+      List.iter replaces ~f:(fun i -> Array.set instrs i.index i);
+      let instrs =
+        Ae_array_utils.apply_inserts ?no_sort Instr'.invalid_nop inserts instrs
       in
-      let res = Arrayp.of_array res in
-      { block with body = res }
+      let instrs =
+        if List.is_empty removes
+        then instrs
+        else Array.filter instrs ~f:(fun instr -> not (Instr.is_nop instr.i))
+      in
+      if (not (List.is_empty removes)) || not (List.is_empty inserts)
+      then begin
+        let index = ref 0 in
+        Array.map_inplace instrs ~f:(fun instr ->
+          let instr = { instr with index = !index } in
+          incr index;
+          instr)
+      end;
+      let instrs = Arrayp.of_array instrs in
+      { block with body = instrs }
     ;;
   end
 
@@ -194,15 +228,21 @@ module Make_ir (Arg : Arg) = struct
     ;;
 
     let add_replace t label instr =
-      add_remove t label instr;
-      add_insert t label instr;
+      Ident.Table.add_multi t ~key:label ~data:(Edit.replace instr);
       ()
     ;;
 
     let apply_blocks ?no_sort t blocks =
-      Ident.Map.map blocks ~f:(fun block ->
-        let edit = Ident.Table.find_multi t block.Block.label |> List.rev in
-        Edit.apply ?no_sort edit block)
+      Ident.Table.iteri t
+      |> Iter.fold ~init:blocks ~f:(fun blocks (label, edits) ->
+        let edits = List.rev edits in
+        let block =
+          Ident.Map.find blocks label
+          |> Option.value_or_thunk ~default:(fun () ->
+            Block.create label (Arrayp.of_list []))
+        in
+        let block = Edit.apply ?no_sort edits block in
+        Ident.Map.set blocks ~key:label ~data:block)
     ;;
   end
 
@@ -212,13 +252,16 @@ module Make_ir (Arg : Arg) = struct
       include Instr_ext
     end
 
+    module Ty = Ty
     module Instr' = Instr'
     module Block = Block
     module Adj_map = Adj_map
     module Adj_table = Adj_table
     module Func = Func
     module Edit = Edit
+    module Multi_edit = Multi_edit
     module Temp_entity = Arg.Temp_entity
     module Temp = Temp_entity.Ident
+    module Block_call = Block_call
   end
 end

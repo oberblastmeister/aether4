@@ -5,6 +5,7 @@ module Label := Label_entity.Ident
 
 module Make (Ir : Ir) : sig
   open Ir
+  open Ir.Arg
   module Temp_entity := Ir.Arg
   module Temp := Ir.Arg.Temp_entity.Ident
 
@@ -16,7 +17,12 @@ module Make (Ir : Ir) : sig
     type t = Temp.Set.t Label.Table.t [@@deriving sexp_of]
   end
 
-  val compute_def_blocks : Func.t -> Label.t list Temp.Table.t
-  val compute_non_ssa_live_list : pred_table:Adj_table.t -> Func.t -> Live_list.t * Live_list.t
+  val compute_def_blocks : Func.t -> Label.t list Temp.Table.t * Ty.t Temp.Table.t
+
+  val compute_non_ssa_live_list
+    :  pred_table:Adj_table.t
+    -> Func.t
+    -> Live_list.t * Live_list.t
+
   val compute_non_ssa : pred_table:Adj_table.t -> Func.t -> Live_set.t * Live_set.t
 end

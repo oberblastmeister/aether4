@@ -55,9 +55,9 @@ let prologue stack_size =
 
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
-  | BlockMov _ -> empty
+  | Block_params _ -> empty
   | Nop -> empty
-  | Jump _ | CondJump _ -> todol [%here]
+  | Jump _ | Cond_jump _ -> todol [%here]
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in

@@ -12,13 +12,6 @@ module Make (Ir : Ir) = struct
   open Ir.Std
 
   open struct
-    module Temp = Ir.Arg.Temp_entity.Ident
-  end
-
-  open Ir
-  open Ir.Arg
-
-  open struct
     let is_on_top table ~equal ~key ~data =
       Ident.Table.find_multi table key |> List.hd |> Option.equal equal (Some data)
     ;;
@@ -36,10 +29,11 @@ module Make (Ir : Ir) = struct
     let module Table = Ident.Table in
     let open Table.Syntax in
     let defs : Label.t list Temp.Table.t = Table.create () in
+    let defs_to_ty : Ty.t Temp.Table.t = Table.create () in
     let upward_exposed = Table.create () in
     begin
-      let@ block = for_ @@ Func.iter_blocks func in
-      let@ instr = for_ @@ Block.iter_fwd block in
+      let@: block = Func.iter_blocks func in
+      let@: instr = Block.iter_fwd block in
       let no_definition_yet temp =
         not (is_on_top defs ~equal:Label.equal ~key:temp ~data:block.label)
       in
@@ -48,21 +42,28 @@ module Make (Ir : Ir) = struct
       in
       if Option.is_some compute_upward_exposed
       then begin
-        let@ use = for_ @@ Instr.iter_uses instr.i in
+        let@: use = Instr.iter_uses instr.i in
         if no_definition_yet use && didn't_add_upward_exposed_yet use
         then begin
           Table.add_multi upward_exposed ~key:use ~data:block.label
         end
       end;
       begin
-        let@ def = for_ @@ Instr.iter_defs instr.i in
+        let@: def, ty = Instr.iter_defs_with_ty instr.i in
+        if not (Table.mem defs_to_ty def)
+        then begin
+          defs_to_ty.!(def) <- ty
+        end
+        else begin
+          assert (Ty.equal defs_to_ty.!(def) ty)
+        end;
         if no_definition_yet def
         then begin
           Table.add_multi defs ~key:def ~data:block.label
         end
       end
     end;
-    defs, upward_exposed
+    defs, defs_to_ty, upward_exposed
   ;;
 
   let compute_defs_and_upward_exposed func =
@@ -70,15 +71,15 @@ module Make (Ir : Ir) = struct
   ;;
 
   let compute_def_blocks func =
-    let defs, _ = compute_defs_and_upward_exposed_maybe func in
-    defs
+    let defs, def_to_ty, _ = compute_defs_and_upward_exposed_maybe func in
+    defs, def_to_ty
   ;;
 
   let compute_non_ssa_live_list ~(pred_table : Adj_table.t) func =
     let module Table = Ident.Table in
     let open Table.Syntax in
     let block_mark : _ Label.Table.t = Table.create () in
-    let defs_table, upward_exposed_table = compute_defs_and_upward_exposed func in
+    let defs_table, _, upward_exposed_table = compute_defs_and_upward_exposed func in
     let live_in : _ Label.Table.t = Table.create () in
     let live_out : _ Label.Table.t = Table.create () in
     let rec up_and_mark (label : Label.t) (temp : Temp.t) =
@@ -104,19 +105,19 @@ module Make (Ir : Ir) = struct
       then ()
       else begin
         Table.add_multi live_in ~key:label ~data:temp;
-        let@ pred = for_ @@ List.iter pred_table.!(label) in
+        let@: pred = List.iter pred_table.!(label) in
         up_and_mark pred temp
       end
     in
     begin
-      let@ temp, defs = for_ @@ Table.iteri defs_table in
+      let@: temp, defs = Table.iteri defs_table in
       let upward_exposed = Table.find_multi upward_exposed_table temp in
       begin
-        let@ def_in = for_ @@ List.iter defs in
+        let@: def_in = List.iter defs in
         block_mark.!(def_in) <- temp
       end;
       begin
-        let@ label = for_ @@ List.iter upward_exposed in
+        let@: label = List.iter upward_exposed in
         if
           let not_propagated_yet =
             not (is_on_top live_in ~equal:Temp.equal ~key:label ~data:temp)
@@ -125,7 +126,7 @@ module Make (Ir : Ir) = struct
         then begin
           Table.add_multi live_in ~key:label ~data:temp;
           begin
-            let@ pred = for_ @@ List.iter pred_table.!(label) in
+            let@: pred = List.iter pred_table.!(label) in
             up_and_mark pred temp
           end
         end

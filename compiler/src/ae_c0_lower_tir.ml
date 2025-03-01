@@ -51,7 +51,7 @@ let add_block t label instrs =
   let block =
     Tir.Block.create
       label
-      (Bag.to_arrayp (empty +> [ ins (BlockParams { temps = [] }) ] ++ instrs))
+      (Bag.to_arrayp (empty +> [ ins (Block_params { temps = [] }) ] ++ instrs))
   in
   t.blocks <- block :: t.blocks;
   ()
@@ -81,7 +81,7 @@ and add_cond_jump st cont cond_temp body1 body2 =
     add_fresh_block ~name:"else" st (body2 (empty +> [ ins (Jump (bc join_label)) ]))
   in
   empty
-  +> [ ins (CondJump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label }) ]
+  +> [ ins (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label }) ]
 
 and lower_stmt st cont (stmt : Ast.stmt) : instrs =
   match stmt with
@@ -114,7 +114,7 @@ and lower_stmt st cont (stmt : Ast.stmt) : instrs =
       st
       loop_label
       (cond
-       +> [ ins (CondJump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label }) ]
+       +> [ ins (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label }) ]
       );
     empty +> [ ins (Jump (bc loop_label)) ]
 
@@ -145,7 +145,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
 let rec lower_program st (program : Ast.program) : Tir.Func.t =
   let name = program.name in
   let start_instrs =
-    empty +> [ ins (BlockParams { temps = [] }) ] ++ lower_block st empty program.block
+    empty +> [ ins (Block_params { temps = [] }) ] ++ lower_block st empty program.block
   in
   let start_label = add_fresh_block ~name:"start" st start_instrs in
   let next_temp_id = Id_gen.next st.temp_gen in

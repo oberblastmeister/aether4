@@ -28,7 +28,7 @@ module Ty = struct
   type t =
     | Int
     | Bool
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, equal, compare]
 end
 
 module Unary_op = struct
@@ -46,7 +46,7 @@ module Block_call = Ae_block_call.Make (Temp_entity)
 
 module Instr = struct
   type t =
-    | BlockParams of { temps : (Temp.t * Ty.t) list }
+    | Block_params of { temps : (Temp.t * Ty.t) list }
     | Nop
     | Bin of
         { dst : Temp.t
@@ -64,7 +64,7 @@ module Instr = struct
         ; op : Nullary_op.t
         }
     | Jump of Block_call.t
-    | CondJump of
+    | Cond_jump of
         { cond : Temp.t
         ; b1 : Block_call.t
         ; b2 : Block_call.t
@@ -73,7 +73,7 @@ module Instr = struct
         { src : Temp.t
         ; ty : Ty.t
         }
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, variants]
 
   let nop = Nop
 
@@ -84,7 +84,7 @@ module Instr = struct
 
   let iter_uses (instr : t) ~f =
     match instr with
-    | BlockParams { temps = _ } | Nop -> ()
+    | Block_params { temps = _ } | Nop -> ()
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;
@@ -96,7 +96,7 @@ module Instr = struct
     | Jump b ->
       Block_call.iter_uses b ~f;
       ()
-    | CondJump { cond; b1; b2 } ->
+    | Cond_jump { cond; b1; b2 } ->
       f cond;
       Block_call.iter_uses b1 ~f;
       Block_call.iter_uses b2 ~f;
@@ -108,7 +108,7 @@ module Instr = struct
 
   let iter_defs (instr : t) ~f =
     match instr with
-    | BlockParams { temps } -> List.iter temps ~f:(fun (temp, _) -> f temp)
+    | Block_params { temps } -> List.iter temps ~f:(fun (temp, _) -> f temp)
     | Nop -> ()
     | Bin { dst; op = _; src1 = _; src2 = _ } ->
       f dst;
@@ -119,28 +119,47 @@ module Instr = struct
     | Nullary { dst; op = _ } ->
       f dst;
       ()
-    | Jump _ | CondJump _ | Ret _ -> ()
+    | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 
-  let jumps (instr : t) =
+  let iter_defs_with_ty (instr : t) ~f =
     match instr with
-    | Nop | BlockParams _ | Bin _ | Unary _ | Nullary _ -> None
+    | Block_params { temps } -> List.iter temps ~f
+    | Nop -> ()
+    | Bin { dst; op = Add | Sub | Mul | Div | Mod; src1 = _; src2 = _ } ->
+      f (dst, Int);
+      ()
+    | Unary { dst; op; src = _ } ->
+      (match op with
+       | Copy ty -> f (dst, ty));
+      ()
+    | Nullary { dst; op } ->
+      (match op with
+       | IntConst _ -> f (dst, Int)
+       | BoolConst _ -> f (dst, Bool));
+      ()
+    | Jump _ | Cond_jump _ | Ret _ -> ()
+  ;;
+
+  let get_jumps (instr : t) =
+    match instr with
+    | Nop | Block_params _ | Bin _ | Unary _ | Nullary _ -> None
     | Ret _ -> Some []
     | Jump b -> Some [ b ]
-    | CondJump { cond = _; b1; b2 } -> Some [ b1; b2 ]
+    | Cond_jump { cond = _; b1; b2 } -> Some [ b1; b2 ]
   ;;
 
   let map_block_calls (instr : t) ~f =
     match instr with
     | Jump b -> Jump (f b)
-    | CondJump { cond; b1; b2 } -> CondJump { cond; b1 = f b1; b2 = f b2 }
+    | Cond_jump { cond; b1; b2 } -> Cond_jump { cond; b1 = f b1; b2 = f b2 }
     | _ -> instr
   ;;
 
   let map_uses (instr : t) ~f =
     match instr with
     | Nop -> Nop
-    | BlockParams _ -> instr
+    | Block_params _ -> instr
     | Bin p ->
       let src1 = f p.src1 in
       let src2 = f p.src2 in
@@ -152,11 +171,11 @@ module Instr = struct
     | Jump j ->
       let j = Block_call.map_uses j ~f in
       Jump j
-    | CondJump { cond; b1; b2 } ->
+    | Cond_jump { cond; b1; b2 } ->
       let cond = f cond in
       let b1 = Block_call.map_uses b1 ~f in
       let b2 = Block_call.map_uses b2 ~f in
-      CondJump { cond; b1; b2 }
+      Cond_jump { cond; b1; b2 }
     | Ret p ->
       let src = f p.src in
       Ret { p with src }
@@ -164,20 +183,22 @@ module Instr = struct
 
   let map_defs (instr : t) ~f =
     match instr with
-    | BlockParams p ->
-      BlockParams { p with temps = (List.map & Tuple2.map_fst) p.temps ~f }
+    | Block_params p ->
+      Block_params { p with temps = (List.map & Tuple2.map_fst) p.temps ~f }
     | Nop -> Nop
     | Bin p -> Bin { p with dst = f p.dst }
     | Unary p -> Unary { p with dst = f p.dst }
     | Nullary p -> Nullary { p with dst = f p.dst }
     | Jump _ -> instr
-    | CondJump _ -> instr
+    | Cond_jump _ -> instr
     | Ret _ -> instr
   ;;
 end
 
-module Ir = Generic_ir.Make_ir (struct
+include Generic_ir.Make_all (struct
+    module Block_call = Block_call
     module Instr = Instr
+    module Ty = Ty
 
     module Func_data = struct
       type t = unit [@@deriving sexp_of]
@@ -187,4 +208,3 @@ module Ir = Generic_ir.Make_ir (struct
   end)
 
 include Ir
-module Liveness = Generic_ir.Liveness.Make (Ir)

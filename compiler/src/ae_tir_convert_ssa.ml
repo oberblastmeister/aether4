@@ -1,5 +1,5 @@
 open Std
-module Tir = Ae_tir_types
+open Ae_tir_types
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
 module Entity_graph_utils = Ae_entity_graph_utils
@@ -15,13 +15,12 @@ end
 
 let compute_phi_placements func =
   let module Table = Entity.Ident.Table in
-  let open Table.Syntax in
-  let succ_table = Tir.Func.succ_table func in
-  let pred_table = Tir.Func.pred_table_of_succ succ_table in
-  let def_blocks = Tir.Liveness.compute_def_blocks func in
-  let live_in, _live_out = Tir.Liveness.compute_non_ssa ~pred_table func in
+  let succ_table = Func.succ_table func in
+  let pred_table = Func.pred_table_of_succ succ_table in
+  let def_blocks, _def_to_ty = Liveness.compute_def_blocks func in
+  let live_in, _live_out = Liveness.compute_non_ssa ~pred_table func in
   let graph = Entity_graph_utils.bi_graph_of_adj_table ~succ_table ~pred_table in
-  let idoms = Tir.Func.compute_idoms ~graph func in
+  let idoms = Func.compute_idoms ~graph func in
   let dom_front = Dominators.Frontier.compute idoms graph in
   let label_to_phis = Table.create () in
   begin
@@ -36,7 +35,7 @@ let compute_phi_placements func =
         |> Option.value ~default:Ident.Set.empty
         |> Fn.flip Ident.Set.mem def)
     in
-    if not (is_on_top label_to_phis ~equal:Tir.Temp.equal ~key:def_frontier ~data:def)
+    if not (is_on_top label_to_phis ~equal:Temp.equal ~key:def_frontier ~data:def)
     then begin
       Table.add_multi label_to_phis ~key:def_frontier ~data:def;
       (* We are adding a phi to this block, *)
@@ -49,15 +48,16 @@ let compute_phi_placements func =
   label_to_phis
 ;;
 
-let convert (func : Tir.Func.t) =
+let convert (func : Func.t) =
   let module Table = Entity.Ident.Table in
   let open Table.Syntax in
-  let idoms = Tir.Func.compute_idoms func in
+  let idoms = Func.compute_idoms func in
   let dom_tree = Dominators.Tree.of_immediate idoms in
+  let _, def_to_ty = Liveness.compute_def_blocks func in
   let block_to_phis = compute_phi_placements func in
   let temp_gen = Id_gen.of_id func.next_temp_id in
-  let multi_edit = Tir.Multi_edit.create () in
-  let rec rename_block rename_temp_map (block : Tir.Block.t) =
+  let multi_edit = Multi_edit.create () in
+  let rec rename_block rename_temp_map (block : Block.t) =
     let rename_temp_map = ref rename_temp_map in
     let find_renamed_temp temp =
       Ident.Map.find !rename_temp_map temp
@@ -66,33 +66,33 @@ let convert (func : Tir.Func.t) =
              (Error.create
                 "Temporary was not initialized on all code paths"
                 temp
-                [%sexp_of: Tir.Temp.t])
+                [%sexp_of: Temp.t])
     in
     begin
-      let@: instr = Tir.Block.iter_fwd block in
+      let@: instr = Block.iter_fwd block in
       let instr =
-        let@: instr = Tir.Instr'.map instr in
+        let@: instr = Instr'.map instr in
         let instr =
           match instr with
-          | BlockParams { temps } ->
+          | Block_params { temps } ->
             let phis = Table.find_multi block_to_phis block.label in
             (* TODO: make sure the definition has the proper type using a type map *)
-            let temps = temps @ List.map phis ~f:(fun temp -> temp, Tir.Ty.Int) in
-            Tir.Instr.BlockParams { temps }
+            let temps = temps @ List.map phis ~f:(fun temp -> temp, def_to_ty.!(temp)) in
+            Instr.Block_params { temps }
           | _ -> instr
         in
         let instr =
-          let@: temp = Tir.Instr.map_uses instr in
+          let@: temp = Instr.map_uses instr in
           find_renamed_temp temp
         in
         let instr =
-          let@: temp = Tir.Instr.map_defs instr in
+          let@: temp = Instr.map_defs instr in
           let new_temp = Ident.freshen temp_gen temp in
           rename_temp_map := Ident.Map.set !rename_temp_map ~key:temp ~data:new_temp;
           new_temp
         in
         let instr =
-          let@: block_call = Tir.Instr.map_block_calls instr in
+          let@: block_call = Instr.map_block_calls instr in
           let new_args =
             Table.find_multi block_to_phis block_call.label
             |> List.map ~f:find_renamed_temp
@@ -101,7 +101,7 @@ let convert (func : Tir.Func.t) =
         in
         instr
       in
-      Tir.Multi_edit.add_replace multi_edit block.label instr
+      Multi_edit.add_replace multi_edit block.label instr
     end;
     let rename_temp_map = !rename_temp_map in
     begin
@@ -109,9 +109,9 @@ let convert (func : Tir.Func.t) =
       rename_block rename_temp_map (Ident.Map.find_exn func.blocks label)
     end
   in
-  rename_block Ident.Map.empty (Tir.Func.start_block func);
+  rename_block Ident.Map.empty (Func.start_block func);
   { func with
-    blocks = Tir.Multi_edit.apply_blocks ~no_sort:() multi_edit func.blocks
+    blocks = Multi_edit.apply_blocks ~no_sort:() multi_edit func.blocks
   ; next_temp_id = Id_gen.next temp_gen
   }
 ;;

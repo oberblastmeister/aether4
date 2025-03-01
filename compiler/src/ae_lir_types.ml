@@ -26,7 +26,7 @@ module Ty = struct
   type t =
     | I64
     | I1
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, equal, compare]
 end
 
 module Unary_op = struct
@@ -37,7 +37,7 @@ module Block_call = Ae_block_call.Make (Temp_entity)
 
 module Instr = struct
   type t =
-    | BlockParams of { temps : (Temp.t * Ty.t) list }
+    | Block_params of { temps : (Temp.t * Ty.t) list }
     | Nop
     | IntConst of
         { dst : Temp.t
@@ -56,7 +56,7 @@ module Instr = struct
         ; src : Temp.t
         }
     | Jump of Block_call.t
-    | CondJump of
+    | Cond_jump of
         { cond : Temp.t
         ; b1 : Block_call.t
         ; b2 : Block_call.t
@@ -65,7 +65,7 @@ module Instr = struct
         { src : Temp.t
         ; ty : Ty.t
         }
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, variants]
 
   let nop = Nop
 
@@ -76,13 +76,17 @@ module Instr = struct
 
   let iter_uses _ = todol [%here]
   let iter_defs _ = todol [%here]
-  let jumps _ = todol [%here]
+  let iter_defs_with_ty _ = todol [%here]
+  let get_jumps _ = todol [%here]
   let map_uses _ = todol [%here]
   let map_defs _ = todol [%here]
+  let map_block_calls _ = todol [%here]
 end
 
 module Ir = Generic_ir.Make_ir (struct
+    module Block_call = Block_call
     module Instr = Instr
+    module Ty = Ty
 
     module Func_data = struct
       type t = unit [@@deriving sexp_of]

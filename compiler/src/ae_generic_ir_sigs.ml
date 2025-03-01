@@ -13,19 +13,33 @@ module type Arg = sig
   module Temp_entity : Entity.S
   module Temp := Temp_entity.Ident
 
+  module Ty : sig
+    type t [@@deriving sexp_of, equal, compare]
+  end
+
+  module Block_call : Ae_block_call.Make_S(Temp_entity).S
+
   module Instr : sig
     type t [@@deriving sexp_of]
 
     val nop : t
     val is_nop : t -> bool
+    val block_params_val : t -> [> `temps of (Temp.t * Ty.t) list ] option
+    val is_block_params : t -> bool
+    val block_params : temps:(Temp.t * Ty.t) list -> t
+    val jump : Block_call.t -> t
+    val jump_val : t -> Block_call.t option
+    val is_jump : t -> bool
     val iter_uses : t -> Temp.t Iter.t
     val iter_defs : t -> Temp.t Iter.t
+    val iter_defs_with_ty : t -> (Temp.t * Ty.t) Iter.t
     val map_uses : t -> f:(Temp.t -> Temp.t) -> t
     val map_defs : t -> f:(Temp.t -> Temp.t) -> t
+    val map_block_calls : t -> f:(Block_call.t -> Block_call.t) -> t
 
     (* Is this a control flow instruction?
       If so give us the labels it jumps to *)
-    val jumps : t -> Block_call.Make(Temp_entity).t list option
+    val get_jumps : t -> Block_call.t list option
   end
 
   module Func_data : sig
@@ -51,7 +65,9 @@ module type Ir = sig
       }
     [@@deriving sexp_of]
 
+    val instr : t -> Instr.t
     val map : t -> f:(Instr.t -> Instr.t) -> t
+    val create : ?info:Info.t -> Instr.t -> int -> t
     val create_unindexed : ?info:Info.t -> Instr.t -> t
 
     module Table : Entity.Table.S with type 'w Key.t = t
@@ -70,6 +86,7 @@ module type Ir = sig
     val iter_fwd : t -> Instr'.t Iter.t
     val iter_bwd : t -> Instr'.t Iter.t
     val find_jump : t -> Instr'.t
+    val find_block_params : t -> Instr'.t
     val create : Label.t -> (Instr'.t, [> read ]) Arrayp.t -> t
     val create_id : Label.t -> Instr'.t iarray -> t
 
@@ -102,6 +119,7 @@ module type Ir = sig
     val pred_table_of_succ : Adj_table.t -> Adj_table.t
     val succ_table : t -> Label.t list Label.Table.t
     val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Immediate.t
+    val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
   end
 
   module Edit : sig
@@ -134,13 +152,20 @@ module type Ir = sig
       end
     end
 
+    module Ty = Ty
     module Instr' = Instr'
     module Block = Block
     module Adj_map = Adj_map
     module Adj_table = Adj_table
     module Func = Func
     module Edit = Edit
-    module Temp_entity = Arg.Temp_entity
+    module Multi_edit = Multi_edit
+    module Temp_entity = Temp_entity
     module Temp = Temp_entity.Ident
+    module Block_call = Block_call
   end
+end
+
+module Make_ir_S (Arg : Arg) = struct
+  module type S = Ir with module Arg = Arg
 end
