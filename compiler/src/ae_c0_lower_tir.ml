@@ -128,8 +128,8 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
 
 and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
-  | IntConst const -> empty +> [ ins (Nullary { dst; op = IntConst const }) ]
-  | BoolConst const -> empty +> [ ins (Nullary { dst; op = BoolConst const }) ]
+  | Int_const const -> empty +> [ ins (Nullary { dst; op = Int_const const }) ]
+  | Bool_const const -> empty +> [ ins (Nullary { dst; op = Bool_const const }) ]
   | Bin { lhs; op; rhs; ty = _ } ->
     let src1 = fresh_temp ~name:"lhs" st in
     let src2 = fresh_temp ~name:"rhs" st in

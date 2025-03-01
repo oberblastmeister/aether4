@@ -78,14 +78,14 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
   | Nullary { dst; op } ->
     let dst = get_temp st dst in
     (match op with
-     | IntConst const -> empty +> [ ins (IntConst { dst; const; ty = I1 }) ]
-     | BoolConst const ->
+     | Int_const const -> empty +> [ ins (Int_const { dst; const; ty = I1 }) ]
+     | Bool_const const ->
        let const =
          match const with
          | true -> 1L
          | false -> 0L
        in
-       empty +> [ ins (IntConst { dst; const; ty = I64 }) ])
+       empty +> [ ins (Int_const { dst; const; ty = I64 }) ])
   | Unary { dst; op; src } ->
     let dst = get_temp st dst in
     let src = get_temp st src in

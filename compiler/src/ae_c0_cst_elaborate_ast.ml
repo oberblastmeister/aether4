@@ -77,11 +77,11 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     let expr =
       match op with
       | Eq -> expr
-      | AddEq -> bin_expr Add
-      | SubEq -> bin_expr Sub
-      | MulEq -> bin_expr Mul
-      | DivEq -> bin_expr Div
-      | ModEq -> bin_expr Mod
+      | Add_eq -> bin_expr Add
+      | Sub_eq -> bin_expr Sub
+      | Mul_eq -> bin_expr Mul
+      | Div_eq -> bin_expr Div
+      | Mod_eq -> bin_expr Mod
     in
     (empty +> Ast.[ Assign { lvalue; expr } ]), st
   | Return expr ->
@@ -111,18 +111,18 @@ and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
 
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
-  | IntConst i ->
+  | Int_const i ->
     Z.to_int64 i
     |> Option.value_or_thunk ~default:(fun () ->
       throw_s [%message "Int did not fit in 64 bits" (i : Z.t)])
-    |> IntConst
-  | BoolConst b -> BoolConst b
+    |> Int_const
+  | Bool_const b -> Bool_const b
   | Var var ->
     let var = elab_var st var in
     Var { var; ty = None }
   | Neg expr ->
     let expr = elab_expr st expr in
-    Bin { lhs = IntConst 0L; op = Sub; rhs = expr; ty = None }
+    Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
   | Bin { lhs; op; rhs } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in

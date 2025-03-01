@@ -18,8 +18,8 @@ let%expect_test "smoke" =
   let blocks =
     [ ( lab "start"
       , [ ins (Block_params { temps = [] })
-        ; ins (Nullary { dst = temp "const_bool"; op = BoolConst true })
-        ; ins (Nullary { dst = temp "const_int"; op = IntConst 1234L })
+        ; ins (Nullary { dst = temp "const_bool"; op = Bool_const true })
+        ; ins (Nullary { dst = temp "const_int"; op = Int_const 1234L })
         ; ins
             (Cond_jump
                { cond = temp "const_bool"
@@ -84,9 +84,9 @@ let%expect_test "smoke" =
            ((label start@2)
             (body
              (((i (Block_params (temps ()))) (index 0) (info ()))
-              ((i (Nullary (dst const_bool@4) (op (BoolConst true)))) (index 1)
+              ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
                (info ()))
-              ((i (Nullary (dst const_int@3) (op (IntConst 1234)))) (index 2)
+              ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
                (info ()))
               ((i
                 (Cond_jump (cond const_bool@4) (b1 ((label loop@3) (args ())))

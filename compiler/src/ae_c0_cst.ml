@@ -47,16 +47,16 @@ and lvalue = string [@@deriving sexp_of]
 
 and assign_op =
   | Eq
-  | AddEq
-  | SubEq
-  | MulEq
-  | DivEq
-  | ModEq
+  | Add_eq
+  | Sub_eq
+  | Mul_eq
+  | Div_eq
+  | Mod_eq
 [@@deriving sexp_of]
 
 and expr =
-  | IntConst of Z.t
-  | BoolConst of bool
+  | Int_const of Z.t
+  | Bool_const of bool
   | Var of string
   | Neg of expr
   | Bin of

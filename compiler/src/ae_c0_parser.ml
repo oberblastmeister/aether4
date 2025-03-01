@@ -155,12 +155,12 @@ and parse_assign env : Cst.assign =
   { lvalue; op; expr }
 
 and parse_assign_op env : Cst.assign_op =
-  (Cst.MulEq
+  (Cst.Mul_eq
    <$ Parser.expect_eq StarEq
-   <|> (Cst.AddEq <$ Parser.expect_eq PlusEq)
-   <|> (Cst.SubEq <$ Parser.expect_eq DashEq)
-   <|> (Cst.ModEq <$ Parser.expect_eq PercentEq)
-   <|> (Cst.DivEq <$ Parser.expect_eq SlashEq)
+   <|> (Cst.Add_eq <$ Parser.expect_eq PlusEq)
+   <|> (Cst.Sub_eq <$ Parser.expect_eq DashEq)
+   <|> (Cst.Mod_eq <$ Parser.expect_eq PercentEq)
+   <|> (Cst.Div_eq <$ Parser.expect_eq SlashEq)
    <|> (Cst.Eq <$ Parser.expect_eq Eq))
     env
 
@@ -226,10 +226,10 @@ and parse_unary_expr env : Cst.expr =
     env
 
 and parse_atom env : Cst.expr =
-  ((fun d -> Cst.IntConst d)
+  ((fun d -> Cst.Int_const d)
    <$> parse_num
-   <|> (Parser.expect_eq True $> Cst.BoolConst true)
-   <|> (Parser.expect_eq False $> Cst.BoolConst false)
+   <|> (Parser.expect_eq True $> Cst.Bool_const true)
+   <|> (Parser.expect_eq False $> Cst.Bool_const false)
    <|> ((fun v -> Cst.Var v) <$> parse_ident))
     env
 

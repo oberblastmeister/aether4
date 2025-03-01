@@ -29,15 +29,15 @@ let%expect_test "smoke" =
      ((ty Int) (name main)
       (block
        ((Declare (ty Int) (var tmp@1))
-        (Assign ((lvalue tmp@1) (expr (IntConst 0))))
+        (Assign ((lvalue tmp@1) (expr (Int_const 0))))
         (Declare (ty Int) (var first@0))
         (Assign ((lvalue first@0) (expr (Var (var tmp@1) (ty ())))))
         (Declare (ty Int) (var tmp@3))
-        (Assign ((lvalue tmp@3) (expr (IntConst 1234))))
+        (Assign ((lvalue tmp@3) (expr (Int_const 1234))))
         (Declare (ty Int) (var second@2))
         (Assign ((lvalue second@2) (expr (Var (var tmp@3) (ty ())))))
         (Declare (ty Bool) (var tmp@5))
-        (Assign ((lvalue tmp@5) (expr (BoolConst true))))
+        (Assign ((lvalue tmp@5) (expr (Bool_const true))))
         (Declare (ty Bool) (var third@4))
         (Assign ((lvalue third@4) (expr (Var (var tmp@5) (ty ())))))
         (Return

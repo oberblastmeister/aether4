@@ -61,11 +61,11 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
     empty +> Abs_x86.Instr.[ Cond_jump { cond; b1; b2 } ]
-  | IntConst { dst; const } when Option.is_some (Int32.of_int64 const) ->
+  | Int_const { dst; const } when Option.is_some (Int32.of_int64 const) ->
     let dst = get_operand st dst in
     empty
     +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword } ]
-  | IntConst { dst; const } ->
+  | Int_const { dst; const } ->
     let dst = get_operand st dst in
     empty +> Abs_x86.Instr.[ MovAbs { dst; src = const } ]
   | Unary { dst; op; src } ->

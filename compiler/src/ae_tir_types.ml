@@ -37,8 +37,8 @@ end
 
 module Nullary_op = struct
   type t =
-    | IntConst of int64
-    | BoolConst of bool
+    | Int_const of int64
+    | Bool_const of bool
   [@@deriving sexp_of]
 end
 
@@ -135,8 +135,8 @@ module Instr = struct
       ()
     | Nullary { dst; op } ->
       (match op with
-       | IntConst _ -> f (dst, Int)
-       | BoolConst _ -> f (dst, Bool));
+       | Int_const _ -> f (dst, Int)
+       | Bool_const _ -> f (dst, Bool));
       ()
     | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;

@@ -39,7 +39,7 @@ module Instr = struct
   type t =
     | Block_params of { temps : (Temp.t * Ty.t) list }
     | Nop
-    | IntConst of
+    | Int_const of
         { dst : Temp.t
         ; const : int64
         ; ty : Ty.t
