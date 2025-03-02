@@ -63,43 +63,35 @@ let%expect_test "smoke" =
     (func
      ((name main)
       (blocks
-       ((0
-         ((key loop@0)
-          (data
-           ((label loop@0)
-            (body
-             (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool)))))
-               (index 0) (info ()))
-              ((i (Jump ((label loop@0) (args ())))) (index 1) (info ()))))))))
-        (1
-         ((key done@1)
-          (data
-           ((label done@1)
-            (body
-             (((i (Block_params (temps ((ret@2 Int))))) (index 0) (info ()))
-              ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))))
-        (2
-         ((key start@2)
-          (data
-           ((label start@2)
-            (body
-             (((i (Block_params (temps ()))) (index 0) (info ()))
-              ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
-               (info ()))
-              ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
-               (info ()))
-              ((i
-                (Cond_jump (cond const_bool@4) (b1 ((label loop@3) (args ())))
-                 (b2 ((label done@1) (args (const_int@3))))))
-               (index 3) (info ()))))))))
-        (3
-         ((key loop@3)
-          (data
-           ((label loop@3)
-            (body
-             (((i (Block_params (temps ()))) (index 0) (info ()))
-              ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
-               (index 1) (info ()))))))))))
+       ((loop@0
+         ((label loop@0)
+          (body
+           (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool))))) (index 0)
+             (info ()))
+            ((i (Jump ((label loop@0) (args ())))) (index 1) (info ()))))))
+        (done@1
+         ((label done@1)
+          (body
+           (((i (Block_params (temps ((ret@2 Int))))) (index 0) (info ()))
+            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
+        (start@2
+         ((label start@2)
+          (body
+           (((i (Block_params (temps ()))) (index 0) (info ()))
+            ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
+             (info ()))
+            ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
+             (info ()))
+            ((i
+              (Cond_jump (cond const_bool@4) (b1 ((label loop@3) (args ())))
+               (b2 ((label done@1) (args (const_int@3))))))
+             (index 3) (info ()))))))
+        (loop@3
+         ((label loop@3)
+          (body
+           (((i (Block_params (temps ()))) (index 0) (info ()))
+            ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
+             (index 1) (info ()))))))))
       (start start@2) (next_temp_id 5) (next_label_id 4)))
     |}]
 ;;

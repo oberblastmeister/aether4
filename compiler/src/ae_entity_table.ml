@@ -99,8 +99,8 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     let length t = t.length
     let max_index t = t.max_index
 
-    let sexp_of_t t f g =
-      Option_array.sexp_of_t (Tuple2.sexp_of_t (Key.sexp_of_t f) g) t.a
+    let sexp_of_t _ g t =
+      Option_array.sexp_of_t (Tuple2.sexp_of_t (Key.sexp_of_t sexp_of_opaque) g) t.a
     ;;
 
     let create ?(size = 0) () = { a = OA.create ~len:size; length = 0; max_index = -1 }

@@ -51,7 +51,7 @@ module type S = sig
 end
 
 module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = struct
-  type 'w t = 'w Key.t Int.Map.t [@@deriving sexp_of]
+  type 'w t = 'w Key.t Int.Map.t
 
   module Key = Key
 
@@ -63,6 +63,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let mem t k = Map.mem t (Key.to_int k)
   let iter t ~f = Map.iter t ~f
   let of_list_exn l = List.map ~f:(fun k -> Key.to_int k, k) l |> Int.Map.of_alist_exn
+  let sexp_of_t _ t = to_list t |> List.sexp_of_t (Key.sexp_of_t sexp_of_opaque)
 
   module Make (Witness : Ae_entity_witness.S) = struct
     open struct
