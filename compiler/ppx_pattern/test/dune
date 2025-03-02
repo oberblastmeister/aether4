@@ -10,4 +10,4 @@
 (cram
  ; Tells dune to depend on the standalone exe,
  ; so it will be part of the cram target
- (deps standalone)) 
+ (deps ./standalone.exe)) 

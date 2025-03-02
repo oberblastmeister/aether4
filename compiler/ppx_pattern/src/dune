@@ -3,5 +3,4 @@
  (kind ppx_rewriter)
  (libraries base ppxlib)
  (preprocess
-   (pps ppxlib.metaquot))
-)
+  (pps ppxlib.metaquot)))
