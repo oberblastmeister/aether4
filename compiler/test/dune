@@ -8,6 +8,7 @@
   (pps
    ppx_jane
    ppx_inline_test
+   ppx_pattern
    -log-source-position))
  (libraries
   aether4

@@ -1,22 +1,76 @@
 open Std
 
-let%bench "stack push" =
+let orders = [ 1000; 10_000; 100_000; 1_000_000 ]
+
+let%bench ("stack push" [@indexed len = orders]) =
   let stack = Stack.create () in
-  for i = 0 to 1_000_000 do
+  for i = 0 to len do
     Stack.push stack i
   done;
   let res = Stack.to_list stack in
   res
 ;;
 
-let%bench "list push" =
+let%bench ("stack push pop" [@indexed len = orders]) =
+  let stack = Stack.create () in
+  let res = ref 0 in
+  for i = 0 to 1000 do
+    for i = 0 to len / 10 do
+      Stack.push stack i
+    done;
+    for _ = 0 to len / 10 do
+      res := !res + Stack.pop_exn stack
+    done
+  done;
+  !res
+;;
+
+let%bench ("stdlib stack push pop" [@indexed len = orders]) =
+  let stack = Stdlib.Stack.create () in
+  let res = ref 0 in
+  for i = 0 to 1000 do
+    for i = 0 to len / 10 do
+      Stdlib.Stack.push i stack
+    done;
+    for _ = 0 to len / 10 do
+      res := !res + Stdlib.Stack.pop stack
+    done
+  done;
+  !res
+;;
+
+let%bench ("stack push no convert" [@indexed len = orders]) =
+  let stack = Stack.create () in
+  for i = 0 to len do
+    Stack.push stack i
+  done;
+  stack
+;;
+
+let%bench ("stdlib stack push" [@indexed len = orders]) =
+  let stack = Stdlib.Stack.create () in
+  for i = 0 to len do
+    Stdlib.Stack.push i stack
+  done;
+  let res = List.rev @@ Stdlib.Stack.fold (fun acc x -> x :: acc) [] stack in
+  res
+;;
+
+let%bench ("list push replace" [@indexed len = orders]) =
   let list = ref [] in
-  for i = 0 to 1_000_000 do
-    list := i :: !list
+  for i = 0 to len do
+    Ref.replace list @@ List.cons i
   done;
   List.rev !list
 ;;
 
+let%bench ("list push" [@indexed len = orders]) =
+  let list = ref [] in
+  for i = 0 to len do
+    list := i :: !list
+  done;
+  List.rev !list
+;;
 (* This shows some sample uses of BENCH. Build and look at ppx_bench_sample.ml.pp in this
    directory to see how the preprocessor works. *)
 

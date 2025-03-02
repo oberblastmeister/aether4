@@ -1,0 +1,13 @@
+(executable
+  (name standalone)
+ 
+ ; tell dune to only use "standalone.ml" to generate the executable
+ ; this isn't strictly necessary, but it's a good practice to keep only the modules
+ ; that are part of the target and avoid "Multiple rules generated for ..."
+ (modules standalone)
+ (libraries ppxlib ppx_pattern))
+ 
+(cram
+ ; Tells dune to depend on the standalone exe,
+ ; so it will be part of the cram target
+ (deps standalone)) 
