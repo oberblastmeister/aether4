@@ -17,7 +17,7 @@ let compute_phi_placements func =
   let module Table = Entity.Ident.Table in
   let succ_table = Func.succ_table func in
   let pred_table = Func.pred_table_of_succ succ_table in
-  let def_blocks, _def_to_ty = Liveness.compute_def_blocks func in
+  let def_blocks = Liveness.compute_def_blocks_non_ssa func in
   let live_in, _live_out = Liveness.compute_non_ssa ~pred_table func in
   let graph = Entity_graph_utils.bi_graph_of_adj_table ~succ_table ~pred_table in
   let idoms = Func.compute_idoms ~graph func in
@@ -53,7 +53,7 @@ let convert (func : Func.t) =
   let open Table.Syntax in
   let idoms = Func.compute_idoms func in
   let dom_tree = Dominators.Tree.of_immediate idoms in
-  let _, def_to_ty = Liveness.compute_def_blocks func in
+  let def_to_ty = Liveness.compute_ty_table func in
   let block_to_phis = compute_phi_placements func in
   let temp_gen = Id_gen.of_id func.next_temp_id in
   let multi_edit = Multi_edit.create () in

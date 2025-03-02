@@ -37,14 +37,14 @@ struct
     let rec move_one i =
       (* self moves don't do anything, so skip them *)
       if not (in_same_reg par_move.(i).src par_move.(i).dst)
-      then (
+      then begin
         (* if we see Being_moved in the children then we found the unique cycle *)
         status.(i) <- Being_moved;
         (* visit children *)
         for j = 0 to n - 1 do
           (* found a child move whose source will be overwritten by the current move's destination *)
           if in_same_reg par_move.(j).src par_move.(i).dst
-          then (
+          then begin
             match status.(j) with
             | To_move -> move_one j
             | Being_moved ->
@@ -55,13 +55,13 @@ struct
                    { Move.dst = scratch; src = par_move.(j).src; ty = par_move.(j).ty };
               (* j now should move from the temp because we are about to overwrite j below *)
               par_move.(j) <- { (par_move.(j)) with src = scratch }
-            | Moved -> ());
-          ()
+            | Moved -> ()
+          end
         done;
         (* move ourselves after all the children have been moved *)
         Ref.replace sequential @@ List.cons par_move.(i);
-        status.(i) <- Moved;
-        ())
+        status.(i) <- Moved
+      end
     in
     (* make sure all components are traversed *)
     for i = 0 to n - 1 do

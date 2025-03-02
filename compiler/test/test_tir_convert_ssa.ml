@@ -1,5 +1,6 @@
 open Std
 open Aether4
+module Trace = Ae_trace
 module Driver = Ae_driver
 module C0 = Ae_c0_std
 module Entity_graph_utils = Ae_entity_graph_utils
@@ -12,8 +13,13 @@ let check s =
   let placements = Tir.Convert_ssa.compute_phi_placements func in
   print_s [%message (placements : Tir.Temp.t list Label.Table.t)];
   let func = Tir.Convert_ssa.convert func in
-  print_s [%message (func : Tir.Func.t)];
   Tir.Check_ssa.check func |> Or_error.ok_exn;
+  let live_in, live_out =
+    Tir.Liveness.compute ~pred_table:(Tir.Func.pred_table func) func
+  in
+  print_s
+    [%message (live_in : Tir.Liveness.Live_set.t) (live_out : Tir.Liveness.Live_set.t)];
+  print_s [%message (func : Tir.Func.t)];
   ()
 ;;
 
@@ -41,6 +47,12 @@ let%expect_test "smoke" =
   [%expect
     {|
     (placements ((join@0 (another@7 second@4 first@3))))
+    ((live_in
+      ((then@1 ((27 first@27) (31 second@31) (35 third@35) (37 another@37)))
+       (else@2 ((27 first@27) (31 second@31) (39 bl@39)))))
+     (live_out
+      ((start@3
+        ((27 first@27) (31 second@31) (35 third@35) (37 another@37) (39 bl@39))))))
     (func
      ((name main)
       (blocks

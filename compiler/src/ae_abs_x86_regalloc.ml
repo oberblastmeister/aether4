@@ -43,12 +43,14 @@ let build_graph (func : Func.t) =
       Graph.add graph precolored_name;
       precolored_name)
   in
-  Block.iter_bwd block ~f:(fun instr ->
+  begin
+    let@: instr = Block.iter_bwd block in
     let defs = Use_defs.Instr.iter_defs instr.i |> Iter.to_list in
     (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
-    List.iter defs ~f:(fun def ->
-      Graph.add graph def;
-      ());
+    begin
+      let@: def = List.iter defs in
+      Graph.add graph def
+    end;
     (* ensure that multiple defs interfere with each other *)
     iter_pairs defs ~f:(fun (def1, def2) -> Graph.add_edge graph def1 def2);
     let can_add_edge_to =
@@ -56,30 +58,33 @@ let build_graph (func : Func.t) =
       fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
     in
     (* add interference edges *)
-    Ident.Table.iter_keys live_out
-    |> Iter.filter ~f:can_add_edge_to
-    |> Iter.iter ~f:(fun live ->
+    begin
+      let@: live =
+        Ident.Table.iter_keys live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter
+      in
       List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
-      Use_defs.Instr.iter_mach_reg_defs instr.i ~f:(fun mach_reg ->
+      begin
+        let@: mach_reg = Use_defs.Instr.iter_mach_reg_defs instr.i in
         let precolored_name = find_precolored_name_or_add mach_reg in
-        Graph.add_edge graph precolored_name live;
-        ());
-      ());
+        Graph.add_edge graph precolored_name live
+      end
+    end;
     Ae_abs_x86_liveness.transfer live_out instr.i;
     (*
        for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
-      we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
+          we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
     *)
-    (match instr.i with
-     | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
-       let rax_name = find_precolored_name_or_add RAX in
-       let rdx_name = find_precolored_name_or_add RDX in
-       Ae_x86_address.iter_regs addr ~f:(fun vreg ->
-         Graph.add_edge graph rdx_name vreg;
-         Graph.add_edge graph rax_name vreg);
-       ()
-     | _ -> ());
-    ());
+    match instr.i with
+    | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
+      let rax_name = find_precolored_name_or_add RAX in
+      let rdx_name = find_precolored_name_or_add RDX in
+      begin
+        let@: vreg = Ae_x86_address.iter_regs addr in
+        Graph.add_edge graph rdx_name vreg;
+        Graph.add_edge graph rax_name vreg
+      end
+    | _ -> ()
+  end;
   graph, mach_reg_to_precolored_name, precolored_id_start, Id_gen.next next_temp_id
 ;;
 

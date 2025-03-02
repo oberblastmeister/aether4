@@ -4,8 +4,8 @@ module Iter = Functional_iter
 (* module Map = Functional_map *)
 
 module Syntax = struct
-  let ( let@ ) f x = f x
-  let ( let@: ) f x = f ~f:x
+  let[@inline] ( let@ ) f x = f x
+  let[@inline] ( let@: ) f x = f ~f:x
   let ( @> ) = Fold.( @> )
   let ( & ) = Functional_map.( & )
 end
