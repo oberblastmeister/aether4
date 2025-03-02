@@ -1,12 +1,5 @@
 open Std
-open Ae_generic_ir_sigs
-
-open struct
-  module Label_entity = Ae_label_entity
-  module Label = Label_entity.Ident
-  module Entity = Ae_entity_std
-  module Ident = Entity.Ident
-end
+open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
   open Ir.Std

@@ -1,13 +1,8 @@
 open Std
-open Ae_generic_ir_sigs
-module Label_entity := Ae_label_entity
-module Label := Label_entity.Ident
+open Ae_generic_ir_import
 
 module Make (Ir : Ir) : sig
-  open Ir
-  open Ir.Arg
-  module Temp_entity := Ir.Arg
-  module Temp := Ir.Arg.Temp_entity.Ident
+  open Ir.Std
 
   module Live_list : sig
     type t = Temp.t list Label.Table.t [@@deriving sexp_of]

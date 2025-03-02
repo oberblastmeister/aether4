@@ -81,6 +81,7 @@ module Instr = struct
   let map_uses _ = todol [%here]
   let map_defs _ = todol [%here]
   let map_block_calls _ = todol [%here]
+  let iter_block_calls _ = todol [%here]
 end
 
 module Ir = Generic_ir.Make_ir (struct

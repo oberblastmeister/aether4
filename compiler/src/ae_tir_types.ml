@@ -193,6 +193,8 @@ module Instr = struct
     | Cond_jump _ -> instr
     | Ret _ -> instr
   ;;
+
+  let iter_block_calls _ = todol [%here]
 end
 
 include Generic_ir.Make_all (struct

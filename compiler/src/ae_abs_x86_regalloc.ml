@@ -89,7 +89,9 @@ let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 let alloc_func stack_builder (func : Func.t) =
   let open Ident.Table.Syntax in
   let module Color = Regalloc.Color in
-  let graph, mach_reg_to_precolored_name, prev_next_temp_id, next_temp_id = build_graph func in
+  let graph, mach_reg_to_precolored_name, prev_next_temp_id, next_temp_id =
+    build_graph func
+  in
   let precolored_name_to_mach_reg =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)

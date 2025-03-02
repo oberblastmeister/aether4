@@ -119,6 +119,8 @@ module Make_ir (Arg : Arg) = struct
           [%message "invariant broken: start block did not exist" (func.start : Label.t)])
     ;;
 
+    let find_block_exn func label = Entity.Ident.Map.find_exn func.blocks label
+
     let succ_map func =
       func.blocks
       |> Entity.Ident.Map.map ~f:(fun b ->
@@ -219,8 +221,13 @@ module Make_ir (Arg : Arg) = struct
     ;;
 
     let add_edits t label edits =
-      Ident.Table.update t label ~f:(Option.value_map ~default:[] ~f:(List.append edits))
+      Ident.Table.update
+        t
+        label
+        ~f:(Option.value_map ~default:[] ~f:(List.append (List.rev edits)))
     ;;
+
+    let add_inserts t label inserts = add_edits t label @@ List.map inserts ~f:Edit.insert
 
     let add_remove t label instr =
       Ident.Table.add_multi t ~key:label ~data:(Edit.remove instr);

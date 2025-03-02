@@ -1,14 +1,5 @@
 open Std
-open Ae_generic_ir_sigs
-
-open struct
-  module Entity = Ae_entity_std
-  module Id_gen = Entity.Id_gen
-  module Dominators = Ae_dominators
-  module Ident = Entity.Ident
-  module Label = Ae_label_entity.Ident
-  module Block_call = Ae_block_call
-end
+open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
   open Ir.Std

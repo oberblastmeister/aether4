@@ -36,6 +36,7 @@ module type Arg = sig
     val map_uses : t -> f:(Temp.t -> Temp.t) -> t
     val map_defs : t -> f:(Temp.t -> Temp.t) -> t
     val map_block_calls : t -> f:(Block_call.t -> Block_call.t) -> t
+    val iter_block_calls : t -> Block_call.t Iter.t
 
     (* Is this a control flow instruction?
       If so give us the labels it jumps to *)
@@ -115,6 +116,7 @@ module type Ir = sig
     val start_block : t -> Block.t
     val succ_map : t -> Adj_map.t
     val iter_blocks : t -> Block.t Iter.t
+    val find_block_exn : t -> Label.t -> Block.t
     val pred_table : t -> Adj_table.t
     val pred_table_of_succ : Adj_table.t -> Adj_table.t
     val succ_table : t -> Label.t list Label.Table.t
@@ -135,6 +137,7 @@ module type Ir = sig
 
     val create : unit -> t
     val add_insert : t -> Label.t -> Instr'.t -> unit
+    val add_inserts : t -> Label.t -> Instr'.t list -> unit
     val add_remove : t -> Label.t -> Instr'.t -> unit
     val add_replace : t -> Label.t -> Instr'.t -> unit
     val add_edits : t -> Label.t -> Edit.t list -> unit
