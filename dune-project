@@ -26,6 +26,8 @@
   dune
   (core
    (= v0.17.1))
+  (core_bench
+   (= v0.17.0))
   (core_kernel
    (= v0.17.0))
   (core_unix

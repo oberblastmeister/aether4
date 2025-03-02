@@ -119,7 +119,8 @@ let%expect_test "while" =
       return third;
     }
   |};
-  [%expect {|
+  [%expect
+    {|
     ((name main)
      (blocks
       ((0

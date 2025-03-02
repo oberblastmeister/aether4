@@ -1,0 +1,4 @@
+(executables
+ (names main)
+ (modules main)
+ (libraries core_bench.inline_benchmarks bench))

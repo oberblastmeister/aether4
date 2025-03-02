@@ -93,7 +93,7 @@ module Instr = struct
   let iter_block_calls _ = todol [%here]
 end
 
-module Ir = Generic_ir.Make_ir (struct
+include Generic_ir.Make_all (struct
     module Block_call = Block_call
     module Instr = Instr
     module Temp_entity = Vreg_entity
