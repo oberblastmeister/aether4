@@ -3,8 +3,9 @@ module Stack_slot_entity = Ae_stack_slot_entity
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
 module Stack_slot = Stack_slot_entity.Ident
+module Size = Ae_x86_size
 
-type t = { table : int Stack_slot.Table.t }
+type t = { table : Size.t Stack_slot.Table.t }
 
 let create () =
   let table = Ident.Table.create () in

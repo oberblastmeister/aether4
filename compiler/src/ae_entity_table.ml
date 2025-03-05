@@ -10,6 +10,8 @@ module type S_phantom_without_make = sig
 
   val create : ?size:int -> unit -> ('w, 'v) t
   val find : ('w, 'v) t -> 'w Key.t -> 'v option
+  val find_int : ('w, 'v) t -> int -> 'v option
+  val find_int_exn : ('w, 'v) t -> int -> 'v
   val remove : ('w, 'v) t -> 'w Key.t -> unit
   val find_exn : ('w, 'v) t -> 'w Key.t -> 'v
   val find_or_add : ('w, 'v) t -> 'w Key.t -> default:(unit -> 'v) -> 'v
@@ -115,6 +117,8 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
       if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
     ;;
 
+    let find_int t i = if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
+
     let find_multi t k =
       match find t k with
       | None -> []
@@ -136,6 +140,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     ;;
 
     let key_not_found _t k = raise_s [%message "key not found" ~key:(k : _ Key.t)]
+    let int_not_found _t i = raise_s [%message "key not found" ~key:(i : int)]
 
     let clear t =
       Option_array.clear t.a;
@@ -150,6 +155,14 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
       then key_not_found t k
       else if OA.is_none t.a i
       then key_not_found t k
+      else snd @@ OA.get_some_exn t.a i
+    ;;
+
+    let find_int_exn t i =
+      if i >= size t
+      then int_not_found t i
+      else if OA.is_none t.a i
+      then int_not_found t i
       else snd @@ OA.get_some_exn t.a i
     ;;
 
@@ -274,3 +287,5 @@ module Make (Key : Key) : S with type 'w Key.t = Key.t = struct
 
   type nonrec 'a t = (Nothing.t, 'a) t
 end
+
+module Int_table = Make (Int)

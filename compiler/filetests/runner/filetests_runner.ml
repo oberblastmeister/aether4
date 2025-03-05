@@ -43,11 +43,14 @@ module Test = struct
         | CompileAndRun of
             { emit : Driver.Emit.t list [@sexp.list]
             ; status : Exit_status.t option [@sexp.option]
+            ; trace : bool [@sexp.bool]
             }
         | CompileFail of { emit : Driver.Emit.t list [@sexp.list] }
       [@@deriving sexp]
 
-      let get_emit (CompileAndRun { emit; status = _ } | CompileFail { emit }) = emit
+      let get_emit (CompileAndRun { emit; status = _; trace = _ } | CompileFail { emit }) =
+        emit
+      ;;
     end
 
     type t = Test of Kind.t [@@deriving sexp]
@@ -115,7 +118,8 @@ let run_test path =
   let%bind () =
     match res, test.options with
     | ( Ok (a_out_path, _changed)
-      , Test (CompileAndRun { emit = _; status = expected_status }) ) ->
+      , Test (CompileAndRun { trace; emit = _; status = expected_status }) ) ->
+      let@ () = Aether4.Ae_trace.with_trace trace in
       let pmgr = Stdenv.process_mgr env.env in
       let@ sw = Eio.Switch.run ~name:"proc" in
       let buf = Buffer.create 100 in

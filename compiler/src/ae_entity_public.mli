@@ -17,6 +17,11 @@ module Id : sig
   module Map : Map.S_phantom with type 'w Key.t = 'w t
   module Set : Set.S_phantom with type 'w Key.t = 'w t
 
+  val ( > ) : 'k t -> 'k t -> bool
+  val ( < ) : 'k t -> 'k t -> bool
+  val ( <= ) : 'k t -> 'k t -> bool
+  val ( >= ) : 'k t -> 'k t -> bool
+  val ( = ) : 'k t -> 'k t -> bool
   val add_table : 'a -> ('w, 'a) Table.t -> 'w t
 end
 

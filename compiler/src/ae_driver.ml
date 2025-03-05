@@ -87,7 +87,7 @@ let compile_source_to_asm ?(emit = []) source =
   let abs_x86 = Lir.Lower_abs_x86.lower lir in
   if mem emit Emit.Abs_asm then print_s [%sexp (abs_x86 : Abs_x86.Func.t)];
   let stack_builder = Stack_builder.create () in
-  let alloc = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
+  let alloc, abs_x86 = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
   let asm = Abs_x86.Lower_flat_x86.lower alloc abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
   if mem emit Emit.Asm then print_endline formatted_asm;

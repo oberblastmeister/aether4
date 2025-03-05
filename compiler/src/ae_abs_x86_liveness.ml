@@ -1,4 +1,4 @@
-open Std
+(* open Std
 open Ae_abs_x86_types
 module Use_defs = Ae_abs_x86_use_defs
 module Entity = Ae_entity_std
@@ -17,4 +17,4 @@ let transfer liveness instr =
     liveness.!(use) <- ();
     ());
   ()
-;;
+;; *)

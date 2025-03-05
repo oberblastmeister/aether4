@@ -28,9 +28,6 @@ module Graph = struct
   ;;
 end
 
-module Color_entity = Entity.Make ()
-module Color = Color_entity.Id
-
 let simplicial_elimination_order (graph : Graph.t) (precolored : Vreg.Set.t) ~f =
   let heap = Bounded_heap.create ~weight_bound:(Table.length graph) () in
   let id_to_name =
@@ -57,43 +54,40 @@ let simplicial_elimination_order (graph : Graph.t) (precolored : Vreg.Set.t) ~f 
 ;;
 
 (* precondition: colors should be sorted *)
-let find_gaps (colors : Color.t Array.t) : Color.t =
+let find_gaps (colors : int Array.t) : int =
   Array.iteri colors
   |> Iter.uncurry
-  |> Iter.map ~f:(fun (i, c) ->
-    if i = 0 then Id.unchecked_of_int (-1), c else colors.(i - 1), c)
+  |> Iter.map ~f:(fun (i, c) -> if i = 0 then -1, c else colors.(i - 1), c)
   |> (fun i ->
   if Array.is_empty colors
   then i
-  else Iter.snoc i (Array.last colors, Id.succ (Id.succ (Array.last colors))))
-  |> Iter.find_map ~f:(fun (c, c') ->
-    if Id.to_int (Id.succ c) < Id.to_int c' then Some (Id.succ c) else None)
-  |> Option.value ~default:(Id.unchecked_of_int 0)
+  else Iter.snoc i (Array.last colors, succ (succ (Array.last colors))))
+  |> Iter.find_map ~f:(fun (c, c') -> if succ c < c' then Some (succ c) else None)
+  |> Option.value ~default:0
 ;;
 
 let%expect_test _ =
-  let id i : Color.t = Id.unchecked_of_int i in
-  let check cs = print_s [%sexp (find_gaps cs : Color.t)] in
-  check [| id 0; id 1; id 1; id 2; id 4; id 5 |];
+  let check cs = print_s [%sexp (find_gaps cs : int)] in
+  check [| 0; 1; 1; 2; 4; 5 |];
   [%expect {| 3 |}];
-  check [| id 1; id 3; id 4 |];
+  check [| 1; 3; 4 |];
   [%expect {| 0 |}];
-  check [| id 0; id 1; id 2; id 3 |];
+  check [| 0; 1; 2; 3 |];
   [%expect {| 4 |}];
-  check [| id 0; id 1; id 5; id 6 |];
+  check [| 0; 1; 5; 6 |];
   [%expect {| 2 |}];
-  check [| id 0 |];
+  check [| 0 |];
   [%expect {| 1 |}];
   ()
 ;;
 
 let color_graph_with_ordering ordering (graph : Graph.t) (precolored : Vreg.Set.t) =
-  let vreg_to_color : Color.t Vreg.Table.t = Entity.Ident.Table.create () in
-  let max_color : Color.t ref = ref @@ Id.unchecked_of_int (-1) in
+  let vreg_to_color : int Vreg.Table.t = Entity.Ident.Table.create () in
+  let max_color : int ref = ref (-1) in
   (* color the precolored vregs *)
   (* each precolored vreg conflicts with all other precolored vregs *)
   Set.iter precolored ~f:(fun (vreg : Vreg.t) ->
-    max_color := Id.succ !max_color;
+    max_color := succ !max_color;
     Table.set vreg_to_color ~key:vreg ~data:!max_color;
     ());
   ordering
@@ -103,12 +97,10 @@ let color_graph_with_ordering ordering (graph : Graph.t) (precolored : Vreg.Set.
       |> Iter.filter_map ~f:(Table.find vreg_to_color)
       |> Iter.to_array
     in
-    Array.sort neighbor_colors ~compare:Color.compare;
+    Array.sort neighbor_colors ~compare;
     let lowest_not_in_neighbors = find_gaps neighbor_colors in
     vreg_to_color.!(vreg) <- lowest_not_in_neighbors;
-    max_color
-    := Id.unchecked_of_int
-         (max (Id.to_int !max_color) (Id.to_int lowest_not_in_neighbors));
+    max_color := max !max_color lowest_not_in_neighbors;
     ());
   vreg_to_color, !max_color
 ;;

@@ -10,6 +10,11 @@ let unchecked_of_int i = i
 let unchecked_coerce i = i
 let succ = succ
 let pred = pred
+let ( > ) = ( > )
+let ( < ) = ( < )
+let ( <= ) = ( <= )
+let ( >= ) = ( >= )
+let ( = ) = ( = )
 
 module type Intable = sig
   type t

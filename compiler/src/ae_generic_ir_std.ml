@@ -12,4 +12,5 @@ module Make_all (Arg : Sigs.Arg) = struct
   module Check_ssa = Check_ssa.Make (Ir)
   module Split_critical = Split_critical.Make (Ir)
   module Normalize_block_params = Normalize_block_params.Make (Ir)
+  (* module Destruct_ssa = Destruct_ssa.Make (Ir) *)
 end

@@ -194,7 +194,23 @@ module Instr = struct
     | Ret _ -> instr
   ;;
 
-  let iter_block_calls _ = todol [%here]
+  let iter_block_calls instr ~f =
+    match instr with
+    | Nop | Block_params _ | Bin _ | Unary _ | Nullary _ -> ()
+    | Ret _ -> ()
+    | Jump b ->
+      f b;
+      ()
+    | Cond_jump { cond = _; b1; b2 } ->
+      f b1;
+      f b2;
+      ()
+  ;;
+
+  let is_control_flow = function
+    | Jump _ | Cond_jump _ | Ret _ -> true
+    | _ -> false
+  ;;
 end
 
 include Generic_ir.Make_all (struct

@@ -13,7 +13,7 @@ module Make (Ir : Ir) = struct
     begin
       let@: block = Func.iter_blocks func in
       let jump_instr = Block.find_jump block in
-      let block_calls = Instr.get_jumps jump_instr.i |> Option.value_exn in
+      let block_calls = Instr.iter_block_calls jump_instr.i |> Iter.to_list in
       if List.length block_calls > 1
       then begin
         let jump_instr_ref = ref jump_instr in

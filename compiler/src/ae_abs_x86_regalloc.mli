@@ -3,7 +3,9 @@ module Stack_builder := Ae_stack_builder
 module Mach_reg := Ae_x86_mach_reg
 
 module Allocation : sig
-  type t = Alloc_reg.t Vreg.Table.t [@@deriving sexp_of]
+  type t
+
+  val find_exn : t -> Vreg.t -> Mach_reg.t
 end
 
-val alloc_func : Stack_builder.t -> Func.t -> Allocation.t
+val alloc_func : Stack_builder.t -> Func.t -> Allocation.t * Func.t

@@ -13,7 +13,7 @@ let check s =
   let lir = Tir.Lower_lir.lower tir in
   let abs_x86 = Lir.lower lir in
   let stack_builder = Stack_builder.create () in
-  let alloc = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
+  let alloc, abs_x86 = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
   let asm = Abs_x86.Lower_flat_x86.lower alloc abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
   print_endline formatted_asm;

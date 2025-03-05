@@ -17,20 +17,18 @@ type st =
   }
 
 let create_state allocation = { allocation; label_id = 0 }
-
-let get_vreg t vreg =
-  Ident.Table.find_exn t.allocation vreg
-  |> Abs_x86.Alloc_reg.inreg_val
+let get_vreg t vreg = Regalloc.Allocation.find_exn t.allocation vreg
+(* |> Abs_x86.Alloc_reg.inreg_val
   |> Option.value_or_thunk ~default:(fun () ->
     raise_s
       [%message
         "All spilled registers should have been fixed up with spill instructions"
-          (vreg : Abs_x86.Vreg.t)])
-;;
+          (vreg : Abs_x86.Vreg.t)]) *)
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
+  | Stack_slot _ -> todol [%here]
   | Reg vreg -> Reg (get_vreg st vreg)
   | Mem _ -> todol [%here]
 ;;
@@ -57,6 +55,12 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
   | Block_params _ -> empty
   | Nop -> empty
+  | Push { src } ->
+    let src = lower_operand st src in
+    empty +> Flat_x86.Instr.[ Push { src; size = Qword } ]
+  | Pop { dst } ->
+    let dst = lower_operand st dst in
+    empty +> Flat_x86.Instr.[ Pop { dst; size = Qword } ]
   | Jump _ | Cond_jump _ -> todol [%here]
   | Mov { src; dst; size } ->
     let src = lower_operand st src in

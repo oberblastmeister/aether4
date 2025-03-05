@@ -1,4 +1,4 @@
-open Std
+(* open Std
 module Abs_x86 = Ae_abs_x86_types
 open Abs_x86
 module Vreg = Abs_x86.Vreg
@@ -10,6 +10,7 @@ module Operand = struct
     | Reg _ -> ()
     | Imm _ -> ()
     | Mem _addr -> todol [%here]
+    | _ -> todol [%here]
   ;;
 
   let iter_any_regs (o : Abs_x86.Operand.t) ~f =
@@ -19,6 +20,7 @@ module Operand = struct
       ()
     | Imm _ -> ()
     | Mem _addr -> todol [%here]
+    | _ -> todol [%here]
   ;;
 
   let iter_reg_val (o : Abs_x86.Operand.t) ~f =
@@ -27,6 +29,7 @@ module Operand = struct
       f r;
       ()
     | Imm _ | Mem _ -> ()
+    | _ -> todol [%here]
   ;;
 end
 
@@ -81,4 +84,4 @@ module Instr = struct
     | Instr.Block_params _ | Jump _ | Cond_jump _ | Instr.Mov _ | Instr.MovAbs _ -> ()
     | Instr.Ret _ -> f Mach_reg.RAX
   ;;
-end
+end *)

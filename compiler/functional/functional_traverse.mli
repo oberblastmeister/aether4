@@ -3,3 +3,4 @@ type ('s, 'a) t' = ('s, 's, 'a, 'a) t
 
 val compose : ('t, 's, 'b, 'a) t -> ('v, 'u, 't, 's) t -> ('v, 'u, 'b, 'a) t
 val ( & ) : ('t, 's, 'b, 'a) t -> ('v, 'u, 't, 's) t -> ('v, 'u, 'b, 'a) t
+val filtered : ('s -> bool) -> ('s, 's) t'
