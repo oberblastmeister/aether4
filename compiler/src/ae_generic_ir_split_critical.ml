@@ -12,7 +12,7 @@ module Make (Ir : Ir) = struct
     let label_gen = Id_gen.of_id func.next_label_id in
     begin
       let@: block = Func.iter_blocks func in
-      let jump_instr = Block.find_jump block in
+      let jump_instr = Block.find_control block in
       let block_calls = Instr.iter_block_calls jump_instr.i |> Iter.to_list in
       if List.length block_calls > 1
       then begin

@@ -30,6 +30,7 @@ module type Arg = sig
     val jump : Block_call.t -> t
     val jump_val : t -> Block_call.t option
     val is_jump : t -> bool
+    val is_control : t -> bool
     val iter_uses : t -> Temp.t Iter.t
     val iter_defs : t -> Temp.t Iter.t
     val iter_defs_with_ty : t -> (Temp.t * Ty.t) Iter.t
@@ -37,10 +38,6 @@ module type Arg = sig
     val map_defs : t -> f:(Temp.t -> Temp.t) -> t
     val map_block_calls : t -> f:(Block_call.t -> Block_call.t) -> t
     val iter_block_calls : t -> Block_call.t Iter.t
-
-    (* Is this a control flow instruction?
-      If so give us the labels it jumps to *)
-    val get_jumps : t -> Block_call.t list option
   end
 
   module Func_data : sig
@@ -53,7 +50,8 @@ module type Ir = sig
   open Arg
 
   module Instr_ext : sig
-    val jumps_labels : Instr.t -> Label.t list option
+    val iter_labels : Instr.t -> Label.t Iter.t
+    val labels_list : Instr.t -> Label.t list
   end
 
   module Temp := Temp_entity.Ident
@@ -86,7 +84,7 @@ module type Ir = sig
     val instrs : t -> Instr'.t iarray
     val iter_fwd : t -> Instr'.t Iter.t
     val iter_bwd : t -> Instr'.t Iter.t
-    val find_jump : t -> Instr'.t
+    val find_control : t -> Instr'.t
     val find_block_params : t -> Instr'.t
     val create : Label.t -> (Instr'.t, [> read ]) Arrayp.t -> t
     val create_id : Label.t -> Instr'.t iarray -> t

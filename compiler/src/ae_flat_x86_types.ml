@@ -49,7 +49,7 @@ module Instr = struct
         { dst : Operand.t
         ; src : Address.t
         }
-    | MovAbs of
+    | Mov_abs of
         { dst : Operand.t
         ; src : int64
         }

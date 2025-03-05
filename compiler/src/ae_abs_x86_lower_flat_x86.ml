@@ -66,9 +66,9 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let src = lower_operand st src in
     let dst = lower_operand st dst in
     Flat_x86.Instr.(empty +> [ Mov { src; dst; size } ])
-  | MovAbs { dst; src } ->
+  | Mov_abs { dst; src } ->
     let dst = lower_operand st dst in
-    Flat_x86.Instr.(empty +> [ MovAbs { dst; src } ])
+    Flat_x86.Instr.(empty +> [ Mov_abs { dst; src } ])
   | Bin { dst; op; src1; src2 } ->
     let dst = lower_operand st dst in
     let src1 = lower_operand st src1 in

@@ -25,6 +25,17 @@ module Arrayp = struct
     ()
   ;;
 
+  let findi_rev t ~f =
+    let rec go i =
+      if i >= 0
+      then (
+        let x = Array.Permissioned.get t i in
+        if f i x then Some (i, x) else go (i - 1))
+      else None
+    in
+    go (Array.Permissioned.length t - 1)
+  ;;
+
   let unchecked_coerce
     : 'a. ('a, _) Array.Permissioned.t -> ('a, [< _ perms ]) Array.Permissioned.t
     =
@@ -109,5 +120,6 @@ module Z = struct
 end
 
 include Functional.Syntax
+
 let todo ?loc () = raise_s [%message "TODO" (loc : Source_code_position.t option)]
 let todol loc = raise_s [%message "TODO" (loc : Source_code_position.t)]

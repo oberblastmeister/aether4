@@ -196,7 +196,6 @@ module Instr = struct
 
   let iter_block_calls instr ~f =
     match instr with
-    | Nop | Block_params _ | Bin _ | Unary _ | Nullary _ -> ()
     | Ret _ -> ()
     | Jump b ->
       f b;
@@ -205,9 +204,10 @@ module Instr = struct
       f b1;
       f b2;
       ()
+    | _ -> ()
   ;;
 
-  let is_control_flow = function
+  let is_control = function
     | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;

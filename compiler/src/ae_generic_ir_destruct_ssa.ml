@@ -84,7 +84,7 @@ struct
     in
     begin
       let@: block = Func.iter_blocks func in
-      let jump_instr = Block.find_jump block in
+      let jump_instr = Block.find_control block in
       let jump_instr =
         let@: block_call = (Instr'.map & Instr.map_block_calls) jump_instr in
         let dst_block = Func.find_block_exn func block_call.label in

@@ -19,9 +19,8 @@ module Make_ir (Arg : Arg) = struct
   module Temp = Temp_entity.Ident
 
   module Instr_ext = struct
-    let jumps_labels i =
-      Instr.get_jumps i |> (Option.map & List.map) ~f:(fun b -> b.label)
-    ;;
+    let iter_labels i = Instr.iter_block_calls i |> Iter.map ~f:(fun bc -> bc.label)
+    let labels_list i = iter_labels i |> Iter.to_list
   end
 
   module Instr' = struct
@@ -73,14 +72,11 @@ module Make_ir (Arg : Arg) = struct
     let create_id label body = { label; body }
     let instrs t = t.body
 
-    let find_jump t =
-      let len = Arrayp.length t.body in
-      Arrayp.find_mapi t.body ~f:(fun i _ ->
-        let i = len - i - 1 in
-        let x = t.body.@(i) in
-        Option.map (Instr.get_jumps x.i) ~f:(Fn.const x))
+    let find_control t =
+      Arrayp.findi_rev t.body ~f:(fun _ x -> Instr.is_control x.i)
       |> Option.value_exn
            ~error:(Error.create "Could not find jump instruction in block" t sexp_of_t)
+      |> snd
     ;;
 
     let find_block_params t =
@@ -124,21 +120,16 @@ module Make_ir (Arg : Arg) = struct
     let succ_map func =
       func.blocks
       |> Entity.Ident.Map.map ~f:(fun b ->
-        let i = Block.find_jump b in
-        Instr_ext.jumps_labels i.i
-        |> Option.value_exn
-             ~error:(Error.create "should be a jump instruction" i Instr'.sexp_of_t))
+        let i = Block.find_control b in
+        Instr_ext.labels_list i.i)
     ;;
 
     let succ_list func =
       func.blocks
       |> Entity.Ident.Map.to_alist
       |> List.map ~f:(fun (lab, b) ->
-        let i = Block.find_jump b in
-        ( lab
-        , Instr_ext.jumps_labels i.i
-          |> Option.value_exn
-               ~error:(Error.create "should be a jump instruction" i Instr'.sexp_of_t) ))
+        let i = Block.find_control b in
+        lab, Instr_ext.labels_list i.i)
     ;;
 
     let succ_table func = succ_list func |> Entity.Ident.Table.of_list

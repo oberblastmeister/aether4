@@ -96,7 +96,7 @@ module Instr = struct
         ; src : Operand.t
         ; size : Size.t
         }
-    | MovAbs of
+    | Mov_abs of
         { dst : Operand.t
         ; src : int64
         }
@@ -143,7 +143,7 @@ module Instr = struct
       on_use src;
       on_def dst;
       ()
-    | MovAbs { dst; src = _ } ->
+    | Mov_abs { dst; src = _ } ->
       on_def dst;
       ()
     | Bin { dst; src1; op = _; src2 } ->
@@ -194,9 +194,9 @@ module Instr = struct
       let src = on_use src in
       let dst = on_def dst in
       Mov { dst; src; size }
-    | MovAbs { dst; src } ->
+    | Mov_abs { dst; src } ->
       let dst = on_def dst in
-      MovAbs { dst; src }
+      Mov_abs { dst; src }
     | Bin { dst; src1; op; src2 } ->
       let src1 = on_use src1 in
       let src2 = on_use src2 in
@@ -230,7 +230,7 @@ module Instr = struct
          f Mach_reg.RAX;
          f Mach_reg.RDX;
          ())
-    | Nop | Push _ | Pop _ | Block_params _ | Jump _ | Cond_jump _ | Mov _ | MovAbs _ ->
+    | Nop | Push _ | Pop _ | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ ->
       ()
     | Ret _ -> f Mach_reg.RAX
   ;;
@@ -259,13 +259,31 @@ module Instr = struct
       ~on_use:Fn.id
   ;;
 
-  let is_control_flow = function
+  let is_control = function
     | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
 
-  let map_block_calls _ = todol [%here]
-  let iter_block_calls _ = todol [%here]
+  let map_block_calls (instr : t) ~f =
+    match instr with
+    | Jump b -> Jump (f b)
+    | Cond_jump { cond; b1; b2 } -> Cond_jump { cond; b1 = f b1; b2 = f b2 }
+    | _ -> instr
+  ;;
+
+  let iter_block_calls instr ~f =
+    match instr with
+    | Ret _ -> ()
+    | Jump b ->
+      f b;
+      ()
+    | Cond_jump { cond = _; b1; b2 } ->
+      f b1;
+      f b2;
+      ()
+    | _ -> ()
+  ;;
+
   let move ~dst ~src ~ty:size = Mov { dst = Reg dst; src = Reg src; size }
 end
 

@@ -83,13 +83,13 @@ module Instr = struct
   let map_block_calls _ = todol [%here]
   let iter_block_calls _ = todol [%here]
 
-  let is_control_flow = function
+  let is_control = function
     | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
 end
 
-module Ir = Generic_ir.Make_ir (struct
+include Generic_ir.Make_all (struct
     module Block_call = Block_call
     module Instr = Instr
     module Ty = Ty
@@ -101,5 +101,4 @@ module Ir = Generic_ir.Make_ir (struct
     module Temp_entity = Temp_entity
   end)
 
-module Liveness = Generic_ir.Liveness.Make (Ir)
 include Ir

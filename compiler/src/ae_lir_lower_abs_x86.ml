@@ -67,7 +67,7 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
     +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword } ]
   | Int_const { dst; const; ty } ->
     let dst = get_operand st dst in
-    empty +> Abs_x86.Instr.[ MovAbs { dst; src = const } ]
+    empty +> Abs_x86.Instr.[ Mov_abs { dst; src = const } ]
   | Unary { dst; op; src } ->
     (match op with
      | Copy ty ->

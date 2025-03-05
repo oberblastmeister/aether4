@@ -70,7 +70,7 @@ let format_instr (instr : Instr.t) =
   | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
-  | MovAbs { dst; src } -> [%string "movabsq %{src#Int64}, %{op dst Size.Qword}"]
+  | Mov_abs { dst; src } -> [%string "movabsq %{src#Int64}, %{op dst Size.Qword}"]
   | Push { src; size } -> [%string "push%{suff size} %{op src size}"]
   | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
   | Lea _ -> todol [%here]

@@ -1,6 +1,5 @@
 open Std
 open Ae_abs_x86_types
-module Use_defs = Ae_abs_x86_use_defs
 module Entity = Ae_entity_std
 module Id = Entity.Id
 module Ident = Entity.Ident
@@ -115,7 +114,7 @@ let spill_instr
       stack_builder
       temp_gen
       spilled_color_to_slot
-      color_to_global_evicted (* just to make sure we don't create aoo many temporaries *)
+      color_to_global_evicted (* just to make sure we don't create too many temporaries *)
       coloring
       edit
       label
@@ -215,9 +214,11 @@ let spill_colors stack_builder spilled_colors coloring (func : Func.t) =
   let spilled_color_to_slot = Int_table.create () in
   begin
     let@: spilled_color = List.iter @@ Bitset.to_list spilled_colors in
-    Int_table.Syntax.(
-      spilled_color_to_slot.!(spilled_color)
-      <- Stack_builder.alloc
+    Int_table.set
+      spilled_color_to_slot
+      ~key:spilled_color
+      ~data:
+        (Stack_builder.alloc
            ~name:("spill" ^ Int.to_string spilled_color)
            stack_builder
            Qword)
@@ -275,9 +276,10 @@ let color_func_and_spill ~num_regs stack_builder (func : Func.t) =
     get_precolored_colors (precolored_id_start, precolored_id_end) coloring max_color
   in
   let spilled_colors = get_spilled_colors precolored_colors ~max_color ~num_regs in
-  (* let func =
+  let func = Split_critical.split func in
+  let func =
     Destruct_ssa.destruct ~in_same_reg:(fun t1 t2 -> coloring.!(t1) = coloring.!(t2)) func
-  in *)
+  in
   let func = spill_colors stack_builder spilled_colors coloring func in
   coloring, max_color, precolored_name_to_mach_reg, func
 ;;
