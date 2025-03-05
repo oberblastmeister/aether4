@@ -13,35 +13,18 @@ module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 open Ae_trace
 
-let iter_pairs xs ~f =
-  let rec go xs =
-    match xs with
-    | [] -> ()
-    | x :: xs ->
-      List.iter xs ~f:(fun y -> f (x, y));
-      go xs
-  in
-  go xs
-;;
-
-let build_graph (func : Func.t) =
-  let block = Func.start_block func in
-  let live_out = ref Ident.Set.empty in
-  let graph = Graph.create () in
-  let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
-  assert (not (Graph.mem graph (Ident.create "next_temp_id" func.next_temp_id)));
-  let precolored_id_start = func.next_temp_id in
-  let temp_gen = Id_gen.of_id func.next_temp_id in
-  let find_precolored_name_or_add mach_reg =
-    Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
-      let precolored_name =
-        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) temp_gen
-      in
-      Graph.add graph precolored_name;
-      precolored_name)
+let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
+  let iter_pairs xs ~f =
+    let rec go xs =
+      match xs with
+      | [] -> ()
+      | x :: xs ->
+        List.iter xs ~f:(fun y -> f (x, y));
+        go xs
+    in
+    go xs
   in
   begin
-    let@: instr = Block.iter_bwd block in
     let defs = Instr.iter_defs instr.i |> Iter.to_list in
     (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
     begin
@@ -57,30 +40,68 @@ let build_graph (func : Func.t) =
     (* add interference edges *)
     begin
       let@: live =
-        Ident.Set.iter !live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter
+        Ident.Set.iter live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter
       in
       List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
       begin
         let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-        let precolored_name = find_precolored_name_or_add mach_reg in
+        let precolored_name = get_precolored_name mach_reg in
         Graph.add_edge graph precolored_name live
       end
     end;
-    live_out := Liveness.backwards_transfer instr.i !live_out;
     (*
        for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
-       we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
+         we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
     *)
     match instr.i with
     | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
-      let rax_name = find_precolored_name_or_add RAX in
-      let rdx_name = find_precolored_name_or_add RDX in
+      let rax_name = get_precolored_name RAX in
+      let rdx_name = get_precolored_name RDX in
       begin
         let@: vreg = Ae_x86_address.iter_regs addr in
         Graph.add_edge graph rdx_name vreg;
         Graph.add_edge graph rax_name vreg
       end
     | _ -> ()
+  end;
+  Liveness.backwards_transfer instr.i live_out
+;;
+
+let build_graph_block ~get_precolored_name graph live_out block =
+  let live_out = ref live_out in
+  begin
+    let@: instr = Block.iter_bwd block in
+    live_out := build_graph_instr ~get_precolored_name graph !live_out instr
+  end
+;;
+
+let build_graph (func : Func.t) =
+  let open Ident.Table.Syntax in
+  let graph = Graph.create () in
+  let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
+  assert (not (Graph.mem graph (Ident.create "next_temp_id" func.next_temp_id)));
+  let precolored_id_start = func.next_temp_id in
+  let temp_gen = Id_gen.of_id func.next_temp_id in
+  let find_precolored_name_or_add mach_reg =
+    Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
+      let precolored_name =
+        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) temp_gen
+      in
+      Graph.add graph precolored_name;
+      precolored_name)
+  in
+  (* TODO: do ssa conversion here *)
+  let _live_in, live_out =
+    Liveness.compute_non_ssa ~pred_table:(Func.pred_table func) func
+  in
+  (* trace_s [%message (live_in : Liveness.Live_set.t) (live_out : Liveness.Live_set.t)]; *)
+  begin
+    let@: block = Func.iter_blocks func in
+    build_graph_block
+      ~get_precolored_name:find_precolored_name_or_add
+      graph
+      (Liveness.Live_set.find live_out block.label)
+      block
   end;
   let func = { func with next_temp_id = Id_gen.next temp_gen } in
   graph, mach_reg_to_precolored_name, precolored_id_start, func.next_temp_id, func
@@ -111,32 +132,22 @@ let get_spilled_colors precolored_colors ~max_color ~num_regs =
 ;;
 
 let spill_instr
-      stack_builder
-      temp_gen
       spilled_color_to_slot
-      color_to_global_evicted (* just to make sure we don't create too many temporaries *)
+      get_evicted_temp_and_slot_for_color
       coloring
-      edit
-      label
-      (instr : Instr'.t)
+      (instr : Instr.t)
   =
   let module Table = Ident.Table in
   let open Table.Syntax in
   let evicted_temps = ref [] in
   let evict_color color =
-    let evicted_temp =
-      Int_table.find_or_add color_to_global_evicted color ~default:(fun () ->
-        let temp = Ident.fresh ~name:"evicted" temp_gen in
-        let stack_slot = Stack_builder.alloc ~name:"evicted" stack_builder Qword in
-        coloring.!(temp) <- color;
-        temp, stack_slot)
-    in
+    let evicted_temp = get_evicted_temp_and_slot_for_color color in
     evicted_temps := evicted_temp :: !evicted_temps;
     evicted_temp
   in
-  let instr_index = instr.index in
+  let instrs_before = Lstack.create () in
+  let instrs_after = Lstack.create () in
   let instr =
-    let@: instr = Instr'.map instr in
     let instr =
       let@: temp =
         (Instr.map_uses
@@ -146,21 +157,13 @@ let spill_instr
       in
       let evicted_temp, evicted_temp_slot = evict_color coloring.!(temp) in
       let temp_slot = Int_table.find_exn spilled_color_to_slot coloring.!(temp) in
-      Multi_edit.add_inserts
-        edit
-        label
-        [ Instr'.create
-            (Mov
-               { dst = Stack_slot evicted_temp_slot
-               ; src = Reg evicted_temp
-               ; size = Qword
-               })
-            instr_index
-        ; Instr'.create
-            (Mov { dst = Reg evicted_temp; src = Stack_slot temp_slot; size = Qword })
-            instr_index
-        ];
-      (* use evicted_temp instead of temp_slot *)
+      Lstack.append_list
+        instrs_before
+        Instr.
+          [ Mov
+              { dst = Stack_slot evicted_temp_slot; src = Reg evicted_temp; size = Qword }
+          ; Mov { dst = Reg evicted_temp; src = Stack_slot temp_slot; size = Qword }
+          ];
       evicted_temp
     in
     let instr =
@@ -172,36 +175,26 @@ let spill_instr
       in
       let evicted_temp, evicted_temp_slot = evict_color coloring.!(temp) in
       let temp_slot = Int_table.find_exn spilled_color_to_slot coloring.!(temp) in
-      Multi_edit.add_inserts
-        edit
-        label
-        [ Instr'.create
-            (Mov
-               { dst = Stack_slot evicted_temp_slot
-               ; src = Reg evicted_temp
-               ; size = Qword
-               })
-            instr_index
-        ; Instr'.create
-            (* insert the move to the stack slot after the instruction has finished *)
-            (Mov { dst = Stack_slot temp_slot; src = Reg evicted_temp; size = Qword })
-            (instr_index + 1)
-        ];
+      Lstack.append_list
+        instrs_before
+        Instr.
+          [ Mov
+              { dst = Stack_slot evicted_temp_slot; src = Reg evicted_temp; size = Qword }
+          ];
+      Lstack.append_list
+        instrs_after
+        Instr.[ Mov { dst = Stack_slot temp_slot; src = Reg evicted_temp; size = Qword } ];
       evicted_temp
     in
     instr
   in
   begin
     let@: evicted_temp, evicted_temp_slot = List.iter !evicted_temps in
-    Multi_edit.add_insert
-      edit
-      label
-      (Instr'.create
-         (Mov { dst = Reg evicted_temp; src = Stack_slot evicted_temp_slot; size = Qword })
-         (instr_index + 1))
+    Lstack.append_list
+      instrs_after
+      [ Mov { dst = Reg evicted_temp; src = Stack_slot evicted_temp_slot; size = Qword } ]
   end;
-  Multi_edit.add_replace edit label instr;
-  ()
+  Lstack.to_list instrs_before, instr, Lstack.to_list instrs_after
 ;;
 
 (* this must be only called after ssa destruction.
@@ -224,20 +217,39 @@ let spill_colors stack_builder spilled_colors coloring (func : Func.t) =
            Qword)
   end;
   let temp_gen = Id_gen.of_id func.next_temp_id in
-  let color_to_evicted = Int_table.create () in
+  let color_to_global_evicted = Int_table.create () in
   let edit = Multi_edit.create () in
+  (* trace_s [%message "coloring func" (func : Func.t)]; *)
+  (* trace_s [%message "coloring" (coloring : int Vreg.Table.t)]; *)
   begin
     let@: block = Func.iter_blocks func in
     let@: instr = Block.iter_fwd block in
-    spill_instr
-      stack_builder
-      temp_gen
-      spilled_color_to_slot
-      color_to_evicted
-      coloring
+    let open Ident.Table.Syntax in
+    let instrs_before, new_instr, instrs_after =
+      (* just to make sure we don't create too many temporaries *)
+      let get_evicted_temp_and_slot_for_color color =
+        Int_table.find_or_add color_to_global_evicted color ~default:(fun () ->
+          let temp = Ident.fresh ~name:"evicted" temp_gen in
+          let stack_slot = Stack_builder.alloc ~name:"evicted" stack_builder Qword in
+          coloring.!(temp) <- color;
+          temp, stack_slot)
+      in
+      spill_instr
+        spilled_color_to_slot
+        get_evicted_temp_and_slot_for_color
+        coloring
+        instr.i
+    in
+    let instr_index = instr.index in
+    Multi_edit.add_inserts
       edit
       block.label
-      instr
+      (List.map instrs_before ~f:(fun instr -> Instr'.create instr instr_index));
+    Multi_edit.add_replace edit block.label (Instr'.create new_instr instr_index);
+    Multi_edit.add_inserts
+      edit
+      block.label
+      (List.map instrs_after ~f:(fun instr -> Instr'.create instr (instr_index + 1)))
   end;
   { func with
     next_temp_id = Id_gen.next temp_gen
@@ -259,6 +271,7 @@ let color_func_and_spill ~num_regs stack_builder (func : Func.t) =
   let graph, mach_reg_to_precolored_name, precolored_id_start, precolored_id_end, func =
     build_graph func
   in
+  (* trace_s [%message (graph : Graph.t)]; *)
   let precolored_name_to_mach_reg =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
@@ -277,8 +290,20 @@ let color_func_and_spill ~num_regs stack_builder (func : Func.t) =
   in
   let spilled_colors = get_spilled_colors precolored_colors ~max_color ~num_regs in
   let func = Split_critical.split func in
+  let scratch_temp, func, max_color =
+    let temp_gen = Id_gen.of_id func.next_temp_id in
+    let scratch_temp = Ident.fresh ~name:"par_move_scratch" temp_gen in
+    coloring.!(scratch_temp) <- max_color + 1;
+    Hashtbl.set precolored_name_to_mach_reg ~key:scratch_temp ~data:R11;
+    Hashtbl.set mach_reg_to_precolored_name ~key:R11 ~data:scratch_temp;
+    scratch_temp, { func with next_temp_id = Id_gen.next temp_gen }, max_color + 1
+  in
+  let get_scratch () = scratch_temp in
   let func =
-    Destruct_ssa.destruct ~in_same_reg:(fun t1 t2 -> coloring.!(t1) = coloring.!(t2)) func
+    Destruct_ssa.destruct
+      ~in_same_reg:(fun t1 t2 -> coloring.!(t1) = coloring.!(t2))
+      ~get_scratch
+      func
   in
   let func = spill_colors stack_builder spilled_colors coloring func in
   coloring, max_color, precolored_name_to_mach_reg, func

@@ -12,6 +12,7 @@ module Id : sig
   val to_int : 'k t -> int
   val succ : 'a t -> 'a t
   val pred : 'a t -> 'a t
+  val to_string : 'a t -> string
 
   module Table : Table.S_phantom with type 'w Key.t = 'w t
   module Map : Map.S_phantom with type 'w Key.t = 'w t

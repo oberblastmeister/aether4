@@ -70,18 +70,8 @@ struct
     List.rev !sequential
   ;;
 
-  let destruct ~in_same_reg (func : Func.t) =
+  let destruct ~in_same_reg ~get_scratch (func : Func.t) =
     let edit = Multi_edit.create () in
-    let temp_gen = Id_gen.of_id func.next_temp_id in
-    let scratch_temp = ref None in
-    let get_scratch () =
-      match !scratch_temp with
-      | None ->
-        let temp = Ident.fresh ~name:"par_move_scratch" temp_gen in
-        scratch_temp := Some temp;
-        temp
-      | Some temp -> temp
-    in
     begin
       let@: block = Func.iter_blocks func in
       let jump_instr = Block.find_control block in

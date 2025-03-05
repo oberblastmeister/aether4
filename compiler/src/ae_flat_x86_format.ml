@@ -1,6 +1,7 @@
 open Std
 open Ae_flat_x86_types
 module Size = Ae_x86_size
+module Condition_code = Ae_x86_condition_code
 
 let string_of_mach_reg8l = function
   | Mach_reg.RAX -> "%al"
@@ -61,6 +62,20 @@ let suffix_of_size (s : Size.t) =
   | Byte -> "b"
 ;;
 
+let string_of_cond (cond : Condition_code.t) =
+  match cond with
+  | E -> "e"
+  | NE -> "ne"
+  | B -> "b"
+  | BE -> "be"
+  | A -> "a"
+  | AE -> "ae"
+  | G -> "g"
+  | GE -> "ge"
+  | L -> "l"
+  | LE -> "le"
+;;
+
 let format_instr (instr : Instr.t) =
   let op = format_operand in
   let suff = suffix_of_size in
@@ -75,6 +90,10 @@ let format_instr (instr : Instr.t) =
   | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
   | Lea _ -> todol [%here]
   | Ret -> [%string "ret"]
+  | Jmp label -> [%string "jmp %{label}"]
+  | J { cc; label } -> [%string "j%{string_of_cond cc} %{label}"]
+  | Test { src1; src2; size } ->
+    [%string "test%{suff size} %{op src1 size}, %{op src2 size}"]
   | Directive s -> s
   | Cqo -> "cqo"
   | Label s -> [%string "%{s}:"]

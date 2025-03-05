@@ -118,6 +118,8 @@ module type Ir = sig
     val pred_table : t -> Adj_table.t
     val pred_table_of_succ : Adj_table.t -> Adj_table.t
     val succ_table : t -> Label.t list Label.Table.t
+    val bi_graph : t -> Label.t Graph.Bi.t
+    val graph : t -> Label.t Graph.t
     val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Immediate.t
     val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
   end

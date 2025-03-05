@@ -2,6 +2,7 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
+  module Condition_code = Ae_x86_condition_code
 end
 
 module Mach_reg = Ae_x86_mach_reg
@@ -45,6 +46,11 @@ module Instr = struct
         ; src : Operand.t
         ; size : Size.t
         }
+    | Test of
+        { src1 : Operand.t
+        ; src2 : Operand.t
+        ; size : Size.t
+        }
     | Lea of
         { dst : Operand.t
         ; src : Address.t
@@ -61,6 +67,8 @@ module Instr = struct
         { dst : Operand.t
         ; size : Size.t
         }
+    | Jmp of string
+    | J of { cc : Condition_code.t ; label : string }
     | Ret
     | Directive of string
     (*

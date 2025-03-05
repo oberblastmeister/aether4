@@ -138,7 +138,18 @@ module Instr = struct
       ()
     | Block_params { temps } ->
       List.iter temps ~f:(fun (temp, _size) -> on_def (Operand.Reg temp))
-    | Jump _ | Cond_jump _ -> todol [%here]
+    | Jump b ->
+      Block_call.iter_uses b ~f:(fun r -> on_def (Operand.Reg r));
+      ()
+    | Cond_jump { cond; b1; b2 } ->
+      (match cond with
+       | Op o -> on_use o
+       | Bin { src1; op = _; src2 } ->
+         on_use src1;
+         on_use src2);
+      Block_call.iter_uses b1 ~f:(fun r -> on_use (Reg r));
+      Block_call.iter_uses b2 ~f:(fun r -> on_use (Reg r));
+      ()
     | Mov { dst; src; size = _ } ->
       on_use src;
       on_def dst;

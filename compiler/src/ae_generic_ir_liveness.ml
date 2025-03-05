@@ -16,12 +16,10 @@ module Make (Ir : Ir) = struct
     ;;
   end
 
-  module Live_list = struct
-    type t = Temp.t list Label.Table.t [@@deriving sexp_of]
-  end
-
   module Live_set = struct
     type t = Temp.Set.t Label.Table.t [@@deriving sexp_of]
+
+    let find t label = Ident.Table.find t label |> Option.value ~default:Ident.Set.empty
   end
 
   let compute_defs_and_upward_exposed func =

@@ -25,5 +25,9 @@ module Make
     -> Move.t list
     -> Move.t list
 
-  val destruct : in_same_reg:(Temp.t -> Temp.t -> bool) -> Func.t -> Func.t
+  val destruct
+    :  in_same_reg:(Temp.t -> Temp.t -> bool)
+    -> get_scratch:(unit -> Temp.t)
+    -> Func.t
+    -> Func.t
 end

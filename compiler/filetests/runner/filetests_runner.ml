@@ -45,11 +45,24 @@ module Test = struct
             ; status : Exit_status.t option [@sexp.option]
             ; trace : bool [@sexp.bool]
             }
-        | CompileFail of { emit : Driver.Emit.t list [@sexp.list] }
+        | CompileFail of
+            { emit : Driver.Emit.t list [@sexp.list]
+            ; trace : bool [@sexp.bool]
+            }
       [@@deriving sexp]
 
-      let get_emit (CompileAndRun { emit; status = _; trace = _ } | CompileFail { emit }) =
+      let get_emit
+            ( CompileAndRun { emit; status = _; trace = _ }
+            | CompileFail { emit; trace = _ } )
+        =
         emit
+      ;;
+
+      let get_trace
+            ( CompileAndRun { emit = _; status = _; trace }
+            | CompileFail { emit = _; trace } )
+        =
+        trace
       ;;
     end
 
@@ -109,6 +122,11 @@ let run_test path =
     Flow.read_all file
   in
   let test = Test.parse contents in
+  let@ () =
+    Aether4.Ae_trace.with_trace
+    @@ Test.Options.Kind.get_trace
+    @@ Test.Options.get_kind test.options
+  in
   (* make sure to print the source first *)
   (* this makes sure that any later stuff gets printed after and gets formatted properly *)
   Test.format_source_with_bar test |> print_string;
@@ -119,7 +137,6 @@ let run_test path =
     match res, test.options with
     | ( Ok (a_out_path, _changed)
       , Test (CompileAndRun { trace; emit = _; status = expected_status }) ) ->
-      let@ () = Aether4.Ae_trace.with_trace trace in
       let pmgr = Stdenv.process_mgr env.env in
       let@ sw = Eio.Switch.run ~name:"proc" in
       let buf = Buffer.create 100 in

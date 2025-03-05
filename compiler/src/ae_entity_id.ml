@@ -8,6 +8,7 @@ type 'k t = int [@@deriving sexp, compare, equal, hash]
 let to_int i = i
 let unchecked_of_int i = i
 let unchecked_coerce i = i
+let to_string = Int.to_string
 let succ = succ
 let pred = pred
 let ( > ) = ( > )

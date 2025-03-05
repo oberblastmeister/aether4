@@ -10,7 +10,19 @@ module Vec = struct
     let rec go acc i = if i >= 0 then go (f (Vec.get vec i) acc) (i - 1) else acc in
     go init (Vec.length vec - 1)
   ;;
+
+  let iteri_rev t ~f =
+    let i = ref (Vec.length t - 1) in
+    while !i > 0 do
+      f !i (Vec.get t !i);
+      decr i;
+      ()
+    done;
+    ()
+  ;;
 end
+
+module Lstack = Std_lstack
 
 module Arrayp = struct
   include Array.Permissioned

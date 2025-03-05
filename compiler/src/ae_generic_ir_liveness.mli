@@ -4,12 +4,10 @@ open Ae_generic_ir_import
 module Make (Ir : Ir) : sig
   open Ir.Std
 
-  module Live_list : sig
-    type t = Temp.t list Label.Table.t [@@deriving sexp_of]
-  end
-
   module Live_set : sig
-    type t = Temp.Set.t Label.Table.t [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
+
+    val find : t -> Label.t -> Temp.Set.t
   end
 
   val backwards_transfer : Instr.t -> Temp.Set.t -> Temp.Set.t

@@ -6,6 +6,8 @@ module Flat_x86 = Ae_flat_x86_types
 module Bag = Ae_data_bag
 module Regalloc = Ae_abs_x86_regalloc
 module Mach_reg = Ae_x86_mach_reg
+module Label_entity = Ae_label_entity
+module Label = Ae_label_entity.Ident
 
 let empty = Bag.empty
 
@@ -18,12 +20,6 @@ type st =
 
 let create_state allocation = { allocation; label_id = 0 }
 let get_vreg t vreg = Regalloc.Allocation.find_exn t.allocation vreg
-(* |> Abs_x86.Alloc_reg.inreg_val
-  |> Option.value_or_thunk ~default:(fun () ->
-    raise_s
-      [%message
-        "All spilled registers should have been fixed up with spill instructions"
-          (vreg : Abs_x86.Vreg.t)]) *)
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
@@ -51,6 +47,8 @@ let prologue stack_size =
        ]
 ;;
 
+let label_to_string st (label : Label.t) = [%string ".L%{label.name}_%{label.id#Entity.Id}"]
+
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
   | Block_params _ -> empty
@@ -61,7 +59,23 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   | Pop { dst } ->
     let dst = lower_operand st dst in
     empty +> Flat_x86.Instr.[ Pop { dst; size = Qword } ]
-  | Jump _ | Cond_jump _ -> todol [%here]
+  | Jump bc -> empty +> Flat_x86.Instr.[ Jmp (label_to_string st bc.label) ]
+  | Cond_jump { cond; b1; b2 } ->
+    let instrs =
+      match cond with
+      | Op src ->
+        let src = lower_operand st src in
+        (* only needs Byte, but we use Dword here *)
+        empty
+        +> Flat_x86.Instr.
+             [ Mov { dst = Reg R11; src; size = Byte }
+             ; Test { src1 = Reg R11; src2 = Reg R11; size = Byte }
+             ; J { cc = NE; label = label_to_string st b1.label }
+             ; Jmp (label_to_string st b2.label)
+             ]
+      | _ -> todo ()
+    in
+    instrs
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
@@ -138,16 +152,25 @@ let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
     |> List.map ~f:(fun instr -> lower_instr st instr.i)
     |> Bag.concat
   in
-  instrs
+  empty +> Flat_x86.Instr.[ Label (label_to_string st block.label) ] ++ instrs
 ;;
 
 let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
-  let start_block = Ident.Map.find_exn func.blocks func.start in
+  let labels =
+    (* fold from left for reverse postorder *)
+    Label_entity.Dfs.postorder ~start:[ func.start ] (Abs_x86.Func.graph func)
+    |> Vec.fold ~init:[] ~f:(Fn.flip List.cons)
+  in
+  let instrs =
+    List.map labels ~f:(fun label ->
+      lower_block st (Ident.Map.find_exn func.blocks label))
+    |> Bag.concat
+  in
   let instrs =
     empty
     +> Flat_x86.Instr.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
     ++ prologue 0l
-    ++ lower_block st start_block
+    ++ instrs
   in
   Bag.to_list instrs
 ;;

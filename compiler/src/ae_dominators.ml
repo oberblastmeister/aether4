@@ -5,19 +5,7 @@ module Ident = Entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 module Graph = Ae_data_graph_std
-
-module Dfs = Graph.Dfs_gen.Make (struct
-    type t = unit Label.Table.t
-
-    module Key = struct
-      type t = Label.t
-    end
-
-    let create () = Table.create ()
-    let add t key = Table.add_exn t ~key ~data:()
-    let remove t k = Table.remove t k
-    let mem t k = Table.mem t k
-  end)
+module Dfs = Label_entity.Dfs
 
 let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) =
   let idoms = Table.create ?size:node_length () in
