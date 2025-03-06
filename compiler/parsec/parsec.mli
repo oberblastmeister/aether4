@@ -75,5 +75,7 @@ module Make (Arg : Arg) : sig
     val ( <$> ) : ('a -> 'b) -> 'a t -> 'b t
     val ( <$ ) : 'a -> 'b t -> 'a t
     val ( $> ) : 'b t -> 'a -> 'a t
+    val ( <* ) : 'a t -> 'b t -> 'a t
+    val ( *> ) : 'a t -> 'b t -> 'b t
   end
 end

@@ -1,3 +1,4 @@
+(* the ty field should be set to None until we do typechecking which fills it in *)
 open Std
 
 type ty =

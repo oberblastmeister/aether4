@@ -16,6 +16,8 @@ type t =
   | StarEq
   | SlashEq
   | PercentEq
+  | PlusPlus
+  | DashDash
   | Langle
   | Rangle
   | LangleEq

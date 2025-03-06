@@ -38,11 +38,11 @@ and check_stmt live (stmt : Ast.stmt) =
   | Ast.Block stmts ->
     List.fold_right ~init:live ~f:(fun stmt live -> check_stmt live stmt) stmts
   | Ast.While { cond; body } ->
-    let live = check_stmt live body in
+    let live_body = check_stmt live body in
     let cond_uses = expr_uses_set cond in
-    live |> Set.union cond_uses
+    live |> Set.union live_body |> Set.union cond_uses
   | Ast.Return e ->
-    (* just discard the live set, because everything after return is not live *)
+    (* just discard the live set, because nothing is live before it *)
     expr_uses_set e
   | Ast.Declare { ty = _; var } ->
     if Set.mem live var

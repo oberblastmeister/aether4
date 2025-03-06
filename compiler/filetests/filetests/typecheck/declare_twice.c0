@@ -2,11 +2,11 @@
 ( (kind (CompileAndRun)) )
 */
 
-// TODO: fix this test
 int main() {
     int first;
-    // int first;
+    int first;
     return 0;
 }
 ----
-0
+("Filetest failed"
+ ("Could not compile test" ("Var was already declared!" (var first))))

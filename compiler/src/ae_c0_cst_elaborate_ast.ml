@@ -68,6 +68,29 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     in
     stmts, st'
   | Block block -> (empty +> Ast.[ Block (elab_block st block) ]), st
+  | Post { lvalue; op } ->
+    let lvalue = elab_var st lvalue in
+    let expr =
+      match op with
+      | Incr -> Ast.Int_const 1L
+      | Decr -> Ast.Int_const (-1L)
+    in
+    let stmts =
+      empty
+      +> Ast.
+           [ Assign
+               { lvalue
+               ; expr =
+                   Bin
+                     { lhs = Var { var = lvalue; ty = None }
+                     ; op = Add
+                     ; rhs = expr
+                     ; ty = None
+                     }
+               }
+           ]
+    in
+    stmts, st
   | Assign { lvalue; op; expr } ->
     let expr = elab_expr st expr in
     let lvalue = elab_var st lvalue in

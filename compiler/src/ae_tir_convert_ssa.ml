@@ -63,7 +63,9 @@ let convert (func : Func.t) =
       |> Option.value_exn
            ~error:
              (Error.create
-                "Temporary was not initialized on all code paths"
+                "Temporary was not initialized on all code paths. The input program must \
+                 be strict, which means each temporary must be initialized on all paths \
+                 before used. This allows the result to be in strict-ssa form"
                 temp
                 [%sexp_of: Temp.t])
     in
@@ -75,7 +77,6 @@ let convert (func : Func.t) =
           match instr with
           | Block_params { temps } ->
             let phis = Table.find_multi block_to_phis block.label in
-            (* TODO: make sure the definition has the proper type using a type map *)
             let temps = temps @ List.map phis ~f:(fun temp -> temp, def_to_ty.!(temp)) in
             Instr.Block_params { temps }
           | _ -> instr
@@ -108,7 +109,6 @@ let convert (func : Func.t) =
       rename_block rename_temp_map (Ident.Map.find_exn func.blocks label)
     end
   in
-  (* trace_s [%message (multi_edit : Multi_edit.t)]; *)
   rename_block Ident.Map.empty (Func.start_block func);
   { func with
     blocks = Multi_edit.apply_blocks ~no_sort:() multi_edit func.blocks

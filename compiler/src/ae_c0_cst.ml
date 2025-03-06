@@ -13,6 +13,10 @@ and stmt =
   | Decl of decl
   | Block of block
   | Assign of assign
+  | Post of
+      { lvalue : lvalue
+      ; op : post_op
+      }
   | Return of expr
   | If of
       { cond : expr
@@ -53,6 +57,10 @@ and assign_op =
   | Div_eq
   | Mod_eq
 [@@deriving sexp_of]
+
+and post_op =
+  | Incr
+  | Decr
 
 and expr =
   | Int_const of Z.t

@@ -2,6 +2,7 @@ open Std
 module Token = Ae_c0_token
 module Cst = Ae_c0_cst
 module Stream = Parsec.Make_stream (Token)
+open Ae_trace
 
 module Error = struct
   type t = Sexp of Sexp.t [@@deriving sexp_of]
@@ -60,7 +61,7 @@ and parse_stmt env : Cst.stmt =
      <|> parse_for
      <|> parse_while
      <|> ((fun b -> Cst.Block b) <$> parse_block)
-     <|> parse_semi_stmt)
+     <|> (parse_semi_stmt <* Parser.expect_eq Semi))
       env
   in
   stmt
@@ -70,12 +71,10 @@ and parse_semi_stmt env : Cst.stmt =
     ((fun d -> Cst.Decl d)
      <$> parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
-     <|> ((fun e -> Cst.Return e) <$> parse_return))
+     <|> ((fun e -> Cst.Return e) <$> parse_return)
+     <|> parse_post)
       env
   in
-  Parser.expect_eq Semi
-  |> Parser.cut (Sexp [%message "expected semicolon after statement"])
-  |> Fn.( |> ) env;
   res
 
 and parse_if env : Cst.stmt =
@@ -122,9 +121,11 @@ and parse_for env : Cst.stmt =
   Cst.For { paren; body }
 
 and parse_for_paren env : Cst.for_paren =
-  let init = parse_stmt env in
+  let init = parse_semi_stmt env in
+  Parser.expect_eq Semi env;
   let cond = parse_expr env in
-  let incr = parse_stmt env in
+  Parser.expect_eq Semi env;
+  let incr = parse_semi_stmt env in
   { init; cond; incr }
 
 and parse_return env : Cst.expr =
@@ -147,6 +148,14 @@ and parse_decl env : Cst.decl =
       env
   in
   ({ ty; name; expr } : Cst.decl)
+
+and parse_post env : Cst.stmt =
+  let lvalue = parse_lvalue env in
+  let op = parse_post_op env in
+  Cst.Post { lvalue; op }
+
+and parse_post_op env : Cst.post_op =
+  (Cst.Incr <$ Parser.expect_eq PlusPlus <|> (Cst.Decr <$ Parser.expect_eq DashDash)) env
 
 and parse_assign env : Cst.assign =
   let lvalue = parse_lvalue env in

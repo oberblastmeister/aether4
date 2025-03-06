@@ -1,0 +1,14 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    int bruh;
+    if (true) {
+        bruh = 1234;
+    } else {
+    }
+    return bruh;
+}
+----
+("Variable was used before initialized" (var bruh@0))
