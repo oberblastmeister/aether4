@@ -1,5 +1,5 @@
 /*
-(Test (CompileAndRun))
+( (kind (CompileAndRun)) )
 */
 
 int first() {

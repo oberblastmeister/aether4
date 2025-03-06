@@ -25,6 +25,7 @@ module Make
     -> Move.t list
     -> Move.t list
 
+  (* critical edges must be split before calling this function *)
   val destruct
     :  in_same_reg:(Temp.t -> Temp.t -> bool)
     -> get_scratch:(unit -> Temp.t)

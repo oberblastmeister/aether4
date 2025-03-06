@@ -51,7 +51,7 @@ end
 
 module type Arg = sig
   module Error : sig
-    type t
+    type t [@@deriving sexp_of]
   end
 
   module Stream : Stream
@@ -76,8 +76,8 @@ module Make (Arg : Arg) = struct
   module Token = Stream.Token
 
   module Exceptions = struct
-    exception Error of Error.t
-    exception Fail
+    exception Error of Error.t [@@deriving sexp_of]
+    exception Fail [@@deriving sexp_of]
   end
 
   open Exceptions

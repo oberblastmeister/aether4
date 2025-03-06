@@ -1,5 +1,7 @@
 /*
-(Test (CompileFail))
+(
+ (kind (CompileFail))
+)
 */
 
 int main() {

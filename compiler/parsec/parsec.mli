@@ -27,7 +27,7 @@ module Make_stream (Token : Token) :
 
 module type Arg = sig
   module Error : sig
-    type t
+    type t [@@deriving sexp_of]
   end
 
   module Stream : Stream
@@ -51,8 +51,8 @@ module Make (Arg : Arg) : sig
   type 'a t = env -> 'a
 
   module Exceptions : sig
-    exception Error of Error.t
-    exception Fail
+    exception Error of Error.t [@@deriving sexp_of]
+    exception Fail [@@deriving sexp_of]
   end
 
   val with_env : Stream.t -> (env -> 'a) -> ('a, Error.t) Parse_result.t

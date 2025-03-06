@@ -1,5 +1,9 @@
 /*
-(Test (CompileAndRun (trace) (emit (Lir Abs_asm Asm)) ))
+(
+ (kind (CompileAndRun)) 
+ (trace)
+ (emit (Lir Abs_asm Asm))
+)
 */
 
 int main() {
@@ -133,12 +137,6 @@ int main() {
           (b2 ((label else@2) (args ())))))
         (index 8) (info ()))))))))
  (start start@3) (next_temp_id 17) (next_label_id 4))
-((parallel_moves (((dst first@0) (src first@8) (ty Qword))))
- (sequential_moves (((dst first@0) (src first@8) (ty Qword)))))
-((parallel_moves (((dst first@0) (src first@11) (ty Qword))))
- (sequential_moves (((dst first@0) (src first@11) (ty Qword)))))
-((parallel_moves ()) (sequential_moves ()))
-((parallel_moves ()) (sequential_moves ()))
 .text
 .globl _c0_main
 _c0_main:

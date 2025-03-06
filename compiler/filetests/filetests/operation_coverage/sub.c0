@@ -1,6 +1,7 @@
 /*
-(Test
- (CompileAndRun))
+(
+ (kind (CompileAndRun))
+)
 */
 
 int main() {

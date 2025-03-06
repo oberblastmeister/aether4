@@ -33,14 +33,11 @@ struct
     let par_move = Array.of_list moves in
     let n = Array.length par_move in
     let status = Array.init n ~f:(Fn.const To_move) in
-    let sequential = ref [] in
+    let sequential = Lstack.create () in
     let rec move_one i =
       (* self moves don't do anything, so skip them *)
       if in_same_reg par_move.(i).src par_move.(i).dst
-      then
-        Ref.replace sequential
-        @@ List.cons
-             { Move.dst = par_move.(i).dst; src = par_move.(i).src; ty = par_move.(i).ty }
+      then Lstack.push sequential par_move.(i)
       else begin
         (* if we see Being_moved in the children then we found the unique cycle *)
         status.(i) <- Being_moved;
@@ -54,16 +51,16 @@ struct
             | Being_moved ->
               (* unique cycle! *)
               let scratch = get_scratch () in
-              Ref.replace sequential
-              @@ List.cons
-                   { Move.dst = scratch; src = par_move.(j).src; ty = par_move.(j).ty };
+              Lstack.push
+                sequential
+                { Move.dst = scratch; src = par_move.(j).src; ty = par_move.(j).ty };
               (* j now should move from the temp because we are about to overwrite j below *)
               par_move.(j) <- { (par_move.(j)) with src = scratch }
             | Moved -> ()
           end
         done;
         (* move ourselves after all the children have been moved *)
-        Ref.replace sequential @@ List.cons par_move.(i);
+        Lstack.push sequential par_move.(i);
         status.(i) <- Moved
       end
     in
@@ -71,7 +68,7 @@ struct
     for i = 0 to n - 1 do
       if equal_status status.(i) To_move then move_one i
     done;
-    List.rev !sequential
+    Lstack.to_list sequential
   ;;
 
   let destruct ~in_same_reg ~get_scratch (func : Func.t) =
@@ -79,10 +76,15 @@ struct
     begin
       let@: block = Func.iter_blocks func in
       let jump_instr = Block.find_control block in
+      let num_block_calls = Instr.iter_block_calls jump_instr.i |> Iter.length in
       let jump_instr =
         let@: block_call = (Instr'.map & Instr.map_block_calls) jump_instr in
         let dst_block = Func.find_block_exn func block_call.label in
         let dst_block_params_instr = Block.find_block_params dst_block in
+        Multi_edit.add_replace
+          edit
+          dst_block.label
+          { dst_block_params_instr with i = Instr.block_params ~temps:[] };
         let (`temps dst_block_params) =
           Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
         in
@@ -93,15 +95,24 @@ struct
         let sequential_moves =
           sequentialize_parallel_moves ~in_same_reg ~get_scratch parallel_moves
         in
-        print_s [%message (parallel_moves : Move.t list) (sequential_moves : Move.t list)];
-        Multi_edit.add_inserts
-          edit
-          block.label
-          (List.map sequential_moves ~f:(fun move ->
-             Instr'.create (Move.to_instr move) jump_instr.index));
+        (* TODO: test this case *)
+        if num_block_calls = 1
+        then begin
+          Multi_edit.add_inserts
+            edit
+            block.label
+            (List.map sequential_moves ~f:(fun move ->
+               Instr'.create (Move.to_instr move) jump_instr.index))
+        end
+        else begin
+          Multi_edit.add_inserts
+            edit
+            dst_block.label
+            (List.map sequential_moves ~f:(fun move ->
+               Instr'.create (Move.to_instr move) (dst_block_params_instr.index + 1)))
+        end;
         { block_call with args = [] }
       in
-      (* TODO: this is wrong, the moves may go in the successor block if this is a conditional jump *)
       Multi_edit.add_replace edit block.label jump_instr
     end;
     { func with blocks = Multi_edit.apply_blocks ~no_sort:() edit func.blocks }
