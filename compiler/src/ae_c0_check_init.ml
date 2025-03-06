@@ -30,25 +30,26 @@ and expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_l
 
 and check_stmt live (stmt : Ast.stmt) =
   match stmt with
-  | Ast.If { cond; body1; body2 } ->
+  | If { cond; body1; body2 } ->
     let live1 = check_stmt live body1 in
     let live2 = Option.value_map body2 ~f:(check_stmt live) ~default:Ast.Var.Set.empty in
     let cond_uses = expr_uses_set cond in
     live1 |> Set.union live2 |> Set.union cond_uses
-  | Ast.Block stmts ->
+  | Block stmts ->
     List.fold_right ~init:live ~f:(fun stmt live -> check_stmt live stmt) stmts
   | Ast.While { cond; body } ->
     let live_body = check_stmt live body in
     let cond_uses = expr_uses_set cond in
     live |> Set.union live_body |> Set.union cond_uses
-  | Ast.Return e ->
+  | Effect e -> Set.union live (expr_uses_set e)
+  | Return e ->
     (* just discard the live set, because nothing is live before it *)
     expr_uses_set e
-  | Ast.Declare { ty = _; var } ->
+  | Declare { ty = _; var } ->
     if Set.mem live var
     then throw_s [%message "Variable was used before initialized" (var : Ast.var)]
     else live
-  | Ast.Assign { lvalue; expr } ->
+  | Assign { lvalue; expr } ->
     live |> Fn.flip Set.remove lvalue |> Set.union (expr_uses_set expr)
 ;;
 

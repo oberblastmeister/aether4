@@ -13,6 +13,7 @@ and stmt =
   | Decl of decl
   | Block of block
   | Assign of assign
+  | Effect of expr
   | Post of
       { lvalue : lvalue
       ; op : post_op

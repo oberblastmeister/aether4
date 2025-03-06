@@ -1,0 +1,11 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+    25 / 0;
+    return 0;
+}
+----

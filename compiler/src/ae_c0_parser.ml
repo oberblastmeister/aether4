@@ -72,7 +72,8 @@ and parse_semi_stmt env : Cst.stmt =
      <$> parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
      <|> ((fun e -> Cst.Return e) <$> parse_return)
-     <|> parse_post)
+     <|> parse_post
+     <|> ((fun e -> Cst.Effect e) <$> parse_expr))
       env
   in
   res

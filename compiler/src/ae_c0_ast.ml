@@ -36,6 +36,7 @@ type stmt =
       { cond : expr
       ; body : stmt
       }
+  | Effect of expr
   | Return of expr
   | Declare of
       { ty : ty

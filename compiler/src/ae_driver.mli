@@ -8,6 +8,7 @@ module Emit : sig
     | Tokens
     | Cst
     | Ast
+    | Tir_non_ssa
     | Tir
     | Lir
     | Abs_asm

@@ -83,6 +83,16 @@ and add_cond_jump st cont cond_temp body1 body2 =
   empty
   +> [ ins (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label }) ]
 
+(* invariant:
+
+  `lower_stmt st cont stmt`
+  
+  lowers to instructions that will execute the continuation cont after stmt.
+  
+  This is essentially modeled like a cps transform.
+  
+  This means that we *MUST* use the cont variable!
+*)
 and lower_stmt st cont (stmt : Ast.stmt) : instrs =
   match stmt with
   | Declare { ty = _; var } ->
@@ -92,6 +102,10 @@ and lower_stmt st cont (stmt : Ast.stmt) : instrs =
     let temp = var_temp st lvalue in
     lower_expr st temp expr ++ cont
   | Block block -> lower_block st cont block
+  | Effect expr ->
+    let dst = fresh_temp ~name:"effect" st in
+    let expr_i = lower_expr st dst expr in
+    expr_i ++ cont
   | Return expr ->
     let dst = fresh_temp ~name:"ret" st in
     let ty = Ast.expr_ty_exn expr in
@@ -141,12 +155,12 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let rhs_i = lower_expr st src2 rhs in
     let op = lower_bin_op op in
     empty ++ lhs_i ++ rhs_i +> [ ins (Bin { dst; src1; op; src2 }) ]
-  | Ast.Var { var; ty } ->
+  | Var { var; ty } ->
     let src = var_temp st var in
     empty +> [ ins (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src }) ]
 ;;
 
-let rec lower_program st (program : Ast.program) : Tir.Func.t =
+let lower_program st (program : Ast.program) : Tir.Func.t =
   let name = program.name in
   let start_instrs = empty ++ lower_block st empty program.block in
   let start_label = add_fresh_block ~name:"start" st start_instrs in

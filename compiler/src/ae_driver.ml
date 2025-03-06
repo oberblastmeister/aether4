@@ -20,6 +20,7 @@ module Emit = struct
     | Tokens
     | Cst
     | Ast
+    | Tir_non_ssa
     | Tir
     | Lir
     | Abs_asm
@@ -85,6 +86,7 @@ let compile_source_to_tir ?(emit = []) source =
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
   let tir = C0.Lower_tree_ir.lower program in
+  if Emit.mem emit Tir_non_ssa then print_s [%message "tir_non_ssa" (tir : Tir.Func.t)];
   let tir = Tir.Convert_ssa.convert tir in
   if Emit.mem emit Tir then print_s [%message "tir" (tir : Tir.Func.t)];
   Ok tir

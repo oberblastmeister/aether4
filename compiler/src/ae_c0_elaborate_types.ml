@@ -54,6 +54,9 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
     let body = check_stmt st body in
     While { cond; body }
   | Return expr -> Return (check_expr st expr Int)
+  | Effect e ->
+    let e = infer_expr st e in
+    Effect e
   | Declare _ -> stmt
   | Assign { lvalue; expr } ->
     let ty = infer_expr st (Var { var = lvalue; ty = None }) |> Ast.expr_ty_exn in

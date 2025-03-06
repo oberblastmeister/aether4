@@ -91,6 +91,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
            ]
     in
     stmts, st
+  | Effect e ->
+    let e = elab_expr st e in
+    (empty +> Ast.[ Effect e ]), st
   | Assign { lvalue; op; expr } ->
     let expr = elab_expr st expr in
     let lvalue = elab_var st lvalue in

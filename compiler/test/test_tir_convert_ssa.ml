@@ -24,7 +24,6 @@ let check s =
 ;;
 
 let%expect_test "nothing" =
-  let@ () = with_trace true in
   check
     {|
       int main() {
