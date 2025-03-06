@@ -1,0 +1,248 @@
+/*
+(Test (CompileAndRun (trace) (emit (Lir Abs_asm Asm))))
+*/
+
+int main() {
+    int first = 1;
+    int second = 2;
+    int third = first + second;
+    bool another = true;
+    if (another) {
+        first += third;
+        second += 1;
+    } else {
+        first += second;
+    }
+    return first + second;
+}
+----
+(multi_edit ())
+((name main)
+ (blocks
+  ((join@0
+    ((label join@0)
+     (body
+      (((i (Block_params (temps ((second@0 I64) (first@1 I64))))) (index 0)
+        (info ()))
+       ((i (Unary (dst lhs@2) (op (Copy I64)) (src first@1))) (index 1)
+        (info ()))
+       ((i (Unary (dst rhs@3) (op (Copy I64)) (src second@0))) (index 2)
+        (info ()))
+       ((i (Bin (dst ret@4) (op Add) (src1 lhs@2) (src2 rhs@3))) (index 3)
+        (info ()))
+       ((i (Ret (src ret@4) (ty I64))) (index 4) (info ()))))))
+   (then@1
+    ((label then@1)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Unary (dst lhs@5) (op (Copy I64)) (src first@6))) (index 1)
+        (info ()))
+       ((i (Unary (dst rhs@7) (op (Copy I64)) (src third@8))) (index 2)
+        (info ()))
+       ((i (Bin (dst first@9) (op Add) (src1 lhs@5) (src2 rhs@7))) (index 3)
+        (info ()))
+       ((i (Unary (dst lhs@10) (op (Copy I64)) (src second@11))) (index 4)
+        (info ()))
+       ((i (Int_const (dst rhs@12) (const 1) (ty I1))) (index 5) (info ()))
+       ((i (Bin (dst second@13) (op Add) (src1 lhs@10) (src2 rhs@12)))
+        (index 6) (info ()))
+       ((i (Jump ((label join@0) (args (second@13 first@9))))) (index 7)
+        (info ()))))))
+   (else@2
+    ((label else@2)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Unary (dst lhs@14) (op (Copy I64)) (src first@6))) (index 1)
+        (info ()))
+       ((i (Unary (dst rhs@15) (op (Copy I64)) (src second@11))) (index 2)
+        (info ()))
+       ((i (Bin (dst first@16) (op Add) (src1 lhs@14) (src2 rhs@15)))
+        (index 3) (info ()))
+       ((i (Jump ((label join@0) (args (second@11 first@16))))) (index 4)
+        (info ()))))))
+   (start@3
+    ((label start@3)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Int_const (dst tmp@17) (const 1) (ty I1))) (index 1) (info ()))
+       ((i (Unary (dst first@6) (op (Copy I64)) (src tmp@17))) (index 2)
+        (info ()))
+       ((i (Int_const (dst tmp@18) (const 2) (ty I1))) (index 3) (info ()))
+       ((i (Unary (dst second@11) (op (Copy I64)) (src tmp@18))) (index 4)
+        (info ()))
+       ((i (Unary (dst lhs@19) (op (Copy I64)) (src first@6))) (index 5)
+        (info ()))
+       ((i (Unary (dst rhs@20) (op (Copy I64)) (src second@11))) (index 6)
+        (info ()))
+       ((i (Bin (dst tmp@21) (op Add) (src1 lhs@19) (src2 rhs@20))) (index 7)
+        (info ()))
+       ((i (Unary (dst third@8) (op (Copy I64)) (src tmp@21))) (index 8)
+        (info ()))
+       ((i (Int_const (dst tmp@22) (const 1) (ty I64))) (index 9) (info ()))
+       ((i (Unary (dst another@23) (op (Copy I1)) (src tmp@22))) (index 10)
+        (info ()))
+       ((i (Unary (dst cond@24) (op (Copy I1)) (src another@23))) (index 11)
+        (info ()))
+       ((i
+         (Cond_jump (cond cond@24) (b1 ((label then@1) (args ())))
+          (b2 ((label else@2) (args ())))))
+        (index 12) (info ()))))))))
+ (start start@3) (next_temp_id 25) (next_label_id 4))
+((name main)
+ (blocks
+  ((join@0
+    ((label join@0)
+     (body
+      (((i (Block_params (temps ((second@0 Qword) (first@1 Qword)))))
+        (index 0) (info ()))
+       ((i (Mov (dst (Reg lhs@2)) (src (Reg first@1)) (size Qword)))
+        (index 1) (info ()))
+       ((i (Mov (dst (Reg rhs@3)) (src (Reg second@0)) (size Qword)))
+        (index 2) (info ()))
+       ((i
+         (Bin (dst (Reg ret@4)) (op Add) (src1 (Reg lhs@2))
+          (src2 (Reg rhs@3))))
+        (index 3) (info ()))
+       ((i (Ret (src (Reg ret@4)) (size Qword))) (index 4) (info ()))))))
+   (then@1
+    ((label then@1)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Mov (dst (Reg lhs@5)) (src (Reg first@6)) (size Qword)))
+        (index 1) (info ()))
+       ((i (Mov (dst (Reg rhs@7)) (src (Reg third@8)) (size Qword)))
+        (index 2) (info ()))
+       ((i
+         (Bin (dst (Reg first@9)) (op Add) (src1 (Reg lhs@5))
+          (src2 (Reg rhs@7))))
+        (index 3) (info ()))
+       ((i (Mov (dst (Reg lhs@10)) (src (Reg second@11)) (size Qword)))
+        (index 4) (info ()))
+       ((i (Mov (dst (Reg rhs@12)) (src (Imm 1)) (size Qword))) (index 5)
+        (info ()))
+       ((i
+         (Bin (dst (Reg second@13)) (op Add) (src1 (Reg lhs@10))
+          (src2 (Reg rhs@12))))
+        (index 6) (info ()))
+       ((i (Jump ((label join@0) (args (second@13 first@9))))) (index 7)
+        (info ()))))))
+   (else@2
+    ((label else@2)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Mov (dst (Reg lhs@14)) (src (Reg first@6)) (size Qword)))
+        (index 1) (info ()))
+       ((i (Mov (dst (Reg rhs@15)) (src (Reg second@11)) (size Qword)))
+        (index 2) (info ()))
+       ((i
+         (Bin (dst (Reg first@16)) (op Add) (src1 (Reg lhs@14))
+          (src2 (Reg rhs@15))))
+        (index 3) (info ()))
+       ((i (Jump ((label join@0) (args (second@11 first@16))))) (index 4)
+        (info ()))))))
+   (start@3
+    ((label start@3)
+     (body
+      (((i (Block_params (temps ()))) (index 0) (info ()))
+       ((i (Mov (dst (Reg tmp@17)) (src (Imm 1)) (size Qword))) (index 1)
+        (info ()))
+       ((i (Mov (dst (Reg first@6)) (src (Reg tmp@17)) (size Qword)))
+        (index 2) (info ()))
+       ((i (Mov (dst (Reg tmp@18)) (src (Imm 2)) (size Qword))) (index 3)
+        (info ()))
+       ((i (Mov (dst (Reg second@11)) (src (Reg tmp@18)) (size Qword)))
+        (index 4) (info ()))
+       ((i (Mov (dst (Reg lhs@19)) (src (Reg first@6)) (size Qword)))
+        (index 5) (info ()))
+       ((i (Mov (dst (Reg rhs@20)) (src (Reg second@11)) (size Qword)))
+        (index 6) (info ()))
+       ((i
+         (Bin (dst (Reg tmp@21)) (op Add) (src1 (Reg lhs@19))
+          (src2 (Reg rhs@20))))
+        (index 7) (info ()))
+       ((i (Mov (dst (Reg third@8)) (src (Reg tmp@21)) (size Qword)))
+        (index 8) (info ()))
+       ((i (Mov (dst (Reg tmp@22)) (src (Imm 1)) (size Qword))) (index 9)
+        (info ()))
+       ((i (Mov (dst (Reg another@23)) (src (Reg tmp@22)) (size Byte)))
+        (index 10) (info ()))
+       ((i (Mov (dst (Reg cond@24)) (src (Reg another@23)) (size Byte)))
+        (index 11) (info ()))
+       ((i
+         (Cond_jump (cond (Op (Reg cond@24))) (b1 ((label then@1) (args ())))
+          (b2 ((label else@2) (args ())))))
+        (index 12) (info ()))))))))
+ (start start@3) (next_temp_id 25) (next_label_id 4))
+((parallel_moves
+  (((dst second@0) (src second@13) (ty Qword))
+   ((dst first@1) (src first@9) (ty Qword))))
+ (sequential_moves
+  (((dst second@0) (src second@13) (ty Qword))
+   ((dst first@1) (src first@9) (ty Qword)))))
+((parallel_moves
+  (((dst second@0) (src second@11) (ty Qword))
+   ((dst first@1) (src first@16) (ty Qword))))
+ (sequential_moves
+  (((dst second@0) (src second@11) (ty Qword))
+   ((dst first@1) (src first@16) (ty Qword)))))
+((parallel_moves ()) (sequential_moves ()))
+((parallel_moves ()) (sequential_moves ()))
+.text
+.globl _c0_main
+_c0_main:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $0, %rsp
+.Lstart_3:
+    movq $1, %rax
+    movq %rax, %rdx
+    movq $2, %rax
+    movq %rax, %rcx
+    movq %rdx, %rdi
+    movq %rcx, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rax, %rsi
+    movq $1, %rax
+    movb %al, %al
+    movb %al, %al
+    movb %al, %r11b
+    testb %r11b, %r11b
+    jne .Lthen_1
+    jmp .Lelse_2
+.Lelse_2:
+    movq %rdx, %rdi
+    movq %rcx, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rcx, %rdi
+    movq %rax, %rax
+    jmp .Ljoin_0
+.Lthen_1:
+    movq %rdx, %rdi
+    movq %rsi, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rsi
+    movq %rcx, %rdi
+    movq $1, %rax
+    movq %rdi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rax, %rdi
+    movq %rsi, %rax
+    jmp .Ljoin_0
+.Ljoin_0:
+    movq %rax, %rsi
+    movq %rdi, %rax
+    movq %rsi, %r11
+    addq %rax, %r11
+    movq %r11, %rax
+    movq %rax, %rax
+    movq %rbp, %rsp
+    popq %rbp
+    ret
+
+7

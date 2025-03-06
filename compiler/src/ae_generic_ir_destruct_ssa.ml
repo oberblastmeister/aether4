@@ -36,8 +36,12 @@ struct
     let sequential = ref [] in
     let rec move_one i =
       (* self moves don't do anything, so skip them *)
-      if not (in_same_reg par_move.(i).src par_move.(i).dst)
-      then begin
+      if in_same_reg par_move.(i).src par_move.(i).dst
+      then
+        Ref.replace sequential
+        @@ List.cons
+             { Move.dst = par_move.(i).dst; src = par_move.(i).src; ty = par_move.(i).ty }
+      else begin
         (* if we see Being_moved in the children then we found the unique cycle *)
         status.(i) <- Being_moved;
         (* visit children *)
@@ -89,6 +93,7 @@ struct
         let sequential_moves =
           sequentialize_parallel_moves ~in_same_reg ~get_scratch parallel_moves
         in
+        print_s [%message (parallel_moves : Move.t list) (sequential_moves : Move.t list)];
         Multi_edit.add_inserts
           edit
           block.label
@@ -96,6 +101,7 @@ struct
              Instr'.create (Move.to_instr move) jump_instr.index));
         { block_call with args = [] }
       in
+      (* TODO: this is wrong, the moves may go in the successor block if this is a conditional jump *)
       Multi_edit.add_replace edit block.label jump_instr
     end;
     { func with blocks = Multi_edit.apply_blocks ~no_sort:() edit func.blocks }

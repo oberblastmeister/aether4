@@ -1,4 +1,5 @@
 open Std
+open Ae_trace
 module C0 = Ae_c0_std
 module Tir = Ae_tir_std
 module Lir = Ae_lir_std
@@ -75,7 +76,9 @@ let compile_source_to_tir source =
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
   let tir = C0.Lower_tree_ir.lower program in
-  return tir
+  (* trace_s [%message (tir : Tir.Func.t)]; *)
+  let tir = Tir.Convert_ssa.convert tir in
+  Ok tir
 ;;
 
 let compile_source_to_asm ?(emit = []) source =

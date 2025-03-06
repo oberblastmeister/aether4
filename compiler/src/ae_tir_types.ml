@@ -211,6 +211,8 @@ module Instr = struct
     | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
+
+  let move ~dst ~src ~ty = Unary { dst; op = Copy ty; src }
 end
 
 include Generic_ir.Make_all (struct
@@ -225,4 +227,5 @@ include Generic_ir.Make_all (struct
     module Temp_entity = Temp_entity
   end)
 
+module Destruct_ssa = Generic_ir.Destruct_ssa.Make (Ir) (Instr)
 include Ir

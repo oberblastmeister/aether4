@@ -145,7 +145,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
 let rec lower_program st (program : Ast.program) : Tir.Func.t =
   let name = program.name in
   let start_instrs =
-    empty +> [ ins (Block_params { temps = [] }) ] ++ lower_block st empty program.block
+    empty ++ lower_block st empty program.block
   in
   let start_label = add_fresh_block ~name:"start" st start_instrs in
   let next_temp_id = Id_gen.next st.temp_gen in

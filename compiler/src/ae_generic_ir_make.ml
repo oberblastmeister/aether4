@@ -212,10 +212,9 @@ module Make_ir (Arg : Arg) = struct
     ;;
 
     let add_edits t label edits =
-      Ident.Table.update
-        t
-        label
-        ~f:(Option.value_map ~default:[] ~f:(List.append (List.rev edits)))
+      Ident.Table.update t label ~f:(function
+        | None -> List.rev edits
+        | Some es -> List.rev_append edits es)
     ;;
 
     let add_inserts t label inserts = add_edits t label @@ List.map inserts ~f:Edit.insert

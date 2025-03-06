@@ -139,7 +139,7 @@ module Instr = struct
     | Block_params { temps } ->
       List.iter temps ~f:(fun (temp, _size) -> on_def (Operand.Reg temp))
     | Jump b ->
-      Block_call.iter_uses b ~f:(fun r -> on_def (Operand.Reg r));
+      Block_call.iter_uses b ~f:(fun r -> on_use (Reg r));
       ()
     | Cond_jump { cond; b1; b2 } ->
       (match cond with
@@ -278,7 +278,10 @@ module Instr = struct
   let map_block_calls (instr : t) ~f =
     match instr with
     | Jump b -> Jump (f b)
-    | Cond_jump { cond; b1; b2 } -> Cond_jump { cond; b1 = f b1; b2 = f b2 }
+    | Cond_jump { cond; b1; b2 } ->
+      let b1 = f b1 in
+      let b2 = f b2 in
+      Cond_jump { cond; b1; b2 }
     | _ -> instr
   ;;
 

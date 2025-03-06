@@ -34,10 +34,10 @@ let%expect_test "smoke" =
   [%expect
     {|
     ((live_in
-      ((join@0 (first@3 second@4)) (then@1 (first@3 second@4 third@9))
-       (else@2 (first@3 second@4 bl@10))))
+      ((join@0 (second@25)) (then@1 (first@21 second@25 third@29))
+       (else@2 (first@21 second@25 bl@33))))
      (live_out
-      ((then@1 (first@3 second@4)) (else@2 (first@3 second@4))
-       (start@3 (first@3 second@4 third@9 bl@10)))))
+      ((then@1 (second@25)) (else@2 (second@25))
+       (start@3 (first@21 second@25 third@29 bl@33)))))
     |}]
 ;;

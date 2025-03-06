@@ -44,7 +44,8 @@ let string_of_mach_reg64 = function
 let string_of_mach_reg = function
   | Size.Byte -> string_of_mach_reg8l
   | Size.Qword -> string_of_mach_reg64
-  | _ -> todol [%here]
+  | _ -> 
+    todol [%here]
 ;;
 
 let format_operand (operand : Operand.t) size =

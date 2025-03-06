@@ -24,58 +24,65 @@ let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
     in
     go xs
   in
+  let defs = Instr.iter_defs instr.i |> Iter.to_list in
+  ( (* let uses = Instr.iter_uses instr.i |> Iter.to_list in *)
+    (* trace_s
+      [%message
+        "build_graph_instr"
+          (instr : Instr'.t)
+          (live_out : Vreg.Set.t)
+          (defs : Vreg.t list)
+          (uses : Vreg.t list)] *) );
+  (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
   begin
-    let defs = Instr.iter_defs instr.i |> Iter.to_list in
-    (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
-    begin
-      let@: def = List.iter defs in
-      Graph.add graph def
-    end;
-    (* ensure that multiple defs interfere with each other *)
-    iter_pairs defs ~f:(fun (def1, def2) -> Graph.add_edge graph def1 def2);
-    let can_add_edge_to =
-      let currently_defining = defs in
-      fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
-    in
-    (* add interference edges *)
-    begin
-      let@: live =
-        Ident.Set.iter live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter
-      in
-      List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
-      begin
-        let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-        let precolored_name = get_precolored_name mach_reg in
-        Graph.add_edge graph precolored_name live
-      end
-    end;
-    (*
-       for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
-         we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
-    *)
-    match instr.i with
-    | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
-      let rax_name = get_precolored_name RAX in
-      let rdx_name = get_precolored_name RDX in
-      begin
-        let@: vreg = Ae_x86_address.iter_regs addr in
-        Graph.add_edge graph rdx_name vreg;
-        Graph.add_edge graph rax_name vreg
-      end
-    | _ -> ()
+    let@: def = List.iter defs in
+    Graph.add graph def
   end;
+  (* ensure that multiple defs interfere with each other *)
+  iter_pairs defs ~f:(fun (def1, def2) -> Graph.add_edge graph def1 def2);
+  let can_add_edge_to =
+    let currently_defining = defs in
+    fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
+  in
+  (* add interference edges *)
+  begin
+    let@: live = Ident.Set.iter live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter in
+    List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
+    begin
+      let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
+      let precolored_name = get_precolored_name mach_reg in
+      Graph.add_edge graph precolored_name live
+    end
+  end;
+  (*
+     for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
+         we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
+  *)
+  (match instr.i with
+   | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
+     let rax_name = get_precolored_name RAX in
+     let rdx_name = get_precolored_name RDX in
+     begin
+       let@: vreg = Ae_x86_address.iter_regs addr in
+       Graph.add_edge graph rdx_name vreg;
+       Graph.add_edge graph rax_name vreg
+     end
+   | _ -> ());
   Liveness.backwards_transfer instr.i live_out
 ;;
 
-let build_graph_block ~get_precolored_name graph live_out block =
+let build_graph_block ~get_precolored_name graph live_out (block : Block.t) =
+  (* trace_s [%message "build_graph_block" (block.label : Label.t) (live_out : Vreg.Set.t)]; *)
   let live_out = ref live_out in
   begin
     let@: instr = Block.iter_bwd block in
     live_out := build_graph_instr ~get_precolored_name graph !live_out instr
+    (* trace_s [%message (live_out : Vreg.Set.t ref)] *)
   end
 ;;
 
 let build_graph (func : Func.t) =
+  (* trace_s [%message "build_graph" (func : Func.t)]; *)
   let open Ident.Table.Syntax in
   let graph = Graph.create () in
   let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
@@ -305,6 +312,12 @@ let color_func_and_spill ~num_regs stack_builder (func : Func.t) =
       ~get_scratch
       func
   in
+  (* trace_s
+    [%message
+      "after destruct"
+        (coloring : int Vreg.Table.t)
+        (func : Func.t)
+        (spilled_colors : Bitset.t)]; *)
   let func = spill_colors stack_builder spilled_colors coloring func in
   coloring, max_color, precolored_name_to_mach_reg, func
 ;;
@@ -367,5 +380,6 @@ let alloc_func stack_builder (func : Func.t) =
     Int_table.set color_to_mach_reg ~key:color ~data:mach_reg
   end;
   let allocation = { Allocation.coloring; color_to_mach_reg } in
+  (* print_s [%message (allocation : Allocation.t)]; *)
   allocation, func
 ;;

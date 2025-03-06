@@ -13,7 +13,7 @@ module Vec = struct
 
   let iteri_rev t ~f =
     let i = ref (Vec.length t - 1) in
-    while !i > 0 do
+    while !i >= 0 do
       f !i (Vec.get t !i);
       decr i;
       ()
@@ -29,7 +29,7 @@ module Arrayp = struct
 
   let iteri_rev t ~f =
     let i = ref (Array.Permissioned.length t - 1) in
-    while !i > 0 do
+    while !i >= 0 do
       f !i (Array.Permissioned.get t !i);
       decr i;
       ()
