@@ -46,10 +46,25 @@ module Instr = struct
         ; src : Operand.t
         ; size : Size.t
         }
+    | Movzx of
+        { dst : Operand.t
+        ; dst_size : Size.t
+        ; src : Operand.t
+        ; src_size : Size.t
+        }
+    | Cmp of
+        { src1 : Operand.t
+        ; src2 : Operand.t
+        ; size : Size.t
+        }
     | Test of
         { src1 : Operand.t
         ; src2 : Operand.t
         ; size : Size.t
+        }
+    | Set of
+        { cc : Condition_code.t
+        ; dst : Operand.t
         }
     | Lea of
         { dst : Operand.t
@@ -68,7 +83,10 @@ module Instr = struct
         ; size : Size.t
         }
     | Jmp of string
-    | J of { cc : Condition_code.t ; label : string }
+    | J of
+        { cc : Condition_code.t
+        ; label : string
+        }
     | Ret
     | Directive of string
     (*

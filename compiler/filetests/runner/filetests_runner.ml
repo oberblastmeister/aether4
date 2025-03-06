@@ -43,10 +43,9 @@ module Test = struct
   ;;
 end
 
-let run_test path =
+let run_test env path =
   eprintf "filetest %s\n" (Filename_unix.realpath path);
   let open Result.Let_syntax in
-  let@ env = Eio_main.run in
   let contents =
     let@ file = Path.with_open_in Path.(Stdenv.fs env / path) in
     Flow.read_all file
@@ -113,19 +112,22 @@ let run_test path =
 ;;
 
 let command =
-  Command.basic_or_error
+  Command.basic
     ~summary:"Filetests runner"
     ~readme:(fun () -> "More detailed information")
-    (let open Command.Let_syntax in
-     let open Command.Param in
-     let%map path = anon ("filename" %: Filename_unix.arg_type) in
-     fun () ->
-       match run_test path with
-       | Ok () -> Ok ()
-       | Error e ->
-         print_endline
-         @@ Error.to_string_hum (Error.tag_s e ~tag:[%message "Filetest failed"]);
-         Ok ())
+    begin
+      let open Command.Let_syntax in
+      let open Command.Param in
+      let%map path = anon ("filename" %: Filename_unix.arg_type) in
+      fun () ->
+        let@ env = Eio_main.run in
+        match run_test env path with
+        | Ok () -> ()
+        | Error e ->
+          print_endline
+          @@ Error.to_string_hum (Error.tag_s e ~tag:[%message "Filetest failed"]);
+          ()
+    end
 ;;
 
 let () = Command_unix.run command

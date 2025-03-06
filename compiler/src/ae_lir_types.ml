@@ -19,6 +19,10 @@ module Bin_op = struct
     | Mul
     | Div
     | Mod
+    | Lt
+    | Gt
+    | Le
+    | Ge
   [@@deriving sexp_of]
 end
 

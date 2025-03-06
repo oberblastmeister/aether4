@@ -26,6 +26,10 @@ rule lex =
   | "%=" { Token.PercentEq }
   | "/=" { Token.SlashEq }
   | "-=" { Token.DashEq }
+  | '<' { Token.Langle }
+  | '>' { Token.Rangle }
+  | "<=" { Token.LangleEq }
+  | ">=" { Token.RangleEq }
   | '(' { Token.LParen }
   | ')' { Token.RParen }
   | '{' { Token.LBrace }

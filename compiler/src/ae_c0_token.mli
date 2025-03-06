@@ -16,6 +16,10 @@ type t =
   | StarEq
   | SlashEq
   | PercentEq
+  | Langle
+  | Rangle
+  | LangleEq
+  | RangleEq
   | LParen
   | RParen
   | LBrace

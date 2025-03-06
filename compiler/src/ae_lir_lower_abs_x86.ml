@@ -61,11 +61,17 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
     empty +> Abs_x86.Instr.[ Cond_jump { cond = Op cond; b1; b2 } ]
-  | Int_const { dst; const; ty } when Option.is_some (Int32.of_int64 const) ->
+  | Int_const { dst; const; ty = I1 } ->
+    let dst = get_operand st dst in
+    if Int64.(const <> 0L && const <> 1L)
+    then raise_s [%message "const was not I1" (const : int64)];
+    empty
+    +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Byte } ]
+  | Int_const { dst; const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
     let dst = get_operand st dst in
     empty
     +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword } ]
-  | Int_const { dst; const; ty } ->
+  | Int_const { dst; const; ty = I64 } ->
     let dst = get_operand st dst in
     empty +> Abs_x86.Instr.[ Mov_abs { dst; src = const } ]
   | Unary { dst; op; src } ->
@@ -85,6 +91,10 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
       | Mul -> Imul
       | Div -> Idiv
       | Mod -> Imod
+      | Lt -> Lt
+      | Gt -> Gt
+      | Le -> Le
+      | Ge -> Ge
     in
     empty +> [ Abs_x86.Instr.Bin { dst; src1; op; src2 } ]
   | Ret { src; ty } ->

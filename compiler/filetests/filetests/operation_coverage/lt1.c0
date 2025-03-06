@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun)) 
+)
+*/
+
+int main() {
+    int res;
+    if (1234 < 1234) res = 1; else res = -1;
+    return res;
+}
+----
+-1

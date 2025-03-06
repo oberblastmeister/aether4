@@ -174,8 +174,31 @@ and parse_lvalue env : Cst.lvalue =
     env
 
 and parse_expr env : Cst.expr =
-  let expr = parse_add env in
+  let expr = parse_comparison env in
   expr
+
+and parse_comparison env : Cst.expr =
+  let lhs = parse_add env in
+  let rec loop lhs env =
+    ((fun env ->
+       let op =
+         (Cst.Lt
+          <$ Parser.expect_eq Langle
+          <|> (Cst.Gt <$ Parser.expect_eq Rangle)
+          <|> (Cst.Le <$ Parser.expect_eq LangleEq)
+          <|> (Cst.Ge <$ Parser.expect_eq RangleEq))
+           env
+       in
+       let rhs =
+         parse_add
+         |> Parser.cut (Sexp [%message "expected rhs of expression"])
+         |> Fn.( |> ) env
+       in
+       loop (Cst.Bin { lhs; op; rhs }) env)
+     <|> Parser.pure lhs)
+      env
+  in
+  loop lhs env
 
 and parse_add env : Cst.expr =
   let lhs = parse_mul env in

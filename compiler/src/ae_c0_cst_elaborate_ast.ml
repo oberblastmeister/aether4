@@ -136,6 +136,10 @@ and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   | Mul -> Mul
   | Div -> Div
   | Mod -> Mod
+  | Lt -> Lt
+  | Gt -> Gt
+  | Le -> Le
+  | Ge -> Ge
 
 and elab_block st (block : Cst.block) : Ast.block =
   let rec go st stmts =

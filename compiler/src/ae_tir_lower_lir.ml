@@ -44,6 +44,10 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Mul -> Mul
   | Div -> Div
   | Mod -> Mod
+  | Lt -> Lt
+  | Gt -> Gt
+  | Le -> Le
+  | Ge -> Ge
 ;;
 
 let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
@@ -78,14 +82,14 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
   | Nullary { dst; op } ->
     let dst = get_temp st dst in
     (match op with
-     | Int_const const -> empty +> [ ins (Int_const { dst; const; ty = I1 }) ]
+     | Int_const const -> empty +> [ ins (Int_const { dst; const; ty = I64 }) ]
      | Bool_const const ->
        let const =
          match const with
          | true -> 1L
          | false -> 0L
        in
-       empty +> [ ins (Int_const { dst; const; ty = I64 }) ])
+       empty +> [ ins (Int_const { dst; const; ty = I1 }) ])
   | Unary { dst; op; src } ->
     let dst = get_temp st dst in
     let src = get_temp st src in

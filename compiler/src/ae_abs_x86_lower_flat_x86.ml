@@ -8,6 +8,7 @@ module Regalloc = Ae_abs_x86_regalloc
 module Mach_reg = Ae_x86_mach_reg
 module Label_entity = Ae_label_entity
 module Label = Ae_label_entity.Ident
+module Condition_code = Ae_x86_condition_code
 
 let empty = Bag.empty
 
@@ -47,7 +48,13 @@ let prologue stack_size =
        ]
 ;;
 
-let label_to_string st (label : Label.t) = [%string ".L%{label.name}_%{label.id#Entity.Id}"]
+let label_to_string st (label : Label.t) =
+  [%string ".L%{label.name}_%{label.id#Entity.Id}"]
+;;
+
+let lower_cmp st (cc : Condition_code.t) size ~dst ~src1 ~src2 =
+  empty +> Flat_x86.Instr.[ Cmp { src1; src2; size }; Set { dst; cc } ]
+;;
 
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
@@ -88,7 +95,12 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
     let size = Flat_x86.Size.Qword in
+    let on_cmp cc = lower_cmp st cc size ~dst ~src1 ~src2 in
     (match op with
+     | Lt -> on_cmp L
+     | Gt -> on_cmp G
+     | Le -> on_cmp LE
+     | Ge -> on_cmp GE
      | Add ->
        Flat_x86.Instr.(
          empty

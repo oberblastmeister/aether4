@@ -3,8 +3,9 @@ open Ae_flat_x86_types
 module Size = Ae_x86_size
 module Condition_code = Ae_x86_condition_code
 
-let string_of_mach_reg8l = function
-  | Mach_reg.RAX -> "%al"
+let string_of_mach_reg8l (m : Mach_reg.t) =
+  match m with
+  | RAX -> "%al"
   | RBX -> "%bl"
   | RCX -> "%cl"
   | RDX -> "%dl"
@@ -22,8 +23,9 @@ let string_of_mach_reg8l = function
   | R15 -> "%r15b"
 ;;
 
-let string_of_mach_reg64 = function
-  | Mach_reg.RAX -> "%rax"
+let string_of_mach_reg64 (m : Mach_reg.t) =
+  match m with
+  | RAX -> "%rax"
   | RCX -> "%rcx"
   | RDX -> "%rdx"
   | RBX -> "%rbx"
@@ -41,11 +43,10 @@ let string_of_mach_reg64 = function
   | R15 -> "%r15"
 ;;
 
-let string_of_mach_reg = function
-  | Size.Byte -> string_of_mach_reg8l
-  | Size.Qword -> string_of_mach_reg64
-  | _ -> 
-    todol [%here]
+let string_of_mach_reg : Size.t -> _ = function
+  | Byte -> string_of_mach_reg8l
+  | Qword -> string_of_mach_reg64
+  | _ -> todol [%here]
 ;;
 
 let format_operand (operand : Operand.t) size =
@@ -87,14 +88,21 @@ let format_instr (instr : Instr.t) =
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
   | Mov_abs { dst; src } -> [%string "movabsq %{src#Int64}, %{op dst Size.Qword}"]
+  | Movzx { dst; dst_size; src; src_size } ->
+    [%string
+      "movzx%{suff src_size}%{suff dst_size} %{op src src_size}, %{op dst dst_size}"]
   | Push { src; size } -> [%string "push%{suff size} %{op src size}"]
   | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
   | Lea _ -> todol [%here]
   | Ret -> [%string "ret"]
   | Jmp label -> [%string "jmp %{label}"]
   | J { cc; label } -> [%string "j%{string_of_cond cc} %{label}"]
+  | Cmp { src1; src2; size } ->
+    (* in att assembly the operands are switched for this *)
+    [%string "cmp%{suff size} %{op src2 size}, %{op src1 size}"]
   | Test { src1; src2; size } ->
-    [%string "test%{suff size} %{op src1 size}, %{op src2 size}"]
+    [%string "test%{suff size} %{op src2 size}, %{op src1 size}"]
+  | Set { cc; dst } -> [%string "set%{string_of_cond cc} %{op dst Byte}"]
   | Directive s -> s
   | Cqo -> "cqo"
   | Label s -> [%string "%{s}:"]

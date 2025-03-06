@@ -29,7 +29,11 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
      | Add | Sub | Mul | Div | Mod ->
        let lhs = check_expr st lhs Int in
        let rhs = check_expr st rhs Int in
-       Bin { lhs; op; rhs; ty = Some Int })
+       Bin { lhs; op; rhs; ty = Some Int }
+     | Lt | Gt | Le | Ge ->
+       let lhs = check_expr st lhs Int in
+       let rhs = check_expr st rhs Int in
+       Bin { lhs; op; rhs; ty = Some Bool })
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in

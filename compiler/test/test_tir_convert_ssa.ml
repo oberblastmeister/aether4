@@ -34,7 +34,6 @@ let%expect_test "nothing" =
       |};
   [%expect
     {|
-    (multi_edit ())
     ((live_in ()) (live_out ()))
     (func
      ((name main)

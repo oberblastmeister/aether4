@@ -108,7 +108,7 @@ let convert (func : Func.t) =
       rename_block rename_temp_map (Ident.Map.find_exn func.blocks label)
     end
   in
-  trace_s [%message (multi_edit : Multi_edit.t)];
+  (* trace_s [%message (multi_edit : Multi_edit.t)]; *)
   rename_block Ident.Map.empty (Func.start_block func);
   { func with
     blocks = Multi_edit.apply_blocks ~no_sort:() multi_edit func.blocks

@@ -73,6 +73,10 @@ and bin_op =
   | Mul
   | Div
   | Mod
+  | Lt
+  | Gt
+  | Le
+  | Ge
 [@@deriving sexp_of]
 
 type program =

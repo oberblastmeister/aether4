@@ -125,6 +125,10 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   | Mul -> Mul
   | Div -> Div
   | Mod -> Mod
+  | Lt -> Lt
+  | Gt -> Gt
+  | Le -> Le
+  | Ge -> Ge
 
 and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
@@ -144,9 +148,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
 
 let rec lower_program st (program : Ast.program) : Tir.Func.t =
   let name = program.name in
-  let start_instrs =
-    empty ++ lower_block st empty program.block
-  in
+  let start_instrs = empty ++ lower_block st empty program.block in
   let start_label = add_fresh_block ~name:"start" st start_instrs in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
