@@ -25,6 +25,9 @@ module Bin_op = struct
     | Gt
     | Le
     | Ge
+    | And
+    | Or
+    | Xor
   [@@deriving sexp_of]
 end
 
@@ -131,8 +134,11 @@ module Instr = struct
     | Block_params { temps } -> List.iter temps ~f
     | Nop -> ()
     | Bin
-        { dst; op = Add | Sub | Mul | Div | Mod | Lt | Gt | Le | Ge; src1 = _; src2 = _ }
-      ->
+        { dst
+        ; op = Add | Sub | Mul | Div | Mod | Lt | Gt | Le | Ge | And | Or | Xor
+        ; src1 = _
+        ; src2 = _
+        } ->
       f (dst, Int);
       ()
     | Unary { dst; op; src = _ } ->

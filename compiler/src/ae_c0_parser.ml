@@ -30,6 +30,19 @@ let parens p env =
   res
 ;;
 
+let chainl ~expr:parse_expr ~op:parse_op ~f env =
+  let rec loop lhs env =
+    ((fun env ->
+       let op = parse_op env in
+       let rhs = parse_expr env in
+       loop (f ~lhs ~op ~rhs) env)
+     <|> Parser.pure lhs)
+      env
+  in
+  let lhs = parse_expr env in
+  loop lhs env
+;;
+
 let rec parse_program env : Cst.program =
   ((fun env ->
      let ty =
@@ -184,83 +197,68 @@ and parse_lvalue env : Cst.lvalue =
     env
 
 and parse_expr env : Cst.expr =
-  let expr = parse_comparison env in
+  let expr = parse_bit_or env in
   expr
 
+and parse_bit_or env : Cst.expr =
+  chainl ~expr:parse_bit_xor ~op:(Cst.Bit_or <$ Parser.expect_eq Pipe) ~f:Cst.bin env
+
+and parse_bit_xor env : Cst.expr =
+  chainl ~expr:parse_bit_and ~op:(Cst.Bit_xor <$ Parser.expect_eq Caret) ~f:Cst.bin env
+
+and parse_bit_and env : Cst.expr =
+  chainl
+    ~expr:parse_comparison
+    ~op:(Cst.Bit_and <$ Parser.expect_eq Ampersand)
+    ~f:Cst.bin
+    env
+
 and parse_comparison env : Cst.expr =
-  let lhs = parse_add env in
-  let rec loop lhs env =
-    ((fun env ->
-       let op =
-         (Cst.Lt
-          <$ Parser.expect_eq Langle
-          <|> (Cst.Gt <$ Parser.expect_eq Rangle)
-          <|> (Cst.Le <$ Parser.expect_eq LangleEq)
-          <|> (Cst.Ge <$ Parser.expect_eq RangleEq))
-           env
-       in
-       let rhs =
-         parse_add
-         |> Parser.cut (Sexp [%message "expected rhs of expression"])
-         |> Fn.( |> ) env
-       in
-       loop (Cst.Bin { lhs; op; rhs }) env)
-     <|> Parser.pure lhs)
-      env
-  in
-  loop lhs env
+  chainl
+    ~expr:parse_add
+    ~op:
+      (Cst.Lt
+       <$ Parser.expect_eq Langle
+       <|> (Cst.Gt <$ Parser.expect_eq Rangle)
+       <|> (Cst.Le <$ Parser.expect_eq LangleEq)
+       <|> (Cst.Ge <$ Parser.expect_eq RangleEq))
+    ~f:Cst.bin
+    env
 
 and parse_add env : Cst.expr =
-  let lhs = parse_mul env in
-  let rec loop lhs env =
-    ((fun env ->
-       let op =
-         (Cst.Add <$ Parser.expect_eq Plus <|> (Cst.Sub <$ Parser.expect_eq Dash)) env
-       in
-       let rhs =
-         parse_mul
-         |> Parser.cut (Sexp [%message "expected rhs of expression"])
-         |> Fn.( |> ) env
-       in
-       loop (Cst.Bin { lhs; op; rhs }) env)
-     <|> Parser.pure lhs)
-      env
-  in
-  loop lhs env
+  chainl
+    ~expr:parse_mul
+    ~op:(Cst.Add <$ Parser.expect_eq Plus <|> (Cst.Sub <$ Parser.expect_eq Dash))
+    ~f:Cst.bin
+    env
 
 and parse_mul env : Cst.expr =
-  let lhs = parse_unary_expr env in
-  let rec loop lhs env =
-    ((fun env ->
-       let op =
-         (Cst.Mul
-          <$ Parser.expect_eq Star
-          <|> (Cst.Div <$ Parser.expect_eq Slash)
-          <|> (Cst.Mod <$ Parser.expect_eq Percent))
-           env
-       in
-       let rhs =
-         parse_unary_expr
-         |> Parser.cut (Sexp [%message "expected rhs of expression"])
-         |> Fn.( |> ) env
-       in
-       loop (Cst.Bin { lhs; op; rhs }) env)
-     <|> Parser.pure lhs)
-      env
-  in
-  loop lhs env
+  chainl
+    ~expr:parse_unary_expr
+    ~op:
+      (Cst.Mul
+       <$ Parser.expect_eq Star
+       <|> (Cst.Div <$ Parser.expect_eq Slash)
+       <|> (Cst.Mod <$ Parser.expect_eq Percent))
+    ~f:Cst.bin
+    env
 
 and parse_unary_expr env : Cst.expr =
   ((fun env ->
      Parser.expect_eq Dash env;
-     let e = parse_unary_expr env in
-     Cst.Neg e)
+     let expr = parse_unary_expr env in
+     Cst.Unary { op = Neg; expr })
+   <|> (fun env ->
+   Parser.expect_eq Tilde env;
+   let expr = parse_unary_expr env in
+   Cst.Unary { op = Bit_not; expr })
    <|> parse_atom)
     env
 
 and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)
    <$> parse_num
+   <|> parens parse_expr
    <|> (Parser.expect_eq True $> Cst.Bool_const true)
    <|> (Parser.expect_eq False $> Cst.Bool_const false)
    <|> ((fun v -> Cst.Var v) <$> parse_ident))

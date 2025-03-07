@@ -67,13 +67,25 @@ and expr =
   | Int_const of Z.t
   | Bool_const of bool
   | Var of string
-  | Neg of expr
+  | Unary of
+      { op : unary_op
+      ; expr : expr
+      }
   | Bin of
       { lhs : expr
       ; op : bin_op
       ; rhs : expr
       }
+  | Ternary of
+      { cond : expr
+      ; then_expr : expr
+      ; else_expr : expr
+      }
 [@@deriving sexp_of]
+
+and unary_op =
+  | Neg
+  | Bit_not
 
 and bin_op =
   | Add
@@ -85,6 +97,9 @@ and bin_op =
   | Gt
   | Le
   | Ge
+  | Bit_and
+  | Bit_or
+  | Bit_xor
 [@@deriving sexp_of]
 
 and decl =
@@ -100,3 +115,5 @@ type program =
   ; block : block
   }
 [@@deriving sexp_of]
+
+let bin ~lhs ~op ~rhs = Bin { lhs; rhs; op }

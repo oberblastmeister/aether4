@@ -61,6 +61,12 @@ and expr =
       }
   | Int_const of int64
   | Bool_const of bool
+  | Ternary of
+      { cond : expr
+      ; then_expr : expr
+      ; else_expr : expr
+      ; ty : ty option
+      }
   | Bin of
       { lhs : expr
       ; op : bin_op
@@ -79,6 +85,9 @@ and bin_op =
   | Gt
   | Le
   | Ge
+  | Bit_and
+  | Bit_or
+  | Bit_xor
 [@@deriving sexp_of]
 
 type program =
@@ -89,7 +98,7 @@ type program =
 [@@deriving sexp_of]
 
 let expr_ty_exn = function
-  | Var { ty; _ } | Bin { ty; _ } -> Option.value_exn ty
+  | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } -> Option.value_exn ty
   | Int_const _ -> Int
   | Bool_const _ -> Bool
 ;;

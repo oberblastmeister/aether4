@@ -1,6 +1,7 @@
 open Std
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
+open Ae_trace
 module Ast = Ae_c0_ast
 module Tir = Ae_tir_types
 module Entity = Ae_entity_std
@@ -93,43 +94,47 @@ and add_cond_jump st cont cond_temp body1 body2 =
   
   This means that we *MUST* use the cont variable!
 *)
-and lower_stmt st cont (stmt : Ast.stmt) : instrs =
+and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
   match stmt with
   | Declare { ty = _; var } ->
     let _ = var_temp st var in
     empty ++ cont
   | Assign { lvalue; expr } ->
     let temp = var_temp st lvalue in
-    lower_expr st temp expr ++ cont
+    lower_expr st cont temp expr
   | Block block -> lower_block st cont block
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
-    let expr_i = lower_expr st dst expr in
-    expr_i ++ cont
+    lower_expr st cont dst expr
   | Return expr ->
     let dst = fresh_temp ~name:"ret" st in
     let ty = Ast.expr_ty_exn expr in
-    let expr_i = lower_expr st dst expr in
-    expr_i +> [ ins (Ret { src = dst; ty = lower_ty ty }) ]
+    (* important: we override the continuation here because nothing should be after a Ret *)
+    let cont = empty +> [ ins (Ret { src = dst; ty = lower_ty ty }) ] in
+    lower_expr st cont dst expr
   | If { cond; body1; body2 } ->
     let cond_temp = fresh_temp ~name:"cond" st in
-    let cond = lower_expr st cond_temp cond in
     let body1 cont = lower_stmt st cont body1 in
     let body2 cont = Option.value_map body2 ~f:(lower_stmt st cont) ~default:cont in
-    cond ++ add_cond_jump st cont cond_temp body1 body2
+    let cont = add_cond_jump st cont cond_temp body1 body2 in
+    lower_expr st cont cond_temp cond
   | While { cond; body } ->
     let done_label = add_fresh_block ~name:"done" st cont in
     let cond_temp = fresh_temp ~name:"cond" st in
-    let cond = lower_expr st cond_temp cond in
     let loop_label = fresh_label ~name:"loop" st in
     let body = lower_stmt st (empty +> [ ins (Jump (bc loop_label)) ]) body in
     let body_label = add_fresh_block ~name:"body" st body in
     add_block
       st
       loop_label
-      (cond
-       +> [ ins (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label }) ]
-      );
+      (lower_expr
+         st
+         (empty
+          +> [ ins
+                 (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label })
+             ])
+         cond_temp
+         cond);
     empty +> [ ins (Jump (bc loop_label)) ]
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
@@ -143,21 +148,49 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   | Gt -> Gt
   | Le -> Le
   | Ge -> Ge
+  | Bit_and -> And
+  | Bit_or -> Or
+  | Bit_xor -> Xor
 
-and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
+(* invariant:
+
+  `lower_expr st cont dst expr stmt`
+  
+  lowers to instructions that will execute the continuation cont after expr.
+  
+  This is essentially modeled like a cps transform.
+  
+  This means that we *MUST* use the cont variable!
+*)
+and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
-  | Int_const const -> empty +> [ ins (Nullary { dst; op = Int_const const }) ]
-  | Bool_const const -> empty +> [ ins (Nullary { dst; op = Bool_const const }) ]
+  | Ternary { cond; then_expr; else_expr; ty = _ } ->
+    let cond_dst = fresh_temp ~name:"cond" st in
+    let cont =
+      add_cond_jump
+        st
+        cont
+        cond_dst
+        (fun cont -> lower_expr st cont dst then_expr)
+        (fun cont -> lower_expr st cont dst else_expr)
+    in
+    let cont = lower_expr st cont cond_dst cond in
+    cont
+  | Int_const const -> empty +> [ ins (Nullary { dst; op = Int_const const }) ] ++ cont
+  | Bool_const const -> empty +> [ ins (Nullary { dst; op = Bool_const const }) ] ++ cont
   | Bin { lhs; op; rhs; ty = _ } ->
+    let op = lower_bin_op op in
     let src1 = fresh_temp ~name:"lhs" st in
     let src2 = fresh_temp ~name:"rhs" st in
-    let lhs_i = lower_expr st src1 lhs in
-    let rhs_i = lower_expr st src2 rhs in
-    let op = lower_bin_op op in
-    empty ++ lhs_i ++ rhs_i +> [ ins (Bin { dst; src1; op; src2 }) ]
+    let cont = empty +> [ ins (Bin { dst; src1; op; src2 }) ] ++ cont in
+    let cont = lower_expr st cont src2 rhs in
+    let cont = lower_expr st cont src1 lhs in
+    cont
   | Var { var; ty } ->
     let src = var_temp st var in
-    empty +> [ ins (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src }) ]
+    empty
+    +> [ ins (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src }) ]
+    ++ cont
 ;;
 
 let lower_program st (program : Ast.program) : Tir.Func.t =

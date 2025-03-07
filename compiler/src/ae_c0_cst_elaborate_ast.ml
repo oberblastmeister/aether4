@@ -146,9 +146,16 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
   | Var var ->
     let var = elab_var st var in
     Var { var; ty = None }
-  | Neg expr ->
+  | Unary { op; expr } ->
     let expr = elab_expr st expr in
-    Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
+    (match op with
+     | Neg -> Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
+     | Bit_not -> Bin { lhs = Int_const (-1L); op = Bit_xor; rhs = expr; ty = None })
+  | Ternary { cond; then_expr; else_expr } ->
+    let cond = elab_expr st cond in
+    let then_expr = elab_expr st then_expr in
+    let else_expr = elab_expr st else_expr in
+    Ternary { cond; then_expr; else_expr; ty = None }
   | Bin { lhs; op; rhs } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in
@@ -166,6 +173,9 @@ and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   | Gt -> Gt
   | Le -> Le
   | Ge -> Ge
+  | Bit_and -> Bit_and
+  | Bit_or -> Bit_or
+  | Bit_xor -> Bit_xor
 
 and elab_block st (block : Cst.block) : Ast.block =
   let rec go st stmts =

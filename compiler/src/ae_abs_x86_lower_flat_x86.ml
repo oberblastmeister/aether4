@@ -52,8 +52,17 @@ let label_to_string st (label : Label.t) =
   [%string ".L%{label.name}_%{label.id#Entity.Id}"]
 ;;
 
-let lower_cmp st (cc : Condition_code.t) size ~dst ~src1 ~src2 =
+let lower_cmp (cc : Condition_code.t) size ~dst ~src1 ~src2 =
   empty +> Flat_x86.Instr.[ Cmp { src1; src2; size }; Set { dst; cc } ]
+;;
+
+let lower_simple_rmw rmw size ~dst ~src1 ~src2 =
+  empty
+  +> Flat_x86.Instr.
+       [ Mov { dst = Reg Mach_reg.scratch; src = src1; size }
+       ; rmw ~dst:(Flat_x86.Operand.Reg Mach_reg.scratch) ~src:src2 ~size
+       ; Mov { dst; src = Reg Mach_reg.scratch; size }
+       ]
 ;;
 
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
@@ -95,28 +104,18 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
     let size = Flat_x86.Size.Qword in
-    let on_cmp cc = lower_cmp st cc size ~dst ~src1 ~src2 in
+    let on_cmp cc = lower_cmp cc size ~dst ~src1 ~src2 in
+    let on_rmw rmw = lower_simple_rmw rmw size ~dst ~src1 ~src2 in
     (match op with
      | Lt -> on_cmp L
      | Gt -> on_cmp G
      | Le -> on_cmp LE
      | Ge -> on_cmp GE
-     | Add ->
-       Flat_x86.Instr.(
-         empty
-         +> [ (* ok because src2 is never allocated with scratch *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
-            ; Add { dst = Reg Mach_reg.scratch; src = src2; size }
-            ; Mov { dst; src = Reg Mach_reg.scratch; size }
-            ])
-     | Sub ->
-       Flat_x86.Instr.(
-         empty
-         +> [ (* ok because src2 is never allocated with scratch *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
-            ; Sub { dst = Reg Mach_reg.scratch; src = src2; size }
-            ; Mov { dst; src = Reg Mach_reg.scratch; size }
-            ])
+     | And -> on_rmw Flat_x86.Instr.and_
+     | Or -> on_rmw Flat_x86.Instr.or_
+     | Xor -> on_rmw Flat_x86.Instr.xor
+     | Add -> on_rmw Flat_x86.Instr.add
+     | Sub -> on_rmw Flat_x86.Instr.sub
      | Imul ->
        Flat_x86.Instr.(
          empty

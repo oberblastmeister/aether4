@@ -41,6 +41,21 @@ module Instr = struct
         { src : Operand.t
         ; size : Size.t
         }
+    | And of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
+    | Or of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
+    | Xor of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
@@ -95,7 +110,7 @@ module Instr = struct
     | Cqo
     | Label of string
     | Comment of string
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, variants]
 end
 
 module Program = struct

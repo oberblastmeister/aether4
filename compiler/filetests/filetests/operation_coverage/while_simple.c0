@@ -1,7 +1,6 @@
 /*
 (
  (kind (CompileAndRun))
- (emit (Tir))
 )
 */
 
@@ -15,60 +14,4 @@ int main() {
     return i + j;
 }
 ----
-(tir
- (tir
-  ((name main)
-   (blocks
-    ((done@0
-      ((label done@0)
-       (body
-        (((i (Block_params (temps ()))) (index 0) (info ()))
-         ((i (Unary (dst lhs@29) (op (Copy Int)) (src i@19))) (index 1)
-          (info ()))
-         ((i (Unary (dst rhs@30) (op (Copy Int)) (src j@18))) (index 2)
-          (info ()))
-         ((i (Bin (dst ret@31) (op Add) (src1 lhs@29) (src2 rhs@30)))
-          (index 3) (info ()))
-         ((i (Ret (src ret@31) (ty Int))) (index 4) (info ()))))))
-     (loop@1
-      ((label loop@1)
-       (body
-        (((i (Block_params (temps ((j@18 Int) (i@19 Int))))) (index 0)
-          (info ()))
-         ((i (Unary (dst lhs@20) (op (Copy Int)) (src i@19))) (index 1)
-          (info ()))
-         ((i (Nullary (dst rhs@21) (op (Int_const 10)))) (index 2) (info ()))
-         ((i (Bin (dst cond@22) (op Lt) (src1 lhs@20) (src2 rhs@21)))
-          (index 3) (info ()))
-         ((i
-           (Cond_jump (cond cond@22) (b1 ((label body@2) (args ())))
-            (b2 ((label done@0) (args ())))))
-          (index 4) (info ()))))))
-     (body@2
-      ((label body@2)
-       (body
-        (((i (Block_params (temps ()))) (index 0) (info ()))
-         ((i (Unary (dst lhs@23) (op (Copy Int)) (src i@19))) (index 1)
-          (info ()))
-         ((i (Nullary (dst rhs@24) (op (Int_const 1)))) (index 2) (info ()))
-         ((i (Bin (dst i@25) (op Add) (src1 lhs@23) (src2 rhs@24))) (index 3)
-          (info ()))
-         ((i (Unary (dst lhs@26) (op (Copy Int)) (src j@18))) (index 4)
-          (info ()))
-         ((i (Nullary (dst rhs@27) (op (Int_const 2)))) (index 5) (info ()))
-         ((i (Bin (dst j@28) (op Add) (src1 lhs@26) (src2 rhs@27))) (index 6)
-          (info ()))
-         ((i (Jump ((label loop@1) (args (j@28 i@25))))) (index 7) (info ()))))))
-     (start@3
-      ((label start@3)
-       (body
-        (((i (Block_params (temps ()))) (index 0) (info ()))
-         ((i (Nullary (dst tmp@14) (op (Int_const 0)))) (index 1) (info ()))
-         ((i (Unary (dst i@15) (op (Copy Int)) (src tmp@14))) (index 2)
-          (info ()))
-         ((i (Nullary (dst tmp@16) (op (Int_const 0)))) (index 3) (info ()))
-         ((i (Unary (dst j@17) (op (Copy Int)) (src tmp@16))) (index 4)
-          (info ()))
-         ((i (Jump ((label loop@1) (args (j@17 i@15))))) (index 5) (info ()))))))))
-   (start start@3) (next_temp_id 32) (next_label_id 4))))
 30

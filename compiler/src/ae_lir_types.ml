@@ -23,6 +23,9 @@ module Bin_op = struct
     | Gt
     | Le
     | Ge
+    | And
+    | Or
+    | Xor
   [@@deriving sexp_of]
 end
 

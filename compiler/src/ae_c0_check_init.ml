@@ -17,6 +17,11 @@ let rec check_block (block : Ast.block) =
 
 and iter_expr_uses (expr : Ast.expr) ~f =
   match expr with
+  | Ternary { cond; then_expr; else_expr; ty = _ } ->
+    iter_expr_uses cond ~f;
+    iter_expr_uses then_expr ~f;
+    iter_expr_uses else_expr ~f;
+    ()
   | Var { var; ty = _ } ->
     f var;
     ()

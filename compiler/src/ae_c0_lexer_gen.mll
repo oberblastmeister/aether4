@@ -32,6 +32,10 @@ rule lex =
   | '>' { Token.Rangle }
   | "<=" { Token.LangleEq }
   | ">=" { Token.RangleEq }
+  | '~' { Token.Tilde }
+  | '^' { Token.Caret }
+  | '&' { Token.Ampersand }
+  | '|' { Token.Pipe }
   | '(' { Token.LParen }
   | ')' { Token.RParen }
   | '{' { Token.LBrace }

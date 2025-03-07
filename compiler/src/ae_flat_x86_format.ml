@@ -84,6 +84,9 @@ let format_instr (instr : Instr.t) =
   match instr with
   | Add { dst; src; size } -> [%string "add%{suff size} %{op src size}, %{op dst size}"]
   | Sub { dst; src; size } -> [%string "sub%{suff size} %{op src size}, %{op dst size}"]
+  | And { dst; src; size } -> [%string "and%{suff size} %{op src size}, %{op dst size}"]
+  | Or { dst; src; size } -> [%string "or%{suff size} %{op src size}, %{op dst size}"]
+  | Xor { dst; src; size } -> [%string "xor%{suff size} %{op src size}, %{op dst size}"]
   | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]

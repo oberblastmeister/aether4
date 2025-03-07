@@ -24,9 +24,15 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Var { var; ty = _ } -> Var { var; ty = Some (var_ty st var) }
   | Int_const _ | Bool_const _ -> expr
+  | Ternary { cond; then_expr; else_expr; ty = _ } ->
+    let cond = check_expr st cond Bool in
+    let then_expr = infer_expr st then_expr in
+    let else_expr = infer_expr st else_expr in
+    check_ty_eq st (Ast.expr_ty_exn then_expr) (Ast.expr_ty_exn else_expr);
+    Ternary { cond; then_expr; else_expr; ty = Some (Ast.expr_ty_exn then_expr) }
   | Bin { lhs; op; rhs; ty = _ } ->
     (match op with
-     | Add | Sub | Mul | Div | Mod ->
+     | Add | Sub | Mul | Div | Mod | Bit_and | Bit_or | Bit_xor ->
        let lhs = check_expr st lhs Int in
        let rhs = check_expr st rhs Int in
        Bin { lhs; op; rhs; ty = Some Int }

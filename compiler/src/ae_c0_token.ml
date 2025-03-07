@@ -27,6 +27,10 @@ type t =
   | LBrace
   | RBrace
   | Return
+  | Tilde
+  | Caret
+  | Ampersand
+  | Pipe
   | Int
   | Bool
   | True

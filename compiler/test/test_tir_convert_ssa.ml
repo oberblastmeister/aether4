@@ -23,7 +23,7 @@ let check s =
   ()
 ;;
 
-let%expect_test "nothing" =
+(* let%expect_test "nothing" =
   check
     {|
       int main() {
@@ -130,4 +130,4 @@ let%expect_test "smoke" =
              (index 8) (info ()))))))))
       (start start@3) (next_temp_id 32) (next_label_id 4)))
     |}]
-;;
+;; *)

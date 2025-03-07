@@ -95,6 +95,9 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
       | Gt -> Gt
       | Le -> Le
       | Ge -> Ge
+      | And -> And
+      | Or -> Or
+      | Xor -> Xor
     in
     empty +> [ Abs_x86.Instr.Bin { dst; src1; op; src2 } ]
   | Ret { src; ty } ->

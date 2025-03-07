@@ -1,0 +1,9 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+    return 3 & 4;
+}
+----
+0
