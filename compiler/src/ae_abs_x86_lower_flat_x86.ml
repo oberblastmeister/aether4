@@ -14,12 +14,9 @@ let empty = Bag.empty
 
 open Bag.Syntax
 
-type st =
-  { allocation : Regalloc.Allocation.t
-  ; mutable label_id : int
-  }
+type st = { allocation : Regalloc.Allocation.t }
 
-let create_state allocation = { allocation; label_id = 0 }
+let create_state allocation = { allocation }
 let get_vreg t vreg = Regalloc.Allocation.find_exn t.allocation vreg
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =

@@ -4,7 +4,7 @@
     - https://xavierleroy.org/publi/parallel-move.pdf
 - dominator algorithm
     - https://www.cs.tufts.edu/~nr/cs257/archive/keith-cooper/dom14.pdf
-- how to translate out of ssa
+- revisiting out of ssa translation
     - https://inria.hal.science/inria-00349925v1/document
 - computing liveness for ssa form programs
     - https://inria.hal.science/inria-00558509v2/document
@@ -13,3 +13,10 @@
     - https://compilers.cs.uni-saarland.de/papers/ssara.pdf
 - ssa based compiler design
     - https://pfalcon.github.io/ssabook/latest/book.pdf
+- ssa based register allocation
+    - go register allocator
+        - https://developers.redhat.com/articles/2024/09/24/go-compiler-register-allocation
+    - preference guided
+        - https://link.springer.com/content/pdf/10.1007/978-3-642-11970-5_12.pdf
+    - spilling
+        - https://i44vm2.informatik.kit.edu/uploads/publikationen/braun09cc.pdf

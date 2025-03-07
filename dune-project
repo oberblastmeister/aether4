@@ -22,7 +22,8 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends
-  ocaml
+  (ocaml
+   (= 5.2.1))
   dune
   (core
    (= v0.17.1))
@@ -34,6 +35,8 @@
    (= v0.17.0))
   (containers
    (= 3.15))
+  (containers-data
+    (= 3.15))
   (ppx_deriving
    (= 6.0.3))
   (ppx_jane
