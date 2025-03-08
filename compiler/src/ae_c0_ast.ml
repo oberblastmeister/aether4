@@ -88,6 +88,9 @@ and bin_op =
   | Bit_and
   | Bit_or
   | Bit_xor
+  | Eq
+  | Lshift
+  | Rshift
 [@@deriving sexp_of]
 
 type program =

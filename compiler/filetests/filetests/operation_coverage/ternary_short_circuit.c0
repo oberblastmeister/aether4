@@ -1,0 +1,9 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+    return true ? 1234 : 1 / 0;
+}
+----
+1234

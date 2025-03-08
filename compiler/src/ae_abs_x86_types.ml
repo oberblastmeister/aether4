@@ -78,6 +78,9 @@ module Bin_op = struct
     | And
     | Or
     | Xor
+    | Eq
+    | Lshift
+    | Rshift
   [@@deriving sexp_of]
 end
 
@@ -243,7 +246,7 @@ module Instr = struct
     match instr with
     | Bin { op; _ } ->
       (match op with
-       | Add | Sub | Lt | Gt | Le | Ge | And | Or | Xor -> ()
+       | Add | Sub | Lt | Gt | Le | Ge | And | Or | Xor | Eq | Lshift | Rshift -> ()
        | Imul | Idiv | Imod ->
          f Mach_reg.RAX;
          f Mach_reg.RDX;

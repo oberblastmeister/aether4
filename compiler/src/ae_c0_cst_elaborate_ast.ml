@@ -102,12 +102,12 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     in
     let expr =
       match op with
-      | Eq -> expr
-      | Add_eq -> bin_expr Add
-      | Sub_eq -> bin_expr Sub
-      | Mul_eq -> bin_expr Mul
-      | Div_eq -> bin_expr Div
-      | Mod_eq -> bin_expr Mod
+      | Id_assign -> expr
+      | Add_assign -> bin_expr Add
+      | Sub_assign -> bin_expr Sub
+      | Mul_assign -> bin_expr Mul
+      | Div_assign -> bin_expr Div
+      | Mod_assign -> bin_expr Mod
     in
     (empty +> Ast.[ Assign { lvalue; expr } ]), st
   | Return expr ->
@@ -150,17 +150,26 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     let expr = elab_expr st expr in
     (match op with
      | Neg -> Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
-     | Bit_not -> Bin { lhs = Int_const (-1L); op = Bit_xor; rhs = expr; ty = None })
+     | Bit_not -> Bin { lhs = Int_const (-1L); op = Bit_xor; rhs = expr; ty = None }
+     | Log_not -> Bin { lhs = Bool_const false; op = Eq; rhs = expr; ty = None })
   | Ternary { cond; then_expr; else_expr } ->
     let cond = elab_expr st cond in
     let then_expr = elab_expr st then_expr in
     let else_expr = elab_expr st else_expr in
     Ternary { cond; then_expr; else_expr; ty = None }
+  | Bin { lhs; op = Neq; rhs } ->
+    elab_expr st (Unary { op = Log_not; expr = Bin { lhs; op = Eq; rhs } })
   | Bin { lhs; op; rhs } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in
-    let op = elab_bin_op op in
-    Bin { lhs; op; rhs; ty = None }
+    (match op with
+     | Log_and ->
+       Ternary { cond = lhs; then_expr = rhs; else_expr = Bool_const false; ty = None }
+     | Log_or ->
+       Ternary { cond = lhs; then_expr = Bool_const true; else_expr = rhs; ty = None }
+     | _ ->
+       let op = elab_bin_op op in
+       Bin { lhs; op; rhs; ty = None })
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with
@@ -176,6 +185,12 @@ and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   | Bit_and -> Bit_and
   | Bit_or -> Bit_or
   | Bit_xor -> Bit_xor
+  | Log_and -> raise_s [%message "should have been elaborated to ternary"]
+  | Log_or -> raise_s [%message "should have been elaborated to ternary"]
+  | Eq -> Eq
+  | Neq -> raise_s [%message "should have been elaborated to not with eq"]
+  | Lshift -> Lshift
+  | Rshift -> Rshift
 
 and elab_block st (block : Cst.block) : Ast.block =
   let rec go st stmts =

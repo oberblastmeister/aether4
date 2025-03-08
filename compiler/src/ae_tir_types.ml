@@ -28,6 +28,9 @@ module Bin_op = struct
     | And
     | Or
     | Xor
+    | Eq
+    | Lshift
+    | Rshift
   [@@deriving sexp_of]
 end
 
@@ -133,14 +136,13 @@ module Instr = struct
     match instr with
     | Block_params { temps } -> List.iter temps ~f
     | Nop -> ()
-    | Bin
-        { dst
-        ; op = Add | Sub | Mul | Div | Mod | Lt | Gt | Le | Ge | And | Or | Xor
-        ; src1 = _
-        ; src2 = _
-        } ->
-      f (dst, Int);
-      ()
+    | Bin { dst; op; src1 = _; src2 = _ } ->
+      let ty : Ty.t =
+        match op with
+        | Add | Sub | Mul | Div | Mod | And | Or | Xor | Lshift | Rshift -> Int
+        | Eq | Lt | Gt | Le | Ge -> Bool
+      in
+      f (dst, ty)
     | Unary { dst; op; src = _ } ->
       (match op with
        | Copy ty -> f (dst, ty));

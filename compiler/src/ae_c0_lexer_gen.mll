@@ -14,6 +14,7 @@ rule lex =
   | newline { Lexing.new_line lexbuf; lex lexbuf }
   | "//" { line_comment lexbuf }
   | "/*" { block_comment 1 lexbuf }
+  | ':' { Token.Colon }
   | ';' { Token.Semi }
   | '+' { Token.Plus }
   | '*' { Token.Star }
@@ -32,10 +33,16 @@ rule lex =
   | '>' { Token.Rangle }
   | "<=" { Token.LangleEq }
   | ">=" { Token.RangleEq }
+  | "<<" { Token.LangleLangle }
+  | ">>" { Token.RangleRangle }
   | '~' { Token.Tilde }
   | '^' { Token.Caret }
   | '&' { Token.Ampersand }
+  | '?' { Token.Question }
+  | '!' { Token.Bang }
   | '|' { Token.Pipe }
+  | "||" { Token.PipePipe }
+  | "&&" { Token.AmpersandAmpersand }
   | '(' { Token.LParen }
   | ')' { Token.RParen }
   | '{' { Token.LBrace }

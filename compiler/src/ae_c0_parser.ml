@@ -178,13 +178,13 @@ and parse_assign env : Cst.assign =
   { lvalue; op; expr }
 
 and parse_assign_op env : Cst.assign_op =
-  (Cst.Mul_eq
+  (Cst.Mul_assign
    <$ Parser.expect_eq StarEq
-   <|> (Cst.Add_eq <$ Parser.expect_eq PlusEq)
-   <|> (Cst.Sub_eq <$ Parser.expect_eq DashEq)
-   <|> (Cst.Mod_eq <$ Parser.expect_eq PercentEq)
-   <|> (Cst.Div_eq <$ Parser.expect_eq SlashEq)
-   <|> (Cst.Eq <$ Parser.expect_eq Eq))
+   <|> (Cst.Add_assign <$ Parser.expect_eq PlusEq)
+   <|> (Cst.Sub_assign <$ Parser.expect_eq DashEq)
+   <|> (Cst.Mod_assign <$ Parser.expect_eq PercentEq)
+   <|> (Cst.Div_assign <$ Parser.expect_eq SlashEq)
+   <|> (Cst.Id_assign <$ Parser.expect_eq Eq))
     env
 
 and parse_lvalue env : Cst.lvalue =
@@ -197,8 +197,31 @@ and parse_lvalue env : Cst.lvalue =
     env
 
 and parse_expr env : Cst.expr =
-  let expr = parse_bit_or env in
+  let expr = parse_ternary env in
   expr
+
+and parse_ternary env : Cst.expr =
+  let cond = parse_log_or env in
+  ((fun env ->
+     Parser.expect_eq Question env;
+     let then_expr = parse_expr env in
+     Parser.expect_eq Colon
+     |> Parser.cut (Sexp [%message "expected colon in ternary"])
+     |> Fn.( |> ) env;
+     let else_expr = parse_expr env in
+     Cst.Ternary { cond; then_expr; else_expr })
+   <|> Parser.pure cond)
+    env
+
+and parse_log_or env : Cst.expr =
+  chainl ~expr:parse_log_and ~op:(Cst.Log_or <$ Parser.expect_eq PipePipe) ~f:Cst.bin env
+
+and parse_log_and env : Cst.expr =
+  chainl
+    ~expr:parse_bit_or
+    ~op:(Cst.Log_and <$ Parser.expect_eq AmpersandAmpersand)
+    ~f:Cst.bin
+    env
 
 and parse_bit_or env : Cst.expr =
   chainl ~expr:parse_bit_xor ~op:(Cst.Bit_or <$ Parser.expect_eq Pipe) ~f:Cst.bin env
@@ -208,20 +231,37 @@ and parse_bit_xor env : Cst.expr =
 
 and parse_bit_and env : Cst.expr =
   chainl
-    ~expr:parse_comparison
+    ~expr:parse_equality
     ~op:(Cst.Bit_and <$ Parser.expect_eq Ampersand)
+    ~f:Cst.bin
+    env
+
+and parse_equality env : Cst.expr =
+  chainl
+    ~expr:parse_comparison
+    ~op:(Cst.Eq <$ Parser.expect_eq EqEq <|> (Cst.Neq <$ Parser.expect_eq BangEq))
     ~f:Cst.bin
     env
 
 and parse_comparison env : Cst.expr =
   chainl
-    ~expr:parse_add
+    ~expr:parse_shift
     ~op:
       (Cst.Lt
        <$ Parser.expect_eq Langle
        <|> (Cst.Gt <$ Parser.expect_eq Rangle)
        <|> (Cst.Le <$ Parser.expect_eq LangleEq)
        <|> (Cst.Ge <$ Parser.expect_eq RangleEq))
+    ~f:Cst.bin
+    env
+
+and parse_shift env : Cst.expr =
+  chainl
+    ~expr:parse_add
+    ~op:
+      (Cst.Lshift
+       <$ Parser.expect_eq LangleLangle
+       <|> (Cst.Rshift <$ Parser.expect_eq RangleRangle))
     ~f:Cst.bin
     env
 
@@ -252,6 +292,10 @@ and parse_unary_expr env : Cst.expr =
    Parser.expect_eq Tilde env;
    let expr = parse_unary_expr env in
    Cst.Unary { op = Bit_not; expr })
+   <|> (fun env ->
+   Parser.expect_eq Bang env;
+   let expr = parse_unary_expr env in
+   Cst.Unary { op = Log_not; expr })
    <|> parse_atom)
     env
 

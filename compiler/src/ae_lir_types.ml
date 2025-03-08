@@ -26,6 +26,9 @@ module Bin_op = struct
     | And
     | Or
     | Xor
+    | Eq
+    | Lshift
+    | Rshift
   [@@deriving sexp_of]
 end
 

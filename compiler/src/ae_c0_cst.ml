@@ -51,12 +51,12 @@ and assign =
 and lvalue = string [@@deriving sexp_of]
 
 and assign_op =
-  | Eq
-  | Add_eq
-  | Sub_eq
-  | Mul_eq
-  | Div_eq
-  | Mod_eq
+  | Id_assign
+  | Add_assign
+  | Sub_assign
+  | Mul_assign
+  | Div_assign
+  | Mod_assign
 [@@deriving sexp_of]
 
 and post_op =
@@ -86,6 +86,7 @@ and expr =
 and unary_op =
   | Neg
   | Bit_not
+  | Log_not
 
 and bin_op =
   | Add
@@ -100,6 +101,12 @@ and bin_op =
   | Bit_and
   | Bit_or
   | Bit_xor
+  | Log_and
+  | Log_or
+  | Lshift
+  | Rshift
+  | Eq
+  | Neq
 [@@deriving sexp_of]
 
 and decl =

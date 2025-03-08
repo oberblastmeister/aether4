@@ -104,6 +104,7 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let on_cmp cc = lower_cmp cc size ~dst ~src1 ~src2 in
     let on_rmw rmw = lower_simple_rmw rmw size ~dst ~src1 ~src2 in
     (match op with
+     | Eq | Lshift | Rshift -> todol [%here]
      | Lt -> on_cmp L
      | Gt -> on_cmp G
      | Le -> on_cmp LE

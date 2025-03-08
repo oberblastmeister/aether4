@@ -76,7 +76,8 @@ let%expect_test "simple control flow" =
            (body1
             (Block
              ((stmts
-               ((Assign ((lvalue another) (op Eq) (expr (Int_const 1243)))))))))
+               ((Assign
+                 ((lvalue another) (op Id_assign) (expr (Int_const 1243)))))))))
            (body2 ()))))))))
     |}]
 ;;
@@ -96,10 +97,10 @@ let%expect_test "simple assign" =
       (block
        ((stmts
          ((Assign
-           ((lvalue first) (op Mul_eq)
+           ((lvalue first) (op Mul_assign)
             (expr (Bin (lhs (Int_const 12)) (op Add) (rhs (Int_const 12))))))
           (Assign
-           ((lvalue another) (op Mod_eq)
+           ((lvalue another) (op Mod_assign)
             (expr (Bin (lhs (Int_const 12)) (op Div) (rhs (Int_const 12))))))))))))
     |}]
 ;;

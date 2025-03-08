@@ -5,8 +5,13 @@ type t =
   | Hexnum of string
   | Decnum of string
   | Semi
+  | Colon
   | Plus
+  | Question
   | Eq
+  | Bang
+  | EqEq
+  | BangEq
   | Star
   | Dash
   | Slash
@@ -20,6 +25,8 @@ type t =
   | DashDash
   | Langle
   | Rangle
+  | LangleLangle
+  | RangleRangle
   | LangleEq
   | RangleEq
   | LParen
@@ -31,6 +38,8 @@ type t =
   | Caret
   | Ampersand
   | Pipe
+  | PipePipe
+  | AmpersandAmpersand
   | Int
   | Bool
   | True

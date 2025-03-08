@@ -5,8 +5,7 @@
 */
 
 int main() {
-    // TODO: fix this test
-    return 0;
+    return false ? 1 : false ? 1 : 1234;
 }
 ----
-0
+1234

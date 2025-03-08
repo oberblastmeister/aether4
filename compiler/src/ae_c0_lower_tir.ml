@@ -151,6 +151,9 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   | Bit_and -> And
   | Bit_or -> Or
   | Bit_xor -> Xor
+  | Eq -> Eq
+  | Lshift -> Lshift
+  | Rshift -> Rshift
 
 (* invariant:
 

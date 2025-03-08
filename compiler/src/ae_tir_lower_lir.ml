@@ -51,6 +51,9 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | And -> And
   | Or -> Or
   | Xor -> Xor
+  | Eq -> Eq
+  | Lshift -> Lshift
+  | Rshift -> Rshift
 ;;
 
 let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
