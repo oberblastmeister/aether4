@@ -37,6 +37,12 @@ let fresh_temp ?(name = "fresh") t : Lir.Temp.t =
   Entity.Ident.create name id
 ;;
 
+let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
+  match ty with
+  | Int -> I64
+  | Bool -> I1
+;;
+
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   match op with
   | Add -> Add
@@ -48,18 +54,12 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Gt -> Gt
   | Le -> Le
   | Ge -> Ge
-  | And -> And
-  | Or -> Or
-  | Xor -> Xor
-  | Eq -> Eq
+  | And -> And I64
+  | Or -> Or I64
+  | Xor -> Xor I64
+  | Eq ty -> Eq (lower_ty ty)
   | Lshift -> Lshift
   | Rshift -> Rshift
-;;
-
-let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
-  match ty with
-  | Int -> I64
-  | Bool -> I1
 ;;
 
 let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =

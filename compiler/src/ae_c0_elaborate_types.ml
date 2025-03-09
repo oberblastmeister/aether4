@@ -32,7 +32,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     Ternary { cond; then_expr; else_expr; ty = Some (Ast.expr_ty_exn then_expr) }
   | Bin { lhs; op; rhs; ty = _ } ->
     (match op with
-     | Add | Sub | Mul | Div | Mod | Bit_and | Bit_or | Bit_xor ->
+     | Add | Sub | Mul | Div | Mod | Bit_and | Bit_or | Bit_xor | Lshift | Rshift ->
        let lhs = check_expr st lhs Int in
        let rhs = check_expr st rhs Int in
        Bin { lhs; op; rhs; ty = Some Int }
@@ -40,7 +40,11 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
        let lhs = check_expr st lhs Int in
        let rhs = check_expr st rhs Int in
        Bin { lhs; op; rhs; ty = Some Bool }
-     | _ -> todol [%here])
+     | Eq ->
+       let lhs = infer_expr st lhs in
+       let rhs = infer_expr st rhs in
+       check_ty_eq st (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
+       Bin { lhs; op; rhs; ty = Some Bool })
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in

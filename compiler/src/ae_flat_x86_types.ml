@@ -67,6 +67,14 @@ module Instr = struct
         ; src : Operand.t
         ; src_size : Size.t
         }
+    | Sal of
+        { dst : Operand.t
+        ; size : Size.t
+        }
+    | Sar of
+        { dst : Operand.t
+        ; size : Size.t
+        }
     | Cmp of
         { src1 : Operand.t
         ; src2 : Operand.t

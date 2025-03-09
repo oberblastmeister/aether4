@@ -14,6 +14,13 @@ module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 
+module Ty = struct
+  type t =
+    | Int
+    | Bool
+  [@@deriving sexp_of, equal, compare]
+end
+
 module Bin_op = struct
   type t =
     | Add
@@ -28,17 +35,10 @@ module Bin_op = struct
     | And
     | Or
     | Xor
-    | Eq
+    | Eq of Ty.t
     | Lshift
     | Rshift
   [@@deriving sexp_of]
-end
-
-module Ty = struct
-  type t =
-    | Int
-    | Bool
-  [@@deriving sexp_of, equal, compare]
 end
 
 module Unary_op = struct
@@ -140,7 +140,7 @@ module Instr = struct
       let ty : Ty.t =
         match op with
         | Add | Sub | Mul | Div | Mod | And | Or | Xor | Lshift | Rshift -> Int
-        | Eq | Lt | Gt | Le | Ge -> Bool
+        | Eq _ | Lt | Gt | Le | Ge -> Bool
       in
       f (dst, ty)
     | Unary { dst; op; src = _ } ->

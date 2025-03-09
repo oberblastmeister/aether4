@@ -151,7 +151,7 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   | Bit_and -> And
   | Bit_or -> Or
   | Bit_xor -> Xor
-  | Eq -> Eq
+  | Eq -> raise_s [%message "don't know type of eq, lower before"]
   | Lshift -> Lshift
   | Rshift -> Rshift
 
@@ -182,7 +182,11 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
   | Int_const const -> empty +> [ ins (Nullary { dst; op = Int_const const }) ] ++ cont
   | Bool_const const -> empty +> [ ins (Nullary { dst; op = Bool_const const }) ] ++ cont
   | Bin { lhs; op; rhs; ty = _ } ->
-    let op = lower_bin_op op in
+    let op : Tir.Bin_op.t =
+      match op with
+      | Eq -> Eq (lower_ty (Ast.expr_ty_exn lhs))
+      | _ -> lower_bin_op op
+    in
     let src1 = fresh_temp ~name:"lhs" st in
     let src2 = fresh_temp ~name:"rhs" st in
     let cont = empty +> [ ins (Bin { dst; src1; op; src2 }) ] ++ cont in

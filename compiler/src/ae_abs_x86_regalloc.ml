@@ -56,18 +56,24 @@ let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
   end;
   (*
      for special instructions that take memory destination but also implicitly write registers such as RAX or RDX,
-         we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered
+     we must prevent the dst operand from being allocated RAX or RDX or else it will be clobbered.
+     
+     This is because above, we only add edges to things that are live_out at this instruction.
+     However, any memory operands used by the instruction we use *after* we write to the precolored register.
+     This means that they are always live_out with respect to the precolored register, even if they may not be in the program.
   *)
-  (match instr.i with
-   | Instr.Bin { dst = Mem addr; op = Idiv | Imul | Imod; _ } ->
-     let rax_name = get_precolored_name RAX in
-     let rdx_name = get_precolored_name RDX in
-     begin
-       let@: vreg = Ae_x86_address.iter_regs addr in
-       Graph.add_edge graph rdx_name vreg;
-       Graph.add_edge graph rax_name vreg
-     end
-   | _ -> ());
+  begin
+    match instr.i with
+    | Instr.Bin { dst = Mem addr; _ } -> begin
+      let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
+      let precolored_name = get_precolored_name mach_reg in
+      begin
+        let@: vreg = Ae_x86_address.iter_regs addr in
+        Graph.add_edge graph precolored_name vreg
+      end
+    end
+    | _ -> ()
+  end;
   Liveness.backwards_transfer instr.i live_out
 ;;
 

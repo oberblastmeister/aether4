@@ -1,5 +1,5 @@
 /*
-( (kind (CompileAndRun)) )
+( (kind (CompileFail)) )
 */
 
 int main() {
@@ -8,5 +8,4 @@ int main() {
     return 0;
 }
 ----
-("Filetest failed"
- ("Could not compile test" ("Var was already declared!" (var first))))
+("Var was already declared!" (var first))

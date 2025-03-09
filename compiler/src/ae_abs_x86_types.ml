@@ -18,13 +18,6 @@ module Address = struct
   type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
 end
 
-module Alloc_reg = struct
-  type t =
-    | InReg of Mach_reg.t
-    | Spilled of Stack_slot.t
-  [@@deriving sexp_of, variants]
-end
-
 module Operand = struct
   type t =
     | Imm of Int32.t
@@ -75,10 +68,10 @@ module Bin_op = struct
     | Gt
     | Le
     | Ge
-    | And
-    | Or
-    | Xor
-    | Eq
+    | And of Size.t
+    | Or of Size.t
+    | Xor of Size.t
+    | Eq of Size.t
     | Lshift
     | Rshift
   [@@deriving sexp_of]
@@ -246,7 +239,10 @@ module Instr = struct
     match instr with
     | Bin { op; _ } ->
       (match op with
-       | Add | Sub | Lt | Gt | Le | Ge | And | Or | Xor | Eq | Lshift | Rshift -> ()
+       | Add | Sub | Lt | Gt | Le | Ge | And _ | Or _ | Xor _ | Eq _ -> ()
+       | Lshift | Rshift ->
+         f Mach_reg.RCX;
+         ()
        | Imul | Idiv | Imod ->
          f Mach_reg.RAX;
          f Mach_reg.RDX;

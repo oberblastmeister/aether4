@@ -100,18 +100,38 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
     let dst = lower_operand st dst in
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
+    let on_cmp ?(size = Flat_x86.Size.Qword) cc = lower_cmp cc size ~dst ~src1 ~src2 in
+    let on_rmw ?(size = Flat_x86.Size.Qword) rmw =
+      lower_simple_rmw rmw size ~dst ~src1 ~src2
+    in
     let size = Flat_x86.Size.Qword in
-    let on_cmp cc = lower_cmp cc size ~dst ~src1 ~src2 in
-    let on_rmw rmw = lower_simple_rmw rmw size ~dst ~src1 ~src2 in
     (match op with
-     | Eq | Lshift | Rshift -> todol [%here]
+     | Eq size -> on_cmp ~size E
+     | Lshift ->
+       empty
+       +> Flat_x86.Instr.
+            [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
+              Mov { dst = Reg R11; src = src1; size }
+            ; Mov { dst = Reg RCX; src = src2; size = Dword }
+            ; Sal { dst = Reg R11; size }
+            ; Mov { dst; src = Reg R11; size }
+            ]
+     | Rshift ->
+       empty
+       +> Flat_x86.Instr.
+            [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
+              Mov { dst = Reg R11; src = src1; size }
+            ; Mov { dst = Reg RCX; src = src2; size = Dword }
+            ; Sar { dst = Reg R11; size }
+            ; Mov { dst; src = Reg R11; size }
+            ]
      | Lt -> on_cmp L
      | Gt -> on_cmp G
      | Le -> on_cmp LE
      | Ge -> on_cmp GE
-     | And -> on_rmw Flat_x86.Instr.and_
-     | Or -> on_rmw Flat_x86.Instr.or_
-     | Xor -> on_rmw Flat_x86.Instr.xor
+     | And size -> on_rmw ~size Flat_x86.Instr.and_
+     | Or size -> on_rmw ~size Flat_x86.Instr.or_
+     | Xor size -> on_rmw ~size Flat_x86.Instr.xor
      | Add -> on_rmw Flat_x86.Instr.add
      | Sub -> on_rmw Flat_x86.Instr.sub
      | Imul ->

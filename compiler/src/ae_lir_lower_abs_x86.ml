@@ -1,3 +1,6 @@
+(*
+  prefer 32 bit registers: https://stackoverflow.com/questions/41573502/why-doesnt-gcc-use-partial-registers
+*)
 open Std
 module Lir = Ae_lir_types
 module Entity = Ae_entity_std
@@ -38,7 +41,7 @@ let fresh_operand ?name st = Abs_x86.Operand.Reg (fresh_temp ?name st)
 let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
   match ty with
   | I64 -> Qword
-  | I1 -> Byte
+  | I1 -> Dword
 ;;
 
 let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
@@ -95,10 +98,10 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
       | Gt -> Gt
       | Le -> Le
       | Ge -> Ge
-      | And -> And
-      | Or -> Or
-      | Xor -> Xor
-      | Eq -> Eq
+      | And ty -> And (lower_ty ty)
+      | Or ty -> Or (lower_ty ty)
+      | Xor ty -> Xor (lower_ty ty)
+      | Eq ty -> Eq (lower_ty ty)
       | Lshift -> Lshift
       | Rshift -> Rshift
     in

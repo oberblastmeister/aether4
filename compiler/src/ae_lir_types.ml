@@ -11,6 +11,13 @@ module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 
+module Ty = struct
+  type t =
+    | I64
+    | I1
+  [@@deriving sexp_of, equal, compare]
+end
+
 (* TODO: change this to use one mega Prim op type *)
 module Bin_op = struct
   type t =
@@ -23,20 +30,13 @@ module Bin_op = struct
     | Gt
     | Le
     | Ge
-    | And
-    | Or
-    | Xor
-    | Eq
+    | And of Ty.t
+    | Or of Ty.t
+    | Xor of Ty.t
+    | Eq of Ty.t
     | Lshift
     | Rshift
   [@@deriving sexp_of]
-end
-
-module Ty = struct
-  type t =
-    | I64
-    | I1
-  [@@deriving sexp_of, equal, compare]
 end
 
 module Unary_op = struct
