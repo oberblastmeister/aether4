@@ -1,0 +1,13 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+    int a = 1024;
+    int b = a * 1024;
+    a -= 2;
+    b %= 1024*1023;
+    return (b-a);
+}
+----
+2

@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+// since mod uses idiv under the hood, if the div operation would overflow, then mod will too
+int main() {
+    // 2^63;
+    int int_min = 0X8000000000000000; 
+    int y = -1;
+    return int_min % y;
+}
+----

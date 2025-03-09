@@ -5,7 +5,14 @@ type t =
   | Qword
 [@@deriving sexp_of, equal, compare]
 
-let size_to_bits = function
+let to_bytes = function
+  | Byte -> 1
+  | Word -> 2
+  | Dword -> 4
+  | Qword -> 8
+;;
+
+let to_bits = function
   | Byte -> 8
   | Word -> 16
   | Dword -> 32

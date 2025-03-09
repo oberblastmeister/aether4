@@ -131,7 +131,7 @@ let format_instr (instr : Instr.t) =
   | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
-  | Mov_abs { dst; src } -> [%string "movabsq %{src#Int64}, %{op dst Size.Qword}"]
+  | Mov_abs { dst; src } -> [%string "movabsq $%{src#Int64}, %{op dst Size.Qword}"]
   | Movzx { dst; dst_size; src; src_size } ->
     [%string
       "movzx%{suff src_size}%{suff dst_size} %{op src src_size}, %{op dst dst_size}"]

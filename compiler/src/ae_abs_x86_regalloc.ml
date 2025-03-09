@@ -376,6 +376,7 @@ let alloc_func stack_builder (func : Func.t) =
   in
   assert (max_color >= -1);
   begin
+    (* TODO: this is wrong, we need to return spilled from color_func_and_spill and only assign registers to non spilled colors *)
     let@: color =
       (* assign registers to colors *)
       Iter.Infix.(0 -- max_color)

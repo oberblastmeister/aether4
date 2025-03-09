@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    // 2^63 - 1
+    int x = 0X7FFFFFFFFFFFFFFF;
+    return x;
+}
+----
+9223372036854775807

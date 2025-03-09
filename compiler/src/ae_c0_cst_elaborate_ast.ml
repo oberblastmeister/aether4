@@ -138,10 +138,15 @@ and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
   | Int_const i ->
-    Z.to_int64 i
-    |> Option.value_or_thunk ~default:(fun () ->
-      throw_s [%message "Int did not fit in 64 bits" (i : Z.t)])
-    |> Int_const
+    (match Z.to_int64 i with
+     | None ->
+       if Z.(equal i (shift_left (of_int 1) 63))
+       then (
+         try Int_const (Z.to_int64_unsigned i) with
+         | Z.Overflow ->
+           raise_s [%message "Bug: unexpected overflow on integer" (i : Z.t)])
+       else throw_s [%message "Int did not fit in 64 bits" (i : Z.t)]
+     | Some i -> Int_const i)
   | Bool_const b -> Bool_const b
   | Var var ->
     let var = elab_var st var in

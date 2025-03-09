@@ -1,7 +1,9 @@
 module Caml_sys = Sys
 module Caml_unix = Unix
 include Core
-include Functional
+module Fold = Functional.Fold
+module Iter = Functional.Iter
+module Traverse = Functional.Traverse
 
 module Vec = struct
   include Vec

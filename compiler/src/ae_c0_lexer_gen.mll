@@ -12,6 +12,8 @@ rule lex =
   parse
   | white { lex lexbuf }
   | newline { Lexing.new_line lexbuf; lex lexbuf }
+  | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }
+  | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | "//" { line_comment lexbuf }
   | "/*" { block_comment 1 lexbuf }
   | ':' { Token.Colon }
@@ -57,8 +59,6 @@ rule lex =
   | "true" { Token.True }
   | "false" { Token.False }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
-  | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }
-  | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }
 
