@@ -26,8 +26,8 @@ let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
   in
   let defs = Instr.iter_defs instr.i |> Iter.to_list in
   let uses = Instr.iter_uses instr.i |> Iter.to_list in
-  trace_s
-    [%message
+  trace_ls
+    [%lazy_message
       "build_graph_instr"
         (instr : Instr'.t)
         (live_out : Vreg.Set.t)
@@ -145,6 +145,7 @@ let get_spilled_colors precolored_colors ~max_color ~num_regs =
   spilled_colors
 ;;
 
+(* TODO: test this function *)
 let spill_instr
       spilled_color_to_slot
       get_evicted_temp_and_slot_for_color
