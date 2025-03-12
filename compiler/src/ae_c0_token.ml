@@ -29,6 +29,11 @@ type t =
   | RangleRangle
   | LangleEq
   | RangleEq
+  | AmpersandEq
+  | PipeEq
+  | CaretEq
+  | LangleLangleEq
+  | RangleRangleEq
   | LParen
   | RParen
   | LBrace

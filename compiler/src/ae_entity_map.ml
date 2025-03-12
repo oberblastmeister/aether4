@@ -17,6 +17,7 @@ module type S_phantom_without_make = sig
 
   val empty : ('w, 'a) t
   val singleton : 'w Key.t -> 'a -> ('w, 'a) t
+  val filteri : ('w, 'a) t -> f:(key:'w Key.t -> data:'a -> bool) -> ('w, 'a) t
   val find : ('w, 'a) t -> 'w Key.t -> 'a option
   val find_exn : ('w, 'a) t -> 'w Key.t -> 'a
   val add_exn : ('w, 'a) t -> key:'w Key.t -> data:'a -> ('w, 'a) t
@@ -55,6 +56,11 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   module Key = Key
 
   let empty = Int.Map.empty
+
+  let filteri t ~f =
+    Map.filteri t ~f:(fun ~key:_ ~data -> f ~key:data.Entry.key ~data:data.Entry.data)
+  ;;
+
   let singleton key data = Int.Map.singleton (Key.to_int key) { Entry.key; data }
   let find t k = Map.find t (Key.to_int k) |> Option.map ~f:(fun e -> e.Entry.data)
   let find_exn t k = (Map.find_exn t (Key.to_int k)).Entry.data

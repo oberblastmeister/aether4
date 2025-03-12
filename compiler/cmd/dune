@@ -1,0 +1,7 @@
+(library
+ (name cmd)
+ (preprocess
+  (pps ppx_jane ppx_inline_test))
+ (flags
+  (:standard -warn-error -A))
+ (libraries base stdio threads spawn))

@@ -1,0 +1,10 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+  return 1 / ( (!(-4 <= 4) ? 1 : 0) + ~ (-4 / 4) );
+}
+----

@@ -66,12 +66,6 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
   | Block_params _ -> empty
   | Nop -> empty
-  | Push { src } ->
-    let src = lower_operand st src in
-    empty +> Flat_x86.Instr.[ Push { src; size = Qword } ]
-  | Pop { dst } ->
-    let dst = lower_operand st dst in
-    empty +> Flat_x86.Instr.[ Pop { dst; size = Qword } ]
   | Jump bc -> empty +> Flat_x86.Instr.[ Jmp (label_to_string st bc.label) ]
   | Cond_jump { cond; b1; b2 } ->
     let instrs =
@@ -81,7 +75,8 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
         (* only needs Byte, but we use Dword here *)
         empty
         +> Flat_x86.Instr.
-             [ Mov { dst = Reg R11; src; size = Byte }
+             [ Mov { dst = Reg R11; src; size = Dword }
+               (* Important! This must be Byte because only the lower byte is valid for byte size, even though we use Dword registers *)
              ; Test { src1 = Reg R11; src2 = Reg R11; size = Byte }
              ; J { cc = NE; label = label_to_string st b1.label }
              ; Jmp (label_to_string st b2.label)

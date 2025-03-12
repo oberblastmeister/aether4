@@ -1,0 +1,23 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// while
+int main() {
+  int x = 1;
+
+  int step = x; 
+  while (x % 57 != 0) x += step;
+
+  step = x; 
+  while (x % 33 != 0) x += step;
+
+  step = x; 
+  while (x % 38 != 0) x += step;
+
+  return x;
+}
+----
+1254

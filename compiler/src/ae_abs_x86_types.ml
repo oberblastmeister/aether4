@@ -119,8 +119,6 @@ module Instr = struct
         { src : Operand.t
         ; size : Size.t
         }
-    | Push of { src : Operand.t }
-    | Pop of { dst : Operand.t }
   [@@deriving sexp_of, variants]
 
   let nop = Nop
@@ -133,16 +131,10 @@ module Instr = struct
   let iter_operand_use_defs (instr : t) ~on_def ~on_use =
     match instr with
     | Nop -> ()
-    | Push { src } ->
-      on_use src;
-      ()
-    | Pop { dst } ->
-      on_def dst;
-      ()
     | Block_params { temps } ->
       List.iter temps ~f:(fun (temp, _size) -> on_def (Operand.Reg temp))
     | Jump b ->
-      Block_call.iter_uses b ~f:(fun r -> on_use (Reg r));
+      Block_call.iter_uses b ~f:(fun r -> on_use (Operand.Reg r));
       ()
     | Cond_jump { cond; b1; b2 } ->
       (match cond with
@@ -178,12 +170,6 @@ module Instr = struct
     in
     match instr with
     | Nop -> instr
-    | Push { src } ->
-      let src = on_use src in
-      Push { src }
-    | Pop { dst } ->
-      let dst = on_def dst in
-      Pop { dst }
     | Block_params { temps } ->
       let temps = (List.map & Tuple2.map_fst) temps ~f:(map_temp ~f:on_def) in
       Block_params { temps }
@@ -247,8 +233,7 @@ module Instr = struct
          f Mach_reg.RAX;
          f Mach_reg.RDX;
          ())
-    | Nop | Push _ | Pop _ | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ ->
-      ()
+    | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ -> ()
     | Ret _ -> f Mach_reg.RAX
   ;;
 

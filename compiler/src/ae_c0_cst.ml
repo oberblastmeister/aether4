@@ -35,9 +35,9 @@ and stmt =
 [@@deriving sexp_of]
 
 and for_paren =
-  { init : stmt
+  { init : stmt option
   ; cond : expr
-  ; incr : stmt
+  ; incr : stmt option
   }
 [@@deriving sexp_of]
 
@@ -57,6 +57,11 @@ and assign_op =
   | Mul_assign
   | Div_assign
   | Mod_assign
+  | Bit_and_assign
+  | Bit_or_assign
+  | Bit_xor_assign
+  | Lshift_assign
+  | Rshift_assign
 [@@deriving sexp_of]
 
 and post_op =
@@ -124,3 +129,4 @@ type program =
 [@@deriving sexp_of]
 
 let bin ~lhs ~op ~rhs = Bin { lhs; rhs; op }
+let nop_stmt = Block { stmts = [] }

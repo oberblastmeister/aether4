@@ -8,8 +8,8 @@ and stmt_returns (stmt : Ast.stmt) =
   | Return _ -> true
   | Assign _ | Declare _ | While _ | Effect _ -> false
   | Block stmts -> block_returns stmts
-  | If { body1; body2 = Some body2; cond = _ } -> stmt_returns body1 || stmt_returns body2
-  | If { body1; body2 = None; cond = _ } -> stmt_returns body1
+  | If { cond = _; body1; body2 = Some body2 } -> stmt_returns body1 && stmt_returns body2
+  | If { cond = _; body1 = _; body2 = None } -> false
 ;;
 
 let check_program (program : Ast.program) =

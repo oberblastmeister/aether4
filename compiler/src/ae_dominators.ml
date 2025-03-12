@@ -1,4 +1,5 @@
 open Std
+open Ae_trace
 module Entity = Ae_entity_std
 module Table = Entity.Ident.Table
 module Ident = Entity.Ident
@@ -15,12 +16,10 @@ let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) =
     Table.remove idoms label;
     res
   in
-  let is_processed label = Table.mem idoms label in
-  let@ () = with_processed start in
   (* This is needed so that the start is known to be already processed *)
   (* We will remove this after everything is done *)
-  Table.set idoms ~key:start ~data:start;
-  Table.set idoms ~key:start ~data:start;
+  let@ () = with_processed start in
+  let is_processed label = Table.mem idoms label in
   (* get the nodes *)
   let nodes = Dfs.postorder ~start:[ start ] (Graph.Bi.to_t graph) in
   let index_of_node = Table.create ~size:(Vec.length nodes) () in
@@ -83,30 +82,42 @@ let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
   let frontier_of_node = Table.create () in
   let rec add_until node node_idom runner =
     if not @@ Label.equal runner node_idom
-    then (
+    then begin
       (* add node to runner's frontier set because runner doesn't dominate node *)
       Table.update frontier_of_node runner ~f:(function
         | None -> Ident.Set.singleton node
         | Some fs -> Ident.Set.add fs node);
-      add_until node node_idom (Table.find_exn idoms runner);
-      ())
+      add_until node node_idom (Table.find_exn idoms runner)
+    end
   in
-  graph.all_nodes
-  |> Iter.iter ~f:(fun node ->
-    let num_preds = graph.preds node |> Iter.length in
-    if is_join_point num_preds
-    then
-      Iter.iter (graph.preds node) ~f:(fun pred ->
-        (* every node must have an idom *)
-        add_until node (Table.find_exn idoms node) pred));
+  begin
+    let@: node =
+      graph.all_nodes
+      |> Iter.filter ~f:(fun node ->
+        (* Table.mem idoms node means that the node is reachable from the start node *)
+        graph.preds node |> Iter.length |> is_join_point && Table.mem idoms node)
+    in
+    let@: pred = graph.preds node in
+    add_until node (Table.find_exn idoms node) pred;
+    ()
+  end;
   frontier_of_node
 ;;
 
 module Immediate = struct
-  type t = Label.t Label.Table.t [@@deriving sexp_of]
+  type t =
+    { start : Label.t
+    ; table : Label.t Label.Table.t
+    }
+  [@@deriving sexp_of]
 
-  let find = Table.find
-  let compute = compute_idoms
+  let find t l = Table.find t.table l
+  let is_reachable t l = Label.equal t.start l || Table.mem t.table l
+
+  let compute ?node_length ~start graph =
+    let table = compute_idoms ?node_length ~start graph in
+    { start; table }
+  ;;
 end
 
 module Tree = struct
@@ -115,7 +126,7 @@ module Tree = struct
   let children idoms label = Table.find idoms label |> Option.value ~default:[]
 
   let of_immediate idoms =
-    Table.iteri idoms
+    Table.iteri idoms.Immediate.table
     |> Iter.map ~f:(fun (label, idom) -> idom, label)
     |> Table.of_iter_accum ~init:[] ~f:(fun acc label -> label :: acc)
   ;;
@@ -124,7 +135,7 @@ end
 module Frontier = struct
   type t = Label.Set.t Label.Table.t [@@deriving sexp_of]
 
-  let compute = compute_frontier
+  let compute idoms = compute_frontier idoms.Immediate.table
 
   let find (t : t) label =
     Table.find t label |> Option.value_map ~f:Ident.Set.to_list ~default:[]

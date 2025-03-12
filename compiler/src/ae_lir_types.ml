@@ -43,16 +43,24 @@ module Unary_op = struct
   type t = Copy of Ty.t [@@deriving sexp_of]
 end
 
+module Nullary_op = struct
+  type t =
+    | Int_const of
+        { const : int64
+        ; ty : Ty.t
+        }
+  [@@deriving sexp_of]
+end
+
 module Block_call = Ae_block_call.Make (Temp_entity)
 
 module Instr = struct
   type t =
     | Block_params of { temps : (Temp.t * Ty.t) list }
     | Nop
-    | Int_const of
+    | Nullary of
         { dst : Temp.t
-        ; const : int64
-        ; ty : Ty.t
+        ; op : Nullary_op.t
         }
     | Bin of
         { dst : Temp.t
@@ -84,19 +92,74 @@ module Instr = struct
     | _ -> false
   ;;
 
-  let iter_uses _ = todol [%here]
-  let iter_defs _ = todol [%here]
-  let iter_defs_with_ty _ = todol [%here]
-  let get_jumps _ = todol [%here]
-  let map_uses _ = todol [%here]
-  let map_defs _ = todol [%here]
-  let map_block_calls _ = todol [%here]
-  let iter_block_calls _ = todol [%here]
+  let iter_uses instr ~f =
+    match instr with
+    | Block_params { temps = _ } | Nop -> ()
+    | Bin { dst = _; op = _; src1; src2 } ->
+      f src1;
+      f src2;
+      ()
+    | Unary { dst = _; op = _; src } ->
+      f src;
+      ()
+    | Nullary _ -> ()
+    | Jump b ->
+      Block_call.iter_uses b ~f;
+      ()
+    | Cond_jump { cond; b1; b2 } ->
+      f cond;
+      Block_call.iter_uses b1 ~f;
+      Block_call.iter_uses b2 ~f;
+      ()
+    | Ret { src; ty = _ } ->
+      f src;
+      ()
+  ;;
+
+  let iter_defs_with_ty (instr : t) ~f =
+    match instr with
+    | Block_params { temps } -> List.iter temps ~f
+    | Nop -> ()
+    | Bin { dst; op; src1 = _; src2 = _ } ->
+      let ty : Ty.t =
+        match op with
+        | And ty | Or ty | Xor ty -> ty
+        | Add | Sub | Mul | Div | Mod | Lshift | Rshift -> I64
+        | Eq _ | Lt | Gt | Le | Ge -> I1
+      in
+      f (dst, ty)
+    | Unary { dst; op; src = _ } ->
+      (match op with
+       | Copy ty -> f (dst, ty));
+      ()
+    | Nullary { dst; op = Int_const { const = _; ty } } ->
+      f (dst, ty);
+      ()
+    | Jump _ | Cond_jump _ | Ret _ -> ()
+  ;;
+
+  let iter_block_calls t ~f =
+    match t with
+    | Ret _ -> ()
+    | Jump b ->
+      f b;
+      ()
+    | Cond_jump { cond = _; b1; b2 } ->
+      f b1;
+      f b2;
+      ()
+    | _ -> ()
+  ;;
 
   let is_control = function
     | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
+
+  let iter_defs instr ~f = iter_defs_with_ty instr |> Iter.map ~f:fst |> Iter.iter ~f
+  let map_uses _ = todol [%here]
+  let map_defs _ = todol [%here]
+  let map_block_calls _ = todol [%here]
 end
 
 include Generic_ir.Make_all (struct

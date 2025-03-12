@@ -135,11 +135,11 @@ and parse_for env : Cst.stmt =
   Cst.For { paren; body }
 
 and parse_for_paren env : Cst.for_paren =
-  let init = parse_semi_stmt env in
+  let init = (Parser.optional parse_semi_stmt) env in
   Parser.expect_eq Semi env;
   let cond = parse_expr env in
   Parser.expect_eq Semi env;
-  let incr = parse_semi_stmt env in
+  let incr = (Parser.optional parse_semi_stmt) env in
   { init; cond; incr }
 
 and parse_return env : Cst.expr =
@@ -184,6 +184,11 @@ and parse_assign_op env : Cst.assign_op =
    <|> (Cst.Sub_assign <$ Parser.expect_eq DashEq)
    <|> (Cst.Mod_assign <$ Parser.expect_eq PercentEq)
    <|> (Cst.Div_assign <$ Parser.expect_eq SlashEq)
+   <|> (Cst.Bit_and_assign <$ Parser.expect_eq AmpersandEq)
+   <|> (Cst.Bit_or_assign <$ Parser.expect_eq PipeEq)
+   <|> (Cst.Bit_xor_assign <$ Parser.expect_eq CaretEq)
+   <|> (Cst.Lshift_assign <$ Parser.expect_eq LangleLangleEq)
+   <|> (Cst.Rshift_assign <$ Parser.expect_eq RangleRangleEq)
    <|> (Cst.Id_assign <$ Parser.expect_eq Eq))
     env
 

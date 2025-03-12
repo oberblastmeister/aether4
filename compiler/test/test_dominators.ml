@@ -43,7 +43,9 @@ let%expect_test _ =
   run_test g;
   [%expect
     {|
-    ((idoms ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2)))
+    ((idoms
+      ((start start@2)
+       (table ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2)))))
      (frontier ((4@0 (1@3)) (3@1 (2@4)) (1@3 (2@4)) (2@4 (1@3))))
      (domtree ((start@2 (2@4 1@3 3@1 4@0)))))
     |}]
@@ -65,7 +67,9 @@ let%expect_test _ =
   [%expect
     {|
     ((idoms
-      ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2) (5@5 start@2)))
+      ((start start@2)
+       (table
+        ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2) (5@5 start@2)))))
      (frontier
       ((4@0 (3@1 2@4)) (3@1 (2@4)) (1@3 (2@4)) (2@4 (3@1 1@3)) (5@5 (1@3))))
      (domtree ((start@2 (5@5 2@4 1@3 3@1 4@0)))))

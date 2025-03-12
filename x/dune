@@ -6,5 +6,10 @@
     ppx_jane))
  (flags
    (:standard -warn-error -A))
- (libraries core shexp.process core_unix.command_unix))
+ (libraries
+  core
+  shexp.process
+  core_unix.command_unix
+  cmd
+  ))
  

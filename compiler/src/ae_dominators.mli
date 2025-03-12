@@ -9,6 +9,7 @@ module Immediate : sig
   type t [@@deriving sexp_of]
 
   val find : t -> Label.t -> Label.t option
+  val is_reachable : t -> Label.t -> bool
   val compute : ?node_length:int -> start:Label.t -> Label.t Graph.Bi.t -> t
 end
 

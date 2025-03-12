@@ -1,0 +1,54 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int N = 10;
+  int A = 1;
+  int B = 3;
+
+  // We create a fibonnacci matrix ..
+  int FibMat11 = 1;
+  int FibMat12 = 1;
+  int FibMat21 = 1;
+  int FibMat22 = 0;
+
+  // ... and raise it to the N-1 th power
+  int Mat11 = 1;
+  int Mat12 = 0;
+  int Mat21 = 0;
+  int Mat22 = 1;
+
+  for (int i = 0 ; i < N - 1; i+=1)  {
+    int t11 = Mat11*FibMat11 + Mat12*FibMat21;
+    int t12 = Mat11*FibMat12 + Mat12*FibMat22;
+    int t21 = Mat21*FibMat11 + Mat22*FibMat21;
+    int t22 = Mat21*FibMat12 + Mat22*FibMat22;
+    Mat11 = t11;
+    Mat12 = t12;
+    Mat21 = t21;
+    Mat22 = t22;
+  }
+
+ // now multiply that matrix with the vector (B, A)
+  int Fn           = Mat11*B + Mat12*A;
+  int Fn_minus_one = Mat21*B + Mat22*A;
+
+  return Fn;
+}
+----
+"Should have spilled registers so that we will always have enough machine registers"
+Raised at Base__Error.raise in file "src/error.ml" (inlined), line 9, characters 21-37
+Called from Base__Option.value_exn in file "src/option.ml", line 119, characters 4-21
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func.(fun) in file "compiler/src/ae_abs_x86_regalloc.ml", lines 370-375, characters 8-26
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func in file "compiler/src/ae_abs_x86_regalloc.ml", line 389, characters 19-53
+Called from Functional__Functional_iter.int_range in file "compiler/functional/functional_iter.ml" (inlined), line 253, characters 4-7
+Called from Functional__Functional_iter.Infix.(--) in file "compiler/functional/functional_iter.ml", line 264, characters 26-48
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func in file "compiler/src/ae_abs_x86_regalloc.ml", lines 381-391, characters 2-5
+Called from Aether4__Ae_driver.compile_source_to_asm.(fun) in file "compiler/src/ae_driver.ml", line 106, characters 23-72
+Called from Aether4__Ae_driver.compile_source_to_a_out in file "compiler/src/ae_driver.ml", line 148, characters 10-53
+Called from Dune__exe__Filetests_runner.run_test in file "compiler/filetests/runner/filetests_runner.ml", line 61, characters 8-54
+
+("Filetest failed" ("Could not compile test" "Compiler panicked!"))

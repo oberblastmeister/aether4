@@ -1,0 +1,19 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// unitialized variable
+int main() {
+  int c = 0;
+  int a;
+  for ( ; c < 33; a *= 3) {
+    c += 1;
+    a = c;
+  }
+
+  // this might be unitialized
+  return a;
+}
+
+----
+("Variable was used before initialized" (var a@2))

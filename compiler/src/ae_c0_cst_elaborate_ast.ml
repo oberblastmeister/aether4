@@ -108,6 +108,11 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       | Mul_assign -> bin_expr Mul
       | Div_assign -> bin_expr Div
       | Mod_assign -> bin_expr Mod
+      | Bit_and_assign -> bin_expr Bit_and
+      | Bit_or_assign -> bin_expr Bit_or
+      | Bit_xor_assign -> bin_expr Bit_xor
+      | Lshift_assign -> bin_expr Lshift
+      | Rshift_assign -> bin_expr Rshift
     in
     (empty +> Ast.[ Assign { lvalue; expr } ]), st
   | Return expr ->
@@ -123,10 +128,14 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     let body = elab_stmt_to_block st body in
     (empty +> Ast.[ While { cond; body } ]), st
   | For { paren = { init; cond; incr }; body } ->
-    let init_stmts, init_st = elab_stmt st init in
+    let init_stmts, init_st =
+      Option.value_map ~f:(elab_stmt st) ~default:(empty, st) init
+    in
     let cond = elab_expr init_st cond in
     let body = elab_stmt_to_block init_st body in
-    let incr = elab_stmt_to_block init_st incr in
+    let incr =
+      Option.value_map ~f:(elab_stmt_to_block init_st) ~default:Ast.nop_stmt incr
+    in
     let while_stmt = Ast.(While { cond; body = Block [ body; incr ] }) in
     let res = Ast.(Block (Bag.to_list (empty ++ init_stmts +> [ while_stmt ]))) in
     empty +> [ res ], st

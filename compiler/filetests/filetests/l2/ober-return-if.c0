@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    bool res = false;
+    return res == false ? 0 : 1;
+}
+----
+0

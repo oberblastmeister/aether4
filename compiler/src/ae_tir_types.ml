@@ -116,24 +116,8 @@ module Instr = struct
       ()
   ;;
 
-  let iter_defs (instr : t) ~f =
-    match instr with
-    | Block_params { temps } -> List.iter temps ~f:(fun (temp, _) -> f temp)
-    | Nop -> ()
-    | Bin { dst; op = _; src1 = _; src2 = _ } ->
-      f dst;
-      ()
-    | Unary { dst; op = _; src = _ } ->
-      f dst;
-      ()
-    | Nullary { dst; op = _ } ->
-      f dst;
-      ()
-    | Jump _ | Cond_jump _ | Ret _ -> ()
-  ;;
-
-  let iter_defs_with_ty (instr : t) ~f =
-    match instr with
+  let iter_defs_with_ty t ~f =
+    match t with
     | Block_params { temps } -> List.iter temps ~f
     | Nop -> ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
@@ -155,13 +139,7 @@ module Instr = struct
     | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 
-  let get_jumps (instr : t) =
-    match instr with
-    | Nop | Block_params _ | Bin _ | Unary _ | Nullary _ -> None
-    | Ret _ -> Some []
-    | Jump b -> Some [ b ]
-    | Cond_jump { cond = _; b1; b2 } -> Some [ b1; b2 ]
-  ;;
+  let iter_defs t ~f = iter_defs_with_ty t |> Iter.map ~f:fst |> Iter.iter ~f
 
   let map_block_calls (instr : t) ~f =
     match instr with
@@ -208,8 +186,8 @@ module Instr = struct
     | Ret _ -> instr
   ;;
 
-  let iter_block_calls instr ~f =
-    match instr with
+  let iter_block_calls t ~f =
+    match t with
     | Ret _ -> ()
     | Jump b ->
       f b;

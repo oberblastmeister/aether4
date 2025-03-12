@@ -27,13 +27,31 @@ let run_filetest paths =
   loop paths
 ;;
 
+let resolve_in_path prog =
+  (* Do not try to resolve in the path if the program is something like
+   * ./this.exe *)
+  if String.split ~on:'/' prog |> List.length <> 1
+  then Some prog
+  else (
+    let paths = Stdlib.Sys.getenv "PATH" |> String.split ~on:':' in
+    List.map paths ~f:(fun d -> Stdlib.Filename.concat d prog)
+    |> List.find ~f:Stdlib.Sys.file_exists)
+;;
+
+let resolve_in_path_exn prog =
+  match resolve_in_path prog with
+  | None -> failwith (Printf.sprintf "no program in path %s" prog)
+  | Some prog -> prog
+;;
+
 let test_command =
   Command.basic
     ~summary:"Test"
     ~readme:(fun () -> "")
     (let open Command.Let_syntax in
      let open Command.Param in
-     return @@ fun () -> eval (run_test ()))
+     let open Cmd in
+     return @@ fun () -> process "dune" [ "test" ] |> run)
 ;;
 
 let filetest_command =

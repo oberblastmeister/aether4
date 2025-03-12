@@ -105,3 +105,5 @@ let expr_ty_exn = function
   | Int_const _ -> Int
   | Bool_const _ -> Bool
 ;;
+
+let nop_stmt = Block []

@@ -21,6 +21,8 @@ rule lex =
   | '+' { Token.Plus }
   | '*' { Token.Star }
   | '=' { Token.Eq }
+  | "==" { Token.EqEq }
+  | "!=" { Token.BangEq }
   | '-' { Token.Dash }
   | '/' { Token.Slash }
   | '%' { Token.Percent }
@@ -29,6 +31,11 @@ rule lex =
   | "%=" { Token.PercentEq }
   | "/=" { Token.SlashEq }
   | "-=" { Token.DashEq }
+  | "&=" { Token.AmpersandEq }
+  | "|=" { Token.PipeEq }
+  | "^=" { Token.CaretEq }
+  | "<<=" { Token.LangleLangleEq }
+  | ">>=" { Token.RangleRangleEq }
   | "++" { Token.PlusPlus }
   | "--" { Token.DashDash }
   | '<' { Token.Langle }

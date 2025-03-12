@@ -111,7 +111,15 @@ let convert (func : Func.t) =
   in
   rename_block Ident.Map.empty (Func.start_block func);
   { func with
-    blocks = Multi_edit.apply_blocks ~no_sort:() multi_edit func.blocks
+    blocks =
+      func.blocks
+      (*
+         The unreachable blocks were not in the dominator tree, so were not converted at all.
+        Just remove them here.
+      *)
+      |> Ident.Map.filteri ~f:(fun ~key ~data:_ ->
+        Dominators.Immediate.is_reachable idoms key)
+      |> Multi_edit.apply_blocks ~no_sort:() multi_edit
   ; next_temp_id = Id_gen.next temp_gen
   }
 ;;

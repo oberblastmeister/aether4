@@ -25,14 +25,14 @@ let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
     go xs
   in
   let defs = Instr.iter_defs instr.i |> Iter.to_list in
-  ( (* let uses = Instr.iter_uses instr.i |> Iter.to_list in *)
-    (* trace_s
-      [%message
-        "build_graph_instr"
-          (instr : Instr'.t)
-          (live_out : Vreg.Set.t)
-          (defs : Vreg.t list)
-          (uses : Vreg.t list)] *) );
+  let uses = Instr.iter_uses instr.i |> Iter.to_list in
+  trace_s
+    [%message
+      "build_graph_instr"
+        (instr : Instr'.t)
+        (live_out : Vreg.Set.t)
+        (defs : Vreg.t list)
+        (uses : Vreg.t list)];
   (* make sure we at least add every use/def in, because the register allocator uses the domain of interference as all nodes *)
   begin
     let@: def = List.iter defs in
@@ -78,7 +78,7 @@ let build_graph_instr ~get_precolored_name graph live_out (instr : Instr'.t) =
 ;;
 
 let build_graph_block ~get_precolored_name graph live_out (block : Block.t) =
-  (* trace_s [%message "build_graph_block" (block.label : Label.t) (live_out : Vreg.Set.t)]; *)
+  trace_s [%message "build_graph_block" (block.label : Label.t) (live_out : Vreg.Set.t)];
   let live_out = ref live_out in
   begin
     let@: instr = Block.iter_bwd block in
@@ -116,6 +116,7 @@ let build_graph (func : Func.t) =
       (Liveness.Live_set.find live_out block.label)
       block
   end;
+  trace_s [%message (graph : Graph.t)];
   let func = { func with next_temp_id = Id_gen.next temp_gen } in
   graph, mach_reg_to_precolored_name, precolored_id_start, func.next_temp_id, func
 ;;
@@ -150,6 +151,7 @@ let spill_instr
       coloring
       (instr : Instr.t)
   =
+  trace_s [%message "spilled_instr" (instr : Instr.t)];
   let module Table = Ident.Table in
   let open Table.Syntax in
   let evicted_temps = ref [] in
@@ -298,6 +300,7 @@ let color_func_and_spill ~num_regs stack_builder (func : Func.t) =
     in
     Regalloc.color_graph graph precolored
   in
+  trace_s [%message (coloring : int Vreg.Table.t)];
   let precolored_colors =
     get_precolored_colors (precolored_id_start, precolored_id_end) coloring max_color
   in
