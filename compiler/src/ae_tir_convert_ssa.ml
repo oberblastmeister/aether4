@@ -114,7 +114,7 @@ let convert (func : Func.t) =
     blocks =
       func.blocks
       (*
-         The unreachable blocks were not in the dominator tree, so were not converted at all.
+        The unreachable blocks were not in the dominator tree, so were not converted at all.
         Just remove them here.
       *)
       |> Ident.Map.filteri ~f:(fun ~key ~data:_ ->

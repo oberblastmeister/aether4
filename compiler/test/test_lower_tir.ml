@@ -37,7 +37,8 @@ let%expect_test "smoke" =
           (((i (Block_params (temps ((first@33 Int))))) (index 0) (info ()))
            ((i (Unary (dst ret@34) (op (Copy Int)) (src first@33))) (index 1)
             (info ()))
-           ((i (Ret (src ret@34) (ty Int))) (index 2) (info ()))))))
+           ((i (Ret (src ret@34) (ty Int))) (index 2) (info ()))
+           ((i Unreachable) (index 3) (info ()))))))
        (then@1
         ((label then@1)
          (body
@@ -48,14 +49,16 @@ let%expect_test "smoke" =
             (info ()))
            ((i (Bin (dst first@32) (op Add) (src1 lhs@30) (src2 rhs@31)))
             (index 3) (info ()))
-           ((i (Jump ((label join@0) (args (first@32))))) (index 4) (info ()))))))
+           ((i (Jump ((label join@0) (args (first@32))))) (index 4) (info ()))
+           ((i Unreachable) (index 5) (info ()))))))
        (else@2
         ((label else@2)
          (body
           (((i (Block_params (temps ()))) (index 0) (info ()))
            ((i (Unary (dst another@29) (op (Copy Bool)) (src bl@27))) (index 1)
             (info ()))
-           ((i (Jump ((label join@0) (args (first@17))))) (index 2) (info ()))))))
+           ((i (Jump ((label join@0) (args (first@17))))) (index 2) (info ()))
+           ((i Unreachable) (index 3) (info ()))))))
        (start@3
         ((label start@3)
          (body
@@ -87,7 +90,8 @@ let%expect_test "smoke" =
            ((i
              (Cond_jump (cond cond@28) (b1 ((label then@1) (args ())))
               (b2 ((label else@2) (args ())))))
-            (index 14) (info ()))))))))
+            (index 14) (info ()))
+           ((i Unreachable) (index 15) (info ()))))))))
      (start start@3) (next_temp_id 35) (next_label_id 4))
     |}]
 ;;
@@ -118,20 +122,23 @@ let%expect_test "while" =
           (((i (Block_params (temps ()))) (index 0) (info ()))
            ((i (Unary (dst ret@25) (op (Copy Int)) (src third@19))) (index 1)
             (info ()))
-           ((i (Ret (src ret@25) (ty Int))) (index 2) (info ()))))))
+           ((i (Ret (src ret@25) (ty Int))) (index 2) (info ()))
+           ((i Unreachable) (index 3) (info ()))))))
        (then@1
         ((label then@1)
          (body
           (((i (Block_params (temps ()))) (index 0) (info ()))
            ((i (Nullary (dst first@24) (op (Int_const 1)))) (index 1) (info ()))
-           ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))))))
+           ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))
+           ((i Unreachable) (index 3) (info ()))))))
        (else@2
         ((label else@2)
          (body
           (((i (Block_params (temps ()))) (index 0) (info ()))
            ((i (Nullary (dst another@23) (op (Bool_const false)))) (index 1)
             (info ()))
-           ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))))))
+           ((i (Jump ((label join@0) (args ())))) (index 2) (info ()))
+           ((i Unreachable) (index 3) (info ()))))))
        (start@3
         ((label start@3)
          (body
@@ -159,7 +166,8 @@ let%expect_test "while" =
            ((i
              (Cond_jump (cond cond@22) (b1 ((label then@1) (args ())))
               (b2 ((label else@2) (args ())))))
-            (index 12) (info ()))))))))
+            (index 12) (info ()))
+           ((i Unreachable) (index 13) (info ()))))))))
      (start start@3) (next_temp_id 26) (next_label_id 4))
     |}]
 ;;

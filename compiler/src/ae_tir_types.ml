@@ -83,6 +83,7 @@ module Instr = struct
         { src : Temp.t
         ; ty : Ty.t
         }
+    | Unreachable
   [@@deriving sexp_of, variants]
 
   let nop = Nop
@@ -94,7 +95,7 @@ module Instr = struct
 
   let iter_uses (instr : t) ~f =
     match instr with
-    | Block_params { temps = _ } | Nop -> ()
+    | Unreachable | Block_params { temps = _ } | Nop -> ()
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;
@@ -136,7 +137,7 @@ module Instr = struct
        | Int_const _ -> f (dst, Int)
        | Bool_const _ -> f (dst, Bool));
       ()
-    | Jump _ | Cond_jump _ | Ret _ -> ()
+    | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 
   let iter_defs t ~f = iter_defs_with_ty t |> Iter.map ~f:fst |> Iter.iter ~f
@@ -150,6 +151,7 @@ module Instr = struct
 
   let map_uses (instr : t) ~f =
     match instr with
+    | Unreachable -> Unreachable
     | Nop -> Nop
     | Block_params _ -> instr
     | Bin p ->
@@ -175,6 +177,7 @@ module Instr = struct
 
   let map_defs (instr : t) ~f =
     match instr with
+    | Unreachable -> Unreachable
     | Block_params p ->
       Block_params { p with temps = (List.map & Tuple2.map_fst) p.temps ~f }
     | Nop -> Nop
@@ -200,7 +203,7 @@ module Instr = struct
   ;;
 
   let is_control = function
-    | Jump _ | Cond_jump _ | Ret _ -> true
+    | Unreachable | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
 

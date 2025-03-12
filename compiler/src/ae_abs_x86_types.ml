@@ -119,6 +119,7 @@ module Instr = struct
         { src : Operand.t
         ; size : Size.t
         }
+    | Unreachable
   [@@deriving sexp_of, variants]
 
   let nop = Nop
@@ -160,6 +161,7 @@ module Instr = struct
     | Ret { src; size = _ } ->
       on_use src;
       ()
+    | Unreachable -> ()
   ;;
 
   let map_operand_use_defs (instr : t) ~on_def ~on_use =
@@ -205,6 +207,7 @@ module Instr = struct
     | Ret { src; size } ->
       let src = on_use src in
       Ret { src; size }
+    | Unreachable -> Unreachable
   ;;
 
   let iter_uses instr ~f =
@@ -235,6 +238,7 @@ module Instr = struct
          ())
     | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ -> ()
     | Ret _ -> f Mach_reg.RAX
+    | Unreachable -> ()
   ;;
 
   let iter_defs_with_ty _ = todol [%here]
@@ -262,7 +266,7 @@ module Instr = struct
   ;;
 
   let is_control = function
-    | Jump _ | Cond_jump _ | Ret _ -> true
+    | Unreachable | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
 

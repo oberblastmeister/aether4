@@ -50,6 +50,7 @@ let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
 
 let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
   match instr.i with
+  | Unreachable -> empty +> [ Abs_x86.Instr.Unreachable ]
   | Block_params { temps } ->
     empty
     +> [ Abs_x86.Instr.Block_params
@@ -71,7 +72,8 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
        if Int64.(const <> 0L && const <> 1L)
        then raise_s [%message "const was not I1" (const : int64)];
        empty
-       +> Abs_x86.Instr.[ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Dword } ]
+       +> Abs_x86.Instr.
+            [ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Dword } ]
      | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
        let dst = get_operand st dst in
        empty

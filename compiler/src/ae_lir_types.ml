@@ -83,6 +83,7 @@ module Instr = struct
         { src : Temp.t
         ; ty : Ty.t
         }
+    | Unreachable
   [@@deriving sexp_of, variants]
 
   let nop = Nop
@@ -114,6 +115,7 @@ module Instr = struct
     | Ret { src; ty = _ } ->
       f src;
       ()
+    | Unreachable -> ()
   ;;
 
   let iter_defs_with_ty (instr : t) ~f =
@@ -135,7 +137,7 @@ module Instr = struct
     | Nullary { dst; op = Int_const { const = _; ty } } ->
       f (dst, ty);
       ()
-    | Jump _ | Cond_jump _ | Ret _ -> ()
+    | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 
   let iter_block_calls t ~f =
@@ -152,7 +154,7 @@ module Instr = struct
   ;;
 
   let is_control = function
-    | Jump _ | Cond_jump _ | Ret _ -> true
+    | Unreachable | Jump _ | Cond_jump _ | Ret _ -> true
     | _ -> false
   ;;
 

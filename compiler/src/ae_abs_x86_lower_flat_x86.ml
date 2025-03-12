@@ -64,6 +64,9 @@ let lower_simple_rmw rmw size ~dst ~src1 ~src2 =
 
 let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   match instr with
+  | Unreachable ->
+    (* TODO: lower this to a panic in debug mode *)
+    empty
   | Block_params _ -> empty
   | Nop -> empty
   | Jump bc -> empty +> Flat_x86.Instr.[ Jmp (label_to_string st bc.label) ]

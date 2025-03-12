@@ -69,6 +69,7 @@ let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =
 let lower_instr st (instr : Tir.Instr'.t) : instrs =
   match instr.i with
   | Nop -> empty
+  | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call st b in
     empty +> [ ins (Jump b) ]

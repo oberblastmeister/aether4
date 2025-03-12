@@ -23,28 +23,4 @@ int main() {
       return X2 - X1 + Y2 - Y1;
 }
 ----
-("Could not find jump instruction in block"
-  ((label join@0)
-    (body (((i (Block_params (temps ()))) (index 0) (info ()))))))
-Raised at Base__Error.raise in file "src/error.ml" (inlined), line 9, characters 21-37
-Called from Base__Option.value_exn in file "src/option.ml", line 119, characters 4-21
-Called from Aether4__Ae_generic_ir_make.Make_ir.Block.find_control in file "compiler/src/ae_generic_ir_make.ml", lines 77-79, characters 6-87
-Called from Aether4__Ae_generic_ir_make.Make_ir.Func.succ_map.(fun) in file "compiler/src/ae_generic_ir_make.ml", line 124, characters 16-36
-Called from Aether4__Ae_entity_map.Make_phantom.map.(fun) in file "compiler/src/ae_entity_map.ml", line 67, characters 62-76
-Called from Base__Map.Tree0.map in file "src/map.ml", line 946, characters 59-62
-Called from Base__Map.Tree0.map in file "src/map.ml", line 948, characters 15-23
-Called from Base__Map.Tree0.map in file "src/map.ml", line 948, characters 15-23
-Called from Base__Map.Tree0.map in file "src/map.ml", line 948, characters 15-23
-Called from Base__Map.Tree0.map in file "src/map.ml", line 948, characters 15-23
-Called from Base__Map.Accessors.map in file "src/map.ml", line 2223, characters 36-57
-Called from Aether4__Ae_generic_ir_make.Make_ir.Func.graph in file "compiler/src/ae_generic_ir_make.ml", line 143, characters 57-72
-Called from Aether4__Ae_generic_ir_make.Make_ir.Func.bi_graph in file "compiler/src/ae_generic_ir_make.ml", line 144, characters 24-34
-Called from Base__Option.value_or_thunk in file "src/option.ml" (inlined), line 125, characters 12-22
-Called from Aether4__Ae_generic_ir_make.Make_ir.Func.compute_idoms in file "compiler/src/ae_generic_ir_make.ml", line 149, characters 8-69
-Called from Aether4__Ae_tir_convert_ssa.convert in file "compiler/src/ae_tir_convert_ssa.ml", line 53, characters 14-37
-Called from Aether4__Ae_driver.compile_source_to_tir.(fun) in file "compiler/src/ae_driver.ml", line 90, characters 12-39
-Called from Aether4__Ae_driver.compile_source_to_asm in file "compiler/src/ae_driver.ml", line 97, characters 17-51
-Called from Aether4__Ae_driver.compile_source_to_a_out in file "compiler/src/ae_driver.ml", line 148, characters 10-53
-Called from Dune__exe__Filetests_runner.run_test in file "compiler/filetests/runner/filetests_runner.ml", line 61, characters 8-54
-
-("Filetest failed" ("Could not compile test" "Compiler panicked!"))
+100

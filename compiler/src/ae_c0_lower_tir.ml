@@ -49,10 +49,14 @@ let fresh_label ?(name = "fresh") t : Label.t =
 ;;
 
 let add_block t label instrs =
+  (*
+     make sure to add an unreachable instruction at the end so that all blocks have a terminator
+  *)
   let block =
     Tir.Block.create
       label
-      (Bag.to_arrayp (empty +> [ ins (Block_params { temps = [] }) ] ++ instrs))
+      (Bag.to_arrayp
+         (empty +> [ ins (Block_params { temps = [] }) ] ++ instrs +> [ ins Unreachable ]))
   in
   t.blocks <- block :: t.blocks;
   ()

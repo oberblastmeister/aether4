@@ -72,12 +72,10 @@ module Make_ir (Arg : Arg) = struct
     let create_id label body = { label; body }
     let instrs t = t.body
 
-    (* TODO: this is wrong, cannot do findi_rev *)
     let find_control t =
-      Arrayp.findi_rev t.body ~f:(fun _ x -> Instr.is_control x.i)
+      Arrayp.find t.body ~f:(fun x -> Instr.is_control x.i)
       |> Option.value_exn
            ~error:(Error.create "Could not find jump instruction in block" t sexp_of_t)
-      |> snd
     ;;
 
     let find_block_params t =
