@@ -99,7 +99,6 @@ and add_cond_jump st cont cond_temp body1 body2 =
   This means that we *MUST* use the cont variable!
 *)
 and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
-  trace_s [%message "lower_stmt" (stmt : Ast.stmt)];
   match stmt with
   | Declare { ty = _; var } ->
     let _ = var_temp st var in

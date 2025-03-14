@@ -5,7 +5,6 @@ module Tir = Ae_tir_std
 module Lir = Ae_lir_std
 module Abs_x86 = Ae_abs_x86_std
 module Flat_x86 = Ae_flat_x86_std
-module F = Filename
 module Path_utils = Ae_path_utils
 module Stdenv = Eio.Stdenv
 module Path = Eio.Path
@@ -13,7 +12,6 @@ module Process = Eio.Process
 module File = Eio.File
 module Flow = Eio.Flow
 module Fs = Eio.Fs
-module Stack_builder = Ae_stack_builder
 
 module Emit = struct
   type t =
@@ -102,9 +100,7 @@ let compile_source_to_asm ?(emit = []) source =
   let abs_x86 = Lir.Lower_abs_x86.lower lir in
   (* let%bind () = Abs_x86.Check.check abs_x86 in *)
   if Emit.mem emit Emit.Abs_asm then print_s [%message (abs_x86 : Abs_x86.Func.t)];
-  let stack_builder = Stack_builder.create () in
-  let alloc, abs_x86 = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
-  let asm = Abs_x86.Lower_flat_x86.lower alloc abs_x86 in
+  let asm = Abs_x86.Driver.convert abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
   if Emit.mem emit Emit.Asm
   then begin

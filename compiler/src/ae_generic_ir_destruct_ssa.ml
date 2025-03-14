@@ -95,7 +95,7 @@ struct
         let sequential_moves =
           sequentialize_parallel_moves ~in_same_reg ~get_scratch parallel_moves
         in
-        (* TODO: test this case *)
+        (* TODO: test both of these cases *)
         if num_block_calls = 1
         then begin
           Multi_edit.add_inserts

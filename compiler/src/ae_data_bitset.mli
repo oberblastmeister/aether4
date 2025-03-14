@@ -9,3 +9,4 @@ val of_list : int list -> t
 val mem : t -> int -> bool
 val to_list : t -> int list
 val of_iter : int Iter.t -> t
+val iter : t -> int Iter.t

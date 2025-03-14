@@ -1,6 +1,7 @@
 type 'a t = f:('a -> unit) -> unit
 type ('a, 'b) t2 = f:('a -> 'b -> unit) -> unit
 
+val append : 'a t -> 'a t -> 'a t
 val of_fn : (('a -> unit) -> unit) -> 'a t
 val to_fn : 'a t -> ('a -> unit) -> unit
 val for_ : 'a t -> ('a -> unit) -> unit

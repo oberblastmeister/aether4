@@ -90,11 +90,22 @@ let string_of_mach_reg : Size.t -> _ = function
   | Qword -> string_of_reg64
 ;;
 
+let format_addr_base (base : _ Ae_x86_address.Base.t) =
+  match base with
+  | Reg r -> "%" ^ string_of_reg64 r
+;;
+
 let format_operand (operand : Operand.t) size =
   match operand with
   | Imm i -> "$" ^ Int32.to_string i
   | Reg r -> "%" ^ string_of_mach_reg size r
-  | Mem _addr -> todol [%here]
+  | Mem addr ->
+    (match addr.index with
+     | None -> [%string "%{addr.offset#Int}(%{format_addr_base addr.base})"]
+     | Some index ->
+       [%string
+         "%{addr.offset#Int}(%{format_addr_base addr.base}, %{string_of_reg64 \
+          index.index}, %{index.scale#Int})"])
 ;;
 
 let suffix_of_size (s : Size.t) =

@@ -14,8 +14,12 @@ module Layout = struct
     }
   [@@deriving sexp_of]
 
-  let resolve_base_offset t slot = todo ()
-  let frame_size _ = todo ()
+  let resolve_frame_offset t slot =
+    let open Table.Syntax in
+    t.table.!(slot)
+  ;;
+
+  let frame_size t = t.frame_size
 end
 
 module Builder = struct
@@ -47,11 +51,12 @@ module Builder = struct
     (* since the stack is 16 byte aligned before the call,
        it is only 8 byte aligned in the call,
        due to the return address being pushed *)
+    *)
     let align size =
       assert (size % 8 = 0);
       if size % 16 = 0 then size + 8 else size
-    in *)
-    let frame_size = todo () in
+    in
+    let frame_size = align !offset in
     { Layout.table = layout_table; frame_size }
   ;;
 end

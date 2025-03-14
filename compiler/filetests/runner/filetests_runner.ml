@@ -1,4 +1,5 @@
 open Std
+open Aether4
 open Aether4.Ae_std
 module Stdenv = Eio.Stdenv
 module Path = Eio.Path
@@ -6,6 +7,8 @@ module Flow = Eio.Flow
 module Process = Eio.Process
 module Buf_read = Eio.Buf_read
 module Test_options = Filetests_test_options
+module Trace = Ae_trace
+module Chaos_mode = Ae_chaos_mode
 
 module Test = struct
   type t =
@@ -51,7 +54,11 @@ let run_test env path =
     Flow.read_all file
   in
   let test = Test.parse contents in
-  let@ () = Aether4.Ae_trace.with_trace test.options.trace in
+  let@ () = Trace.with_trace test.options.trace in
+  let@ () =
+    Chaos_mode.with_options (fun options ->
+      { options with spill_mode = test.options.chaos_spill_mode })
+  in
   (* make sure to print the source first *)
   (* this makes sure that any later stuff gets printed after and gets formatted properly *)
   Test.format_source_with_bar test |> print_string;

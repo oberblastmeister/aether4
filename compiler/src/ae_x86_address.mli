@@ -13,7 +13,6 @@ end
 module Base : sig
   type 'r t =
     | Reg of 'r
-    | Rsp
   [@@deriving sexp_of, variants]
 end
 

@@ -1,10 +1,12 @@
 open Std
-open Aether4.Ae_std
+open Aether4
+open Ae_std
 module Stdenv = Eio.Stdenv
 module Path = Eio.Path
 module Flow = Eio.Flow
 module Process = Eio.Process
 module Buf_read = Eio.Buf_read
+module Chaos_mode = Ae_chaos_mode
 
 module Exit_status = struct
   type t =
@@ -48,6 +50,7 @@ type t =
   ; status : Exit_status.t option [@sexp.option]
   ; trace : bool [@sexp.bool]
   ; emit : Driver.Emit.t list [@sexp.list]
+  ; chaos_spill_mode : Chaos_mode.Spill_mode.t option [@sexp.option]
   }
 [@@deriving sexp]
 

@@ -3,20 +3,25 @@ open Core
 type 'a t = f:('a -> unit) -> unit
 type ('a, 'b) t2 = f:('a -> 'b -> unit) -> unit
 
-let of_fn it = fun ~f -> it f
-let to_fn it = fun f -> it ~f
-let for_ = to_fn
-let uncurry t2 = fun ~f -> t2 ~f:(fun x y -> f (x, y))
+let[@inline] of_fn it = fun ~f -> it f
+let[@inline] to_fn it = fun f -> it ~f
+let[@inline] for_ = to_fn
+let[@inline] uncurry t2 = fun ~f -> t2 ~f:(fun x y -> f (x, y))
 
-let to_list_rev t =
+let[@inline] append it1 it2 ~f =
+  it1 ~f;
+  it2 ~f
+;;
+
+let[@inline] to_list_rev t =
   let res = ref [] in
   t ~f:(fun x -> res := x :: !res);
   !res
 ;;
 
-let to_list t = to_list_rev t |> List.rev
+let[@inline] to_list t = to_list_rev t |> List.rev
 
-let while_ cond =
+let[@inline] while_ cond =
   fun ~f ->
   while cond () do
     f ()
@@ -24,7 +29,7 @@ let while_ cond =
   ()
 ;;
 
-let while_some cond ~f =
+let[@inline] while_some cond ~f =
   let rec loop () =
     match cond () with
     | None -> ()
@@ -35,33 +40,33 @@ let while_some cond ~f =
   loop ()
 ;;
 
-let empty ~f:_ = ()
-let singleton x ~f = f x
+let[@inline] empty ~f:_ = ()
+let[@inline] singleton x ~f = f x
 
-let cons x i ~f =
+let[@inline] cons x i ~f =
   f x;
   i ~f
 ;;
 
-let snoc i x ~f =
+let[@inline] snoc i x ~f =
   i ~f;
   f x
 ;;
 
-let iter i ~f = i ~f
+let[@inline] iter i ~f = i ~f
 
-let fold i ~init ~f =
+let[@inline] fold i ~init ~f =
   let acc = ref init in
   i ~f:(fun x -> acc := f !acc x);
   !acc
 ;;
 
-let sum = fold ~init:0 ~f:( + )
-let filter i ~f:pred ~f:f' = i ~f:(fun x -> if pred x then f' x)
-let concat_map i ~f ~f:f' = i ~f:(fun x -> f x ~f:f')
+let[@inline] sum = fold ~init:0 ~f:( + )
+let[@inline] filter i ~f:pred ~f:f' = i ~f:(fun x -> if pred x then f' x)
+let[@inline] concat_map i ~f ~f:f' = i ~f:(fun x -> f x ~f:f')
 let bind = concat_map
 
-let enumerate it ~f =
+let[@inline] enumerate it ~f =
   let ix = ref 0 in
   it ~f:(fun x ->
     f (!ix, x);
@@ -69,23 +74,23 @@ let enumerate it ~f =
   ()
 ;;
 
-let map i ~f ~f:k = i ~f:(fun x -> k (f x))
-let to_list i = List.rev (fold i ~init:[] ~f:(fun xs x -> x :: xs))
+let[@inline] map i ~f ~f:k = i ~f:(fun x -> k (f x))
+let[@inline] to_list i = List.rev (fold i ~init:[] ~f:(fun xs x -> x :: xs))
 
-let length i =
+let[@inline] length i =
   let len = ref 0 in
   i ~f:(fun _ -> incr len);
   !len
 ;;
 
-let filter_map i ~f ~f:k =
+let[@inline] filter_map i ~f ~f:k =
   i ~f:(fun x ->
     match f x with
     | None -> ()
     | Some x -> k x)
 ;;
 
-let unfoldr ~init ~f ~f:k =
+let[@inline] unfoldr ~init ~f ~f:k =
   let rec loop state ~f =
     match f state with
     | None -> ()
@@ -231,7 +236,7 @@ let to_array i = Array.of_list @@ to_list i
 
 exception ExitFind
 
-let find_map seq ~f =
+let[@inline] find_map seq ~f =
   let r = ref None in
   (try
      seq ~f:(fun x ->
@@ -245,10 +250,10 @@ let find_map seq ~f =
   !r
 ;;
 
-let find i ~f = find_map i ~f:(fun x -> if f x then Some x else None)
-let exists i ~f = find i ~f |> Option.is_some
+let[@inline] find i ~f = find_map i ~f:(fun x -> if f x then Some x else None)
+let[@inline] exists i ~f = find i ~f |> Option.is_some
 
-let int_range ~start ~stop ~f =
+let[@inline] int_range ~start ~stop ~f =
   for i = start to stop do
     f i
   done
@@ -272,14 +277,14 @@ module Private = struct
   let to_mlist = MList.of_iter
 end
 
-let drop n it =
+let[@inline] drop n it =
   let count = ref n in
   fun ~f -> it ~f:(fun x -> if !count <= 0 then f x else decr count)
 ;;
 
 exception ExitTake
 
-let take n seq =
+let[@inline] take n seq =
   fun ~f:k ->
   let count = ref 0 in
   try
@@ -293,13 +298,13 @@ let take n seq =
 
 exception ExitTakeWhile
 
-let take_while seq ~f:p =
+let[@inline] take_while seq ~f:p =
   fun ~f:k ->
   try seq ~f:(fun x -> if p x then k x else raise_notrace ExitTakeWhile) with
   | ExitTakeWhile -> ()
 ;;
 
-let take_while_map it ~f:p =
+let[@inline] take_while_map it ~f:p =
   fun ~f:k ->
   try
     it ~f:(fun x ->
@@ -310,9 +315,9 @@ let take_while_map it ~f:p =
   | ExitTakeWhile -> ()
 ;;
 
-let iter it ~f = it ~f
+let[@inline] iter it ~f = it ~f
 
-let repeat x =
+let[@inline] repeat x =
   fun ~f ->
   while true do
     f x
@@ -333,7 +338,7 @@ let[@inline] product outer inner ~f:k = outer ~f:(fun x -> inner ~f:(fun y -> k 
 
 exception ExitForall
 
-let for_all ~f:p seq =
+let[@inline] for_all ~f:p seq =
   try
     seq ~f:(fun x -> if not (p x) then raise_notrace ExitForall);
     true

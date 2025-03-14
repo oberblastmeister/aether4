@@ -6,7 +6,7 @@ module Layout : sig
   type t [@@deriving sexp_of]
 
   (* resolve offset from the base pointer *)
-  val resolve_base_offset : t -> Stack_slot.t -> int
+  val resolve_frame_offset : t -> Stack_slot.t -> int
 
   (* the total size of the frame, how much to increase rsp by *)
   val frame_size : t -> int

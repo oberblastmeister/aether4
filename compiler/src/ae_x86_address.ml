@@ -14,15 +14,11 @@ module Index = struct
 end
 
 module Base = struct
-  type 'r t =
-    | Reg of 'r
-    | Rsp
-  [@@deriving sexp_of, variants]
+  type 'r t = Reg of 'r [@@deriving sexp_of, variants]
 
   let iter_regs base ~f =
     match base with
     | Reg r -> f r
-    | Rsp -> ()
   ;;
 end
 

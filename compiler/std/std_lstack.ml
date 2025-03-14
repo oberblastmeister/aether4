@@ -23,4 +23,6 @@ let pop_exn t =
 ;;
 
 let to_list t = List.rev !t
+let of_list_rev l = ref l
+let of_list l = ref @@ List.rev l
 let to_list_rev t = !t

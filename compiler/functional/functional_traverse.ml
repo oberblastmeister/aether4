@@ -11,6 +11,6 @@ let compose
   fun mf mg a ~f -> mf ~f:(fun s -> mg ~f s) a
 ;;
 
-let filtered pred a ~f = if pred a then f a else a
+let filtered ~f:pred a ~f = if pred a then f a else a
 let ( & ) = compose
 let of_field field ~f = Field.map field ~f

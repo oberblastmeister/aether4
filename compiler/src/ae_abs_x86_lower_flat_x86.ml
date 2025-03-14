@@ -9,20 +9,27 @@ module Mach_reg = Ae_x86_mach_reg
 module Label_entity = Ae_label_entity
 module Label = Ae_label_entity.Ident
 module Condition_code = Ae_x86_condition_code
+module Frame = Ae_x86_frame
+module Address = Ae_x86_address
 
 let empty = Bag.empty
 
 open Bag.Syntax
 
-type st = { allocation : Regalloc.Allocation.t }
+type st =
+  { stack_frame : Frame.Layout.t
+  ; allocation : Regalloc.Allocation.t
+  }
 
-let create_state allocation = { allocation }
+let create_state stack_frame allocation = { stack_frame; allocation }
 let get_vreg t vreg = Regalloc.Allocation.find_exn t.allocation vreg
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
-  | Stack_slot _ -> todol [%here]
+  | Stack_slot slot ->
+    let offset = Frame.Layout.resolve_frame_offset st.stack_frame slot in
+    Mem (Address.create Mach_reg.RSP offset)
   | Reg vreg -> Reg (get_vreg st vreg)
   | Mem _ -> todol [%here]
 ;;
@@ -36,6 +43,11 @@ let epilogue =
        ]
 ;;
 
+let epilogue_without_base stack_size =
+  empty
+  +> Flat_x86.Instr.[ Add { dst = Reg RSP; src = Imm stack_size; size = Qword }; Ret ]
+;;
+
 let prologue stack_size =
   empty
   +> Flat_x86.Instr.
@@ -43,6 +55,10 @@ let prologue stack_size =
        ; Mov { dst = Reg RBP; src = Reg RSP; size = Qword }
        ; Sub { dst = Reg RSP; src = Imm stack_size; size = Qword }
        ]
+;;
+
+let prologue_without_base stack_size =
+  empty +> Flat_x86.Instr.[ Sub { dst = Reg RSP; src = Imm stack_size; size = Qword } ]
 ;;
 
 let label_to_string st (label : Label.t) =
@@ -168,7 +184,10 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
             ]))
   | Ret { src; size } ->
     let src = lower_operand st src in
-    Flat_x86.Instr.(empty +> [ Mov { dst = Reg RAX; src; size } ] ++ epilogue)
+    Flat_x86.Instr.(
+      empty
+      +> [ Mov { dst = Reg RAX; src; size } ]
+      ++ epilogue_without_base (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame)))
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
@@ -196,13 +215,13 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   let instrs =
     empty
     +> Flat_x86.Instr.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
-    ++ prologue 0l
+    ++ prologue_without_base (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame))
     ++ instrs
   in
   Bag.to_list instrs
 ;;
 
-let lower allocation func =
-  let st = create_state allocation in
+let lower stack_frame allocation func =
+  let st = create_state stack_frame allocation in
   lower_func st func
 ;;
