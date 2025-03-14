@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int f1 = 1;
+  int f2 = 1;
+  int f3 = f2+f1;
+  int f4 = f3+f2;
+  int f5 = f4+f3;
+  int f6 = f5+f4;
+  int f7 = f6+f5;
+  int f8 = f7+f6;
+  return f8;			// fib(8) == 21
+}
+----
+21
