@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    int a = 1;
+    int b = 2;
+    return (a-b));
+}
+----
+("Parse error"
+ ("expected closing brace for block"
+  ("Stream.peek (Parser.stream env)" (Return))))

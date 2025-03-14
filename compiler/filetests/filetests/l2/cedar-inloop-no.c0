@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+int main() {
+	int a = 3;
+	int b = 5;
+	int i = 10;
+	for(i = 0; i < b; i = i + 1) {
+		t = t + b;
+		b = b + a;
+		if(a > 0)
+			a = a - 1;
+	}
+	return t;
+}
+----
+("Variable not found" (var t))

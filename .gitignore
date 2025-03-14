@@ -6,3 +6,8 @@ zig-out/
 .c0_cache/
 test.s
 a.out
+.gdb_history
+concatenated_output.txt
+concatenated_output2.txt
+concatenated_output3.txt
+script.py

@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+  int prev = 0;
+  int result = 0;
+  int i;
+  for (i = 1; i > prev; i <<= 1) {
+    result |= i;
+    prev = i;
+  }
+  return i / (result + i);
+}
+----

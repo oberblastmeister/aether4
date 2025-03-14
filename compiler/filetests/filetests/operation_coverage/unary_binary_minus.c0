@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// test unary vs binary minus
+int main() {
+  int x = 3;
+  x -= x - - - - - - -2;
+  return x;
+}
+----
+2

@@ -1,0 +1,21 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// Find the next highest power of two
+int main() {
+  int N = 3333;
+
+  int n = N - 1;
+  int bitspace = 32;
+
+  for (int k = 1; k <= bitspace / 2; k *= 2) {
+    n |= n >> k;
+  }
+  
+  return n + 1;
+}
+----
+4096

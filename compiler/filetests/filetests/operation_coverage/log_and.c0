@@ -1,0 +1,9 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+    return true && false ? 1 : -1;
+}
+----
+-1

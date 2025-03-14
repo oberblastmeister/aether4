@@ -1,0 +1,11 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    // 2^63 + 1
+    int x = 9223372036854775809;
+    return x;
+}
+----
+("Int did not fit in 64 bits" (i 9223372036854775809))

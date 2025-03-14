@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun)) 
+)
+*/
+
+int main() {
+    int first = 3;
+    int second = 2;
+    bool another = true;
+    if (another) {
+        first += 1;
+    } else {
+        first += second;
+    }
+    return first + second;
+}
+----
+6

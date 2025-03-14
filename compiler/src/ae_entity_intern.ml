@@ -18,12 +18,21 @@ module String_to_name = struct
       name)
   ;;
 
+  let fresh ?(name = "fresh") t =
+    let id = t.id in
+    t.id <- id + 1;
+    Ident.{ name; id }
+  ;;
+
   let find_exn t key = Hashtbl.find_exn t.map key
+  let next_id t = t.id
 
   module Make_global (Witness : T) () = struct
     let t : Witness.t t = create ()
+    let fresh ?name () = fresh ?name t
     let intern k = intern t k
     let find_exn k = find_exn t k
+    let next_id () = next_id t
   end
 end
 

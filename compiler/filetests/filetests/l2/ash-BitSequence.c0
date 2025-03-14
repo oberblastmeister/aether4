@@ -1,0 +1,22 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+// find the longest sequence of 1s in the binary representation of S
+int main() {
+  int S = 2870200;
+
+  int max = 0;
+  int mask = 1;
+  int count = 0;
+  for (mask = 1; mask <= S; mask <<= 1) {
+    if ((mask & S) != 0) count +=1;
+    else count = 0;
+
+    if (count > max) max = count;
+  }
+
+  return max;
+}
+----
+4

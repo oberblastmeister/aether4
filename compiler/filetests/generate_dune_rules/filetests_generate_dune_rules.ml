@@ -1,4 +1,4 @@
-open Std
+open Core
 
 let generate_rules_diff dir base =
   let v s = "%{" ^ s ^ "}" in

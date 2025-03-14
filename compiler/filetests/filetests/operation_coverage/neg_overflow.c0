@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    // this overflows to -9223372036854775808
+    int int_min = 9223372036854775808;
+    // this results in 9223372036854775808, which overflows back to -9223372036854775808
+    return -int_min;
+}
+----
+-9223372036854775808

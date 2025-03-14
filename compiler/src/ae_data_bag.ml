@@ -10,6 +10,11 @@ let append_list t l = Append (t, List l)
 let append t t' = Append (t, t')
 let of_list l = List l
 
+let of_option = function
+  | None -> Empty
+  | Some x -> Leaf x
+;;
+
 let to_list builder =
   let rec go stack acc =
     match stack with
@@ -24,8 +29,18 @@ let to_list builder =
   go [ builder ] [] |> List.rev
 ;;
 
+let to_arrayp t = to_list t |> Arrayp.of_list
 let sexp_of_t f t = to_list t |> List.sexp_of_t f
 let concat ts = List.fold_left ~init:Empty ~f:append ts
+
+let rec map t ~f =
+  match t with
+  | Empty -> Empty
+  | Leaf x -> Leaf (f x)
+  | Append (l, r) -> Append (map l ~f, map r ~f)
+  | List l -> List (List.map ~f l)
+;;
+
 let empty = Empty
 
 module Syntax = struct

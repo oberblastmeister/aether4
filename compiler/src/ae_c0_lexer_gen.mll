@@ -12,12 +12,17 @@ rule lex =
   parse
   | white { lex lexbuf }
   | newline { Lexing.new_line lexbuf; lex lexbuf }
+  | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }
+  | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | "//" { line_comment lexbuf }
   | "/*" { block_comment 1 lexbuf }
+  | ':' { Token.Colon }
   | ';' { Token.Semi }
   | '+' { Token.Plus }
   | '*' { Token.Star }
   | '=' { Token.Eq }
+  | "==" { Token.EqEq }
+  | "!=" { Token.BangEq }
   | '-' { Token.Dash }
   | '/' { Token.Slash }
   | '%' { Token.Percent }
@@ -26,15 +31,41 @@ rule lex =
   | "%=" { Token.PercentEq }
   | "/=" { Token.SlashEq }
   | "-=" { Token.DashEq }
+  | "&=" { Token.AmpersandEq }
+  | "|=" { Token.PipeEq }
+  | "^=" { Token.CaretEq }
+  | "<<=" { Token.LangleLangleEq }
+  | ">>=" { Token.RangleRangleEq }
+  | "++" { Token.PlusPlus }
+  | "--" { Token.DashDash }
+  | '<' { Token.Langle }
+  | '>' { Token.Rangle }
+  | "<=" { Token.LangleEq }
+  | ">=" { Token.RangleEq }
+  | "<<" { Token.LangleLangle }
+  | ">>" { Token.RangleRangle }
+  | '~' { Token.Tilde }
+  | '^' { Token.Caret }
+  | '&' { Token.Ampersand }
+  | '?' { Token.Question }
+  | '!' { Token.Bang }
+  | '|' { Token.Pipe }
+  | "||" { Token.PipePipe }
+  | "&&" { Token.AmpersandAmpersand }
   | '(' { Token.LParen }
   | ')' { Token.RParen }
   | '{' { Token.LBrace }
   | '}' { Token.RBrace }
   | "return" { Token.Return }
+  | "if" { Token.If }
+  | "else" { Token.Else }
+  | "while" { Token.While }
+  | "for" { Token.For }
   | "int" { Token.Int }
+  | "bool" { Token.Bool }
+  | "true" { Token.True }
+  | "false" { Token.False }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
-  | hexnum { Token.Hexnum (Lexing.lexeme lexbuf) }
-  | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }
 

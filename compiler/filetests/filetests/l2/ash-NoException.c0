@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// test logical and / or
+int main() {
+  bool x = (1 != 0) && ((2 != 0) || ((3 / 0) == 0 ? false : true));
+
+  return x == true ? 1 : 0;
+}
+----
+1

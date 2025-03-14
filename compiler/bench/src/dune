@@ -1,0 +1,9 @@
+(library
+ (name bench)
+ (libraries std)
+ (library_flags -linkall)
+ (flags
+   ; turn pattern matching into error 
+   (:standard -warn-error -A+8 -w -23))
+ (preprocess
+  (pps ppx_jane)))

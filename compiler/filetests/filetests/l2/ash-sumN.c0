@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// validate the formula for the sum of the first n integers
+int main() {
+  int N = 100;
+
+  int sum = 0;
+  for (int i = 1; i <= N; i += 1) sum += i;
+
+  return (sum == N * (N + 1) / 2) ? 1 : 0;
+}
+----
+1

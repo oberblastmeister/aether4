@@ -1,18 +1,7 @@
 open Std
 module Signatures = Ae_signatures
 module OA = Option_array
-
-module type Key_phantom = sig
-  type 'w t [@@deriving sexp_of]
-
-  val to_int : 'w t -> int
-end
-
-module type Key = sig
-  type t
-
-  include Key_phantom with type 'w t := t
-end
+open Ae_entity_sigs
 
 module type S_phantom_without_make = sig
   module Key : Key_phantom
@@ -21,13 +10,17 @@ module type S_phantom_without_make = sig
 
   val create : ?size:int -> unit -> ('w, 'v) t
   val find : ('w, 'v) t -> 'w Key.t -> 'v option
+  val find_int : ('w, 'v) t -> int -> 'v option
+  val find_int_exn : ('w, 'v) t -> int -> 'v
   val remove : ('w, 'v) t -> 'w Key.t -> unit
   val find_exn : ('w, 'v) t -> 'w Key.t -> 'v
   val find_or_add : ('w, 'v) t -> 'w Key.t -> default:(unit -> 'v) -> 'v
+  val find_multi : ('w, 'v list) t -> 'w Key.t -> 'v list
   val set : ('w, 'v) t -> key:'w Key.t -> data:'v -> unit
   val add_exn : ('w, 'v) t -> key:'w Key.t -> data:'v -> unit
   val mem : ('w, 'v) t -> 'w Key.t -> bool
   val update : ('w, 'v) t -> 'w Key.t -> f:('v option -> 'v) -> unit
+  val add_multi : ('w, 'v list) t -> key:'w Key.t -> data:'v -> unit
   val of_list : ('w Key.t * 'v) list -> ('w, 'v) t
   val to_list : ('w, 'v) t -> ('w Key.t * 'v) list
   val of_iter : ?size:int -> ('w Key.t * 'v) Iter.t -> ('w, 'v) t
@@ -35,6 +28,14 @@ module type S_phantom_without_make = sig
   val iteri : ('w, 'v) t -> ('w Key.t * 'v) Iter.t
   val length : ('w, 'v) t -> int
   val max_index : ('w, 'v) t -> int
+  val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
+
+  val of_iter_accum
+    :  ?size:int
+    -> ('w Key.t * 'a) Iter.t
+    -> init:'acc
+    -> f:('acc -> 'a -> 'acc)
+    -> ('w, 'acc) t
 
   module Syntax : sig
     val ( .!() ) : ('w, 'a) t -> 'w Key.t -> 'a
@@ -100,8 +101,8 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     let length t = t.length
     let max_index t = t.max_index
 
-    let sexp_of_t t f g =
-      Option_array.sexp_of_t (Tuple2.sexp_of_t (Key.sexp_of_t f) g) t.a
+    let sexp_of_t _ g t =
+      Option_array.sexp_of_t (Tuple2.sexp_of_t (Key.sexp_of_t sexp_of_opaque) g) t.a
     ;;
 
     let create ?(size = 0) () = { a = OA.create ~len:size; length = 0; max_index = -1 }
@@ -114,6 +115,14 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     let find t k =
       let i = Key.to_int k in
       if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
+    ;;
+
+    let find_int t i = if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
+
+    let find_multi t k =
+      match find t k with
+      | None -> []
+      | Some l -> l
     ;;
 
     let remove t k =
@@ -131,6 +140,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     ;;
 
     let key_not_found _t k = raise_s [%message "key not found" ~key:(k : _ Key.t)]
+    let int_not_found _t i = raise_s [%message "key not found" ~key:(i : int)]
 
     let clear t =
       Option_array.clear t.a;
@@ -145,6 +155,14 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
       then key_not_found t k
       else if OA.is_none t.a i
       then key_not_found t k
+      else snd @@ OA.get_some_exn t.a i
+    ;;
+
+    let find_int_exn t i =
+      if i >= size t
+      then int_not_found t i
+      else if OA.is_none t.a i
+      then int_not_found t i
       else snd @@ OA.get_some_exn t.a i
     ;;
 
@@ -194,6 +212,12 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     let sexp_of_t f g t = to_list t |> List.sexp_of_t (Tuple2.sexp_of_t f g)
     let update t k ~f = set t ~key:k ~data:(f (find t k))
 
+    let add_multi t ~key ~data =
+      update t key ~f:(function
+        | None -> [ data ]
+        | Some l -> data :: l)
+    ;;
+
     let of_iter_accum ?size i ~init ~f =
       let t = create ?size () in
       Iter.iter i ~f:(fun (k, v) ->
@@ -214,6 +238,21 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     ;;
 
     let iteri t ~f = Option_array.iter t.a |> Iter.filter_map ~f:Fn.id |> Iter.iter ~f
+
+    let of_iter_accum ?size i ~init ~f =
+      let t = create ?size () in
+      Iter.iter i ~f:(fun (k, v) ->
+        update t k ~f:(function
+          | None -> f init v
+          | Some acc -> f acc v));
+      t
+    ;;
+
+    let map t ~f =
+      let t' = create ~size:(Option_array.length t.a) () in
+      iteri t ~f:(fun (k, v) -> set t' ~key:k ~data:(f v));
+      t'
+    ;;
 
     module Syntax = struct
       let ( .!() ) = find_exn
@@ -236,14 +275,17 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   end
 end
 
-module Make (Key : Key) : S = struct
+module Make (Key : Key) : S with type 'w Key.t = Key.t = struct
   module Key' = struct
-    include Key
-
     type 'w t = Key.t
+
+    let to_int k = Key.to_int k
+    let sexp_of_t _ k = Key.sexp_of_t k
   end
 
   include Make_phantom (Key')
 
   type nonrec 'a t = (Nothing.t, 'a) t
 end
+
+module Int_table = Make (Int)

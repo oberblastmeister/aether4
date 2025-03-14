@@ -1,5 +1,5 @@
 /*
-(Test (CompileFail))
+( (kind (CompileFail)) )
 */
 
 int main() {
@@ -9,4 +9,4 @@ int main() {
     third += another;
 }
 ----
-"Did not find return statement"
+"Program does not return on all control flow paths"

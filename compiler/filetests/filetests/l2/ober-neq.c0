@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  bool c = (17 != 19); // true
+  return c == false ? 0 : 1;
+}
+----
+1

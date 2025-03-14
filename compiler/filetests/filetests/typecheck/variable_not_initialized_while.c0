@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    int bruh;
+    while (true) {
+        bruh = 1;
+    }
+    return bruh;
+}
+----
+("Variable was used before initialized" (var bruh@0))

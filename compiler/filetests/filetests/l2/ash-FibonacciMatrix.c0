@@ -1,0 +1,42 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int N = 10;
+  int A = 1;
+  int B = 3;
+
+  // We create a fibonnacci matrix ..
+  int FibMat11 = 1;
+  int FibMat12 = 1;
+  int FibMat21 = 1;
+  int FibMat22 = 0;
+
+  // ... and raise it to the N-1 th power
+  int Mat11 = 1;
+  int Mat12 = 0;
+  int Mat21 = 0;
+  int Mat22 = 1;
+
+  for (int i = 0 ; i < N - 1; i+=1)  {
+    int t11 = Mat11*FibMat11 + Mat12*FibMat21;
+    int t12 = Mat11*FibMat12 + Mat12*FibMat22;
+    int t21 = Mat21*FibMat11 + Mat22*FibMat21;
+    int t22 = Mat21*FibMat12 + Mat22*FibMat22;
+    Mat11 = t11;
+    Mat12 = t12;
+    Mat21 = t21;
+    Mat22 = t22;
+  }
+
+ // now multiply that matrix with the vector (B, A)
+  int Fn           = Mat11*B + Mat12*A;
+  int Fn_minus_one = Mat21*B + Mat22*A;
+
+  return Fn;
+}
+----
+199

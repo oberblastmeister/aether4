@@ -22,14 +22,25 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends
-  ocaml
+  (ocaml
+   (= 5.2.1))
   dune
   (core
    (= v0.17.1))
+  (core_bench
+   (= v0.17.0))
   (core_kernel
    (= v0.17.0))
   (core_unix
    (= v0.17.0))
+  ; needed by cmd
+  stdio
+  threads
+  spawn
+  (containers
+   (= 3.15))
+  (containers-data
+    (= 3.15))
   (ppx_deriving
    (= 6.0.3))
   (ppx_jane
@@ -55,6 +66,8 @@
   (base64
    (= 3.5.1))
   menhir
+  (shexp (= v0.17.0))
+  feather
   )
  (tags
   ("add topics" "to describe" your project))

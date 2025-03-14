@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  bool a = !(34 == 0 ? false : true); // false
+  bool b = !(-34 == 0 ? false : true); // false
+  bool c = (17 != 19); // true
+  bool d = (92 > ~93); // true
+  bool res = a != b || c && d; // false
+  return res == false ? 0 : 1;
+}
+----
+1

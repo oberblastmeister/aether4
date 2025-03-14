@@ -51,7 +51,7 @@ end
 
 module type Arg = sig
   module Error : sig
-    type t
+    type t [@@deriving sexp_of]
   end
 
   module Stream : Stream
@@ -76,8 +76,8 @@ module Make (Arg : Arg) = struct
   module Token = Stream.Token
 
   module Exceptions = struct
-    exception Error of Error.t
-    exception Fail
+    exception Error of Error.t [@@deriving sexp_of]
+    exception Fail [@@deriving sexp_of]
   end
 
   open Exceptions
@@ -157,6 +157,22 @@ module Make (Arg : Arg) = struct
     let ( <$ ) x p env =
       p env |> ignore;
       x
+    ;;
+
+    let ( $> ) p x env =
+      p env |> ignore;
+      x
+    ;;
+
+    let ( <* ) p1 p2 env =
+      let x = p1 env in
+      p2 env |> ignore;
+      x
+    ;;
+
+    let ( *> ) p1 p2 env =
+      p1 env |> ignore;
+      p2 env
     ;;
   end
 

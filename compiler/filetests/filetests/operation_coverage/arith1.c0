@@ -1,0 +1,14 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+  int a = 0;
+  int b = a+1;
+  int c = 2*b;
+  int d = 3-c;
+  int e = -d;
+  return d;
+}
+----
+1

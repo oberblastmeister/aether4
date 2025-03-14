@@ -1,0 +1,11 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    int first = 123;
+    int second = first + third + fourth;
+    return second;
+}
+----
+("Variable not found" (var third))

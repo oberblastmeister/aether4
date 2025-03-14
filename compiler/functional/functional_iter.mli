@@ -1,10 +1,13 @@
 type 'a t = f:('a -> unit) -> unit
 type ('a, 'b) t2 = f:('a -> 'b -> unit) -> unit
 
+val append : 'a t -> 'a t -> 'a t
 val of_fn : (('a -> unit) -> unit) -> 'a t
 val to_fn : 'a t -> ('a -> unit) -> unit
+val for_ : 'a t -> ('a -> unit) -> unit
 val to_list_rev : 'a t -> 'a list
 val while_ : (unit -> bool) -> unit t
+val while_some : (unit -> 'a option) -> 'a t
 val uncurry : ('a, 'b) t2 -> ('a * 'b) t
 val find_map : 'a t -> f:('a -> 'b option) -> 'b option
 val find : 'a t -> f:('a -> bool) -> 'a option

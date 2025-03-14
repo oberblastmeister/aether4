@@ -1,0 +1,27 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// variable a not fully initialized, but it is never used so it is ok
+int main() {
+  int c = 0;
+  int q;
+  
+  if (c > 0) q = 1;
+  else
+    if (c < 0) q = ~0;
+    else q = 0;
+
+  int a;
+  for ( ; c < 33; a *= 3) {
+    c += 1;
+    a = c;
+    q = a * 3;
+  }
+
+  return q;
+}
+----
+99

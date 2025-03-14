@@ -1,0 +1,9 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    return a;
+}
+----
+("Variable not found" (var a))

@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileAndRun))
+ (chaos_spill_mode All)
+)
+*/
+
+int main() {
+  int x0 = 1;
+  int x1 = x0+1;
+  int x2 = x1+1;
+  return x0 + x1 + x2;
+}
+----
+6

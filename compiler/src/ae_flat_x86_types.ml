@@ -2,6 +2,7 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
+  module Condition_code = Ae_x86_condition_code
 end
 
 module Mach_reg = Ae_x86_mach_reg
@@ -9,6 +10,8 @@ module Mach_reg = Ae_x86_mach_reg
 module Address = struct
   type t = Mach_reg.t Ae_x86_address.t [@@deriving sexp_of]
 end
+
+module Size = Ae_x86_size
 
 module Operand = struct
   type t =
@@ -23,27 +26,90 @@ module Instr = struct
     | Add of
         { dst : Operand.t
         ; src : Operand.t
+        ; size : Size.t
         }
     | Sub of
         { dst : Operand.t
         ; src : Operand.t
+        ; size : Size.t
         }
-    | Imul of { src : Operand.t }
-    | Idiv of { src : Operand.t }
+    | Imul of
+        { src : Operand.t
+        ; size : Size.t
+        }
+    | Idiv of
+        { src : Operand.t
+        ; size : Size.t
+        }
+    | And of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
+    | Or of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
+    | Xor of
+        { dst : Operand.t
+        ; src : Operand.t
+        ; size : Size.t
+        }
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
+        ; size : Size.t
+        }
+    | Movzx of
+        { dst : Operand.t
+        ; dst_size : Size.t
+        ; src : Operand.t
+        ; src_size : Size.t
+        }
+    | Sal of
+        { dst : Operand.t
+        ; size : Size.t
+        }
+    | Sar of
+        { dst : Operand.t
+        ; size : Size.t
+        }
+    | Cmp of
+        { src1 : Operand.t
+        ; src2 : Operand.t
+        ; size : Size.t
+        }
+    | Test of
+        { src1 : Operand.t
+        ; src2 : Operand.t
+        ; size : Size.t
+        }
+    | Set of
+        { cc : Condition_code.t
+        ; dst : Operand.t
         }
     | Lea of
         { dst : Operand.t
         ; src : Address.t
         }
-    | MovAbs of
+    | Mov_abs of
         { dst : Operand.t
         ; src : int64
         }
-    | Push of { src : Operand.t }
-    | Pop of { dst : Operand.t }
+    | Push of
+        { src : Operand.t
+        ; size : Size.t
+        }
+    | Pop of
+        { dst : Operand.t
+        ; size : Size.t
+        }
+    | Jmp of string
+    | J of
+        { cc : Condition_code.t
+        ; label : string
+        }
     | Ret
     | Directive of string
     (*
@@ -52,7 +118,7 @@ module Instr = struct
     | Cqo
     | Label of string
     | Comment of string
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, variants]
 end
 
 module Program = struct

@@ -1,0 +1,18 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int n = 1000;
+  int zeroes = 0;
+  /* Use the fact that each multiple of each power of 5 
+   * contributes an extra 0
+   */
+  for (int x = 5; x < n; x *= 5)
+    zeroes += n / x;
+  return zeroes;
+}
+----
+249

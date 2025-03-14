@@ -1,0 +1,11 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    while (true) {
+        return 0;
+    }
+}
+----
+"Program does not return on all control flow paths"

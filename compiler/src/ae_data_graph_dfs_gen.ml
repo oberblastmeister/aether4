@@ -34,18 +34,18 @@ module Make (Set : Signatures.Mutable_set) = struct
 
   let postorder ~start graph =
     let vec = Vec.create () in
-    visit_postorder ~f:(Vec.push vec) ~start graph;
+    visit_postorder ~f:(Vec.push_back vec) ~start graph;
     vec
   ;;
 
   let reverse_postorder ~start graph =
     let vec = postorder ~start graph in
-    Vec.rev vec
+    Vec.to_list vec |> List.rev |> Vec.of_list
   ;;
 
   let preorder ~start graph =
     let vec = Vec.create () in
-    visit_preorder ~f:(Vec.push vec) ~start graph;
+    visit_preorder ~f:(Vec.push_back vec) ~start graph;
     vec
   ;;
 end

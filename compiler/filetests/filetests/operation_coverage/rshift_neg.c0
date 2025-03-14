@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    // this truncates towards negative infinity
+    return -9 >> 2;
+}
+----
+-3

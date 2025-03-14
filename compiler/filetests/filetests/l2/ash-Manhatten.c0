@@ -1,0 +1,26 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// computes the manhatten distance
+int main() {
+  int X1 = 30;
+  int Y1 = 30;
+  int X2 = 70;
+  int Y2 = -30;
+
+  if (X1 > X2)
+    if (Y1 > Y2)
+      return X1 - X2 + Y1 - Y2;
+    else
+      return X1 - X2 + Y2 - Y1;
+  else
+    if (Y1 > Y2)
+      return X2 - X1 + Y1 - Y2;
+    else
+      return X2 - X1 + Y2 - Y1;
+}
+----
+100

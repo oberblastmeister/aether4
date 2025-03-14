@@ -18,7 +18,4 @@ module Graph : sig
   val add_edge : t -> Vreg.t -> Vreg.t -> unit
 end
 
-module Color_entity : Entity.S
-module Color = Color_entity.Id
-
-val color_graph : Graph.t -> Vreg.Set.t -> Color.t Vreg.Table.t * Color.t
+val color_graph : Graph.t -> Vreg.Set.t -> int Vreg.Table.t * int

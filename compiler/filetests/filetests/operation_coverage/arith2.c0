@@ -1,0 +1,17 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+int main() {
+  int x1 = 2;
+  int x2 = x1 * x1;
+  int x4 = x2 * x2;
+  int x8 = x4 * x4;
+  int x16 = x8 * x8;
+  int x15 = x16 / x1;
+  int x30 = x15 * x15;
+  int x31 = x30 * x1;
+  return x31;
+}
+----
+2147483648

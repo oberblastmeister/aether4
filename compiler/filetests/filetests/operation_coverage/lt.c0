@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun)) 
+)
+*/
+
+int main() {
+    int x = 1234;
+    int y = 1;
+    int res;
+    if (x < y) {
+        res = -1;
+    } else {
+        res = 1;
+    }
+    return res;
+}
+----
+1

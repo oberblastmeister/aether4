@@ -1,10 +1,10 @@
 open Std
+open Ae_trace
 module C0 = Ae_c0_std
 module Tir = Ae_tir_std
 module Lir = Ae_lir_std
 module Abs_x86 = Ae_abs_x86_std
 module Flat_x86 = Ae_flat_x86_std
-module F = Filename
 module Path_utils = Ae_path_utils
 module Stdenv = Eio.Stdenv
 module Path = Eio.Path
@@ -12,14 +12,20 @@ module Process = Eio.Process
 module File = Eio.File
 module Flow = Eio.Flow
 module Fs = Eio.Fs
-module Stack_builder = Ae_stack_builder
 
 module Emit = struct
   type t =
-    | Asm
+    | Tokens
+    | Cst
+    | Ast
+    | Tir_non_ssa
+    | Tir
     | Lir
     | Abs_asm
+    | Asm
   [@@deriving sexp, equal]
+
+  let mem = List.mem ~equal
 end
 
 module Env = struct
@@ -64,26 +70,43 @@ let link_files_with_runtime mgr paths out_path =
      @ [ "-o"; out_path ])
 ;;
 
-let compile_source_to_asm ?(emit = []) source =
+let compile_source_to_tir ?(emit = []) source =
   let open Result.Let_syntax in
-  let mem = List.mem ~equal:Emit.equal in
   let tokens = C0.Lexer.tokenize source in
+  if Emit.mem emit Tokens then print_s [%message "tokens" (tokens : C0.Token.t list)];
   let%bind program =
     C0.Parser.parse tokens
-    |> Result.map_error ~f:(function Sexp s ->
-        Error.tag_s (Error.create_s s) ~tag:[%message "Parse error"])
+    |> Result.map_error ~f:(Error.tag_s ~tag:[%message "Parse error"])
   in
+  if Emit.mem emit Cst then print_s [%message "cst" (program : C0.Cst.program)];
+  let%bind program = C0.Cst_elaborate_ast.elaborate_program program in
+  if Emit.mem emit Ast then print_s [%message "ast" (program : C0.Ast.program)];
+  let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
   let tir = C0.Lower_tree_ir.lower program in
+  if Emit.mem emit Tir_non_ssa then print_s [%message "tir_non_ssa" (tir : Tir.Func.t)];
+  let tir = Tir.Convert_ssa.convert tir in
+  if Emit.mem emit Tir then print_s [%message "tir" (tir : Tir.Func.t)];
+  Ok tir
+;;
+
+let compile_source_to_asm ?(emit = []) source =
+  let open Result.Let_syntax in
+  let%bind tir = compile_source_to_tir ~emit source in
+  let%bind () = Tir.Check.check tir in
   let lir = Tir.Lower_lir.lower tir in
-  if mem emit Emit.Lir then print_s [%sexp (lir : Lir.Func.t)];
+  (* let%bind () = Lir.Check.check lir in *)
+  if Emit.mem emit Emit.Lir then print_s [%message (lir : Lir.Func.t)];
   let abs_x86 = Lir.Lower_abs_x86.lower lir in
-  if mem emit Emit.Abs_asm then print_s [%sexp (abs_x86 : Abs_x86.Func.t)];
-  let stack_builder = Stack_builder.create () in
-  let alloc = Abs_x86.Regalloc.alloc_func stack_builder abs_x86 in
-  let asm = Abs_x86.Lower_flat_x86.lower alloc abs_x86 in
+  (* let%bind () = Abs_x86.Check.check abs_x86 in *)
+  if Emit.mem emit Emit.Abs_asm then print_s [%message (abs_x86 : Abs_x86.Func.t)];
+  let asm = Abs_x86.Driver.convert abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
-  if mem emit Emit.Asm then print_endline formatted_asm;
+  if Emit.mem emit Emit.Asm
+  then begin
+    print_endline "asm";
+    print_endline formatted_asm
+  end;
   Ok formatted_asm
 ;;
 

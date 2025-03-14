@@ -1,0 +1,30 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+// Combinations: N choose K
+int main() {
+    int N = 10;
+    int K = 6;
+    
+    int k;
+    if (N - K < K) k = N - K;
+    else k = K;
+    
+    int num = 1;
+    int den = 1;
+    
+    int a = N;
+    int b = k;
+    
+    while (b > 0) {
+        num *= a;
+        den *= b;
+        a -= 1;
+        b -= 1;
+    }
+    
+    return num / den;
+}
+----
+210

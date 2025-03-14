@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+   int x = 1073741824;
+   x = x + x + x;
+   return (x+((x>>63)&3))>>2;
+}
+----
+805306368

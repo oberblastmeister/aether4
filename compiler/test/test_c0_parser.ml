@@ -6,7 +6,7 @@ let check s =
   let module Lexer = Ae_c0_lexer in
   let tokens = Lexer.tokenize s in
   let program = C0.Parser.parse tokens in
-  print_s [%sexp (program : (C0.Cst.program, C0.Parser.Error.t) result)];
+  print_s [%sexp (program : C0.Cst.program Or_error.t)];
   ()
 ;;
 
@@ -37,20 +37,48 @@ let%expect_test "simple decl" =
          ((Decl
            ((ty Int) (name first)
             (expr
-             ((Bin (lhs (IntConst 12)) (op Add)
+             ((Bin (lhs (Int_const 12)) (op Add)
                (rhs
                 (Bin
                  (lhs
                   (Bin
                    (lhs
-                    (Bin (lhs (IntConst 1234)) (op Mod) (rhs (IntConst 1234))))
-                   (op Mul) (rhs (IntConst 12))))
-                 (op Div) (rhs (IntConst 2)))))))))
+                    (Bin (lhs (Int_const 1234)) (op Mod) (rhs (Int_const 1234))))
+                   (op Mul) (rhs (Int_const 12))))
+                 (op Div) (rhs (Int_const 2)))))))))
           (Decl
            ((ty Int) (name second)
             (expr
-             ((Bin (lhs (Bin (lhs (IntConst 1234)) (op Add) (rhs (IntConst 12))))
-               (op Add) (rhs (IntConst 12)))))))))))))
+             ((Bin
+               (lhs (Bin (lhs (Int_const 1234)) (op Add) (rhs (Int_const 12))))
+               (op Add) (rhs (Int_const 12)))))))))))))
+    |}]
+;;
+
+let%expect_test "simple control flow" =
+  check
+    {|
+    int main() {
+      int i = 1234;
+      if (b) {
+        another = 1243;
+      }
+    }
+  |};
+  [%expect
+    {|
+    (Ok
+     ((ty Int) (name main)
+      (block
+       ((stmts
+         ((Decl ((ty Int) (name i) (expr ((Int_const 1234)))))
+          (If (cond (Var b))
+           (body1
+            (Block
+             ((stmts
+               ((Assign
+                 ((lvalue another) (op Id_assign) (expr (Int_const 1243)))))))))
+           (body2 ()))))))))
     |}]
 ;;
 
@@ -69,10 +97,30 @@ let%expect_test "simple assign" =
       (block
        ((stmts
          ((Assign
-           ((lvalue first) (op MulEq)
-            (expr (Bin (lhs (IntConst 12)) (op Add) (rhs (IntConst 12))))))
+           ((lvalue first) (op Mul_assign)
+            (expr (Bin (lhs (Int_const 12)) (op Add) (rhs (Int_const 12))))))
           (Assign
-           ((lvalue another) (op ModEq)
-            (expr (Bin (lhs (IntConst 12)) (op Div) (rhs (IntConst 12))))))))))))
+           ((lvalue another) (op Mod_assign)
+            (expr (Bin (lhs (Int_const 12)) (op Div) (rhs (Int_const 12))))))))))))
     |}]
 ;;
+
+let%expect_test "bool" =
+  check {|
+    int main() {
+          int first = 0;
+          int second = 1234;
+          bool third = true;
+          return first + second;
+        }
+  |};
+  [%expect {|
+    (Ok
+     ((ty Int) (name main)
+      (block
+       ((stmts
+         ((Decl ((ty Int) (name first) (expr ((Int_const 0)))))
+          (Decl ((ty Int) (name second) (expr ((Int_const 1234)))))
+          (Decl ((ty Bool) (name third) (expr ((Bool_const true)))))
+          (Return (Bin (lhs (Var first)) (op Add) (rhs (Var second))))))))))
+    |}]

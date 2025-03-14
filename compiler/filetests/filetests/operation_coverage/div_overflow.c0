@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+    // 2^63;
+    int int_min = 0X8000000000000000; 
+    int y = -1;
+    return int_min / y;
+}
+----
