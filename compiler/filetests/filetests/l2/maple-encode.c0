@@ -1,0 +1,25 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int x = 5;
+  int y = 10;
+  int code = 2;
+
+  for(int i=1; i<x; i+=1)
+  {
+    code*=2;
+  }
+
+  code = code*(2*y + 1);
+
+  //going from left to right
+  //the binary expansion of code is x zeros followed by a 1 followed by 
+  //the binary expansion of y
+  return code;
+}
+----
+672

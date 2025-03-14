@@ -1,0 +1,18 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int x = 5;
+  int y = 7;
+
+  x ^= y;
+  y ^= x;
+  x ^= y;
+
+  return x;
+}
+----
+7

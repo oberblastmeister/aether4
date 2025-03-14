@@ -1,0 +1,47 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int x = 94522549;
+  int y = x;
+  int len = 0;
+  // trivial case
+  if (y == 0)
+    return 1;
+  while (y > 0)
+  {
+    y /= 10;
+    len += 1;
+  }
+  for (int i = 0; i <= len / 2; i += 1)
+  {
+    int z = x; 
+    for (int j = 0; j < i; j += 1)
+      z /= 10;
+    int a = z % 10;
+    z = x; 
+    for (int j = 0; j < len - 1 - i; j += 1)
+      z /= 10;
+    int b = z % 10;
+    if (a != b)
+      return 0;
+  }
+  return 1;
+}
+----
+"Should have spilled registers so that we will always have enough machine registers"
+Raised at Base__Error.raise in file "src/error.ml" (inlined), line 9, characters 21-37
+Called from Base__Option.value_exn in file "src/option.ml", line 119, characters 4-21
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func.(fun) in file "compiler/src/ae_abs_x86_regalloc.ml", lines 371-376, characters 8-26
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func in file "compiler/src/ae_abs_x86_regalloc.ml", line 390, characters 19-53
+Called from Functional__Functional_iter.int_range in file "compiler/functional/functional_iter.ml" (inlined), line 253, characters 4-7
+Called from Functional__Functional_iter.Infix.(--) in file "compiler/functional/functional_iter.ml", line 264, characters 26-48
+Called from Aether4__Ae_abs_x86_regalloc.alloc_func in file "compiler/src/ae_abs_x86_regalloc.ml", lines 382-392, characters 2-5
+Called from Aether4__Ae_driver.compile_source_to_asm.(fun) in file "compiler/src/ae_driver.ml", line 106, characters 23-72
+Called from Aether4__Ae_driver.compile_source_to_a_out in file "compiler/src/ae_driver.ml", line 148, characters 10-53
+Called from Dune__exe__Filetests_runner.run_test in file "compiler/filetests/runner/filetests_runner.ml", line 61, characters 8-54
+
+("Filetest failed" ("Could not compile test" "Compiler panicked!"))

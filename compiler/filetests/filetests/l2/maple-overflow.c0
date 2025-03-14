@@ -1,0 +1,11 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+ int tmin = 1<<63; 
+ return tmin/(~0);
+}
+----

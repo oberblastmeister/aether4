@@ -1,0 +1,26 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int n = 7;
+  int x = 7;
+
+  int ret = 1;
+
+  while (n > 0)
+  {
+     if (n % 2 == 1)
+     {
+        ret *= x;
+     }
+     x *= x;
+     n /= 2;
+  }
+
+  return ret;
+}
+----
+823543

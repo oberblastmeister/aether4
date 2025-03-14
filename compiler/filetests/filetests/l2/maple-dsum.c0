@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// Compute the digit sum of an integer x
+int main() {
+  int x = 43129313;
+  int sum = 0;
+  for (;x > 0; x /= 10)
+    sum += x % 10;
+  return sum;
+}
+----
+26

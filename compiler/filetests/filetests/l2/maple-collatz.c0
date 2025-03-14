@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// Compute the stopping time of the collatz function on some input x
+int main() {
+  int x = 27;
+  int steps = 0;
+  for (int n = x; n != 1;)
+  {
+    if (n % 2 == 0)
+      n /= 2;
+    else
+      n = 3 * n + 1;
+    steps += 1;
+  }
+  return steps;
+}
+----
+111
