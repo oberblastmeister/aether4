@@ -3,13 +3,17 @@ module Spanned = Ae_spanned
 module Span = Ae_span
 
 type ty =
-  | Int
-  | Bool
+  | Int of Span.t
+  | Bool of Span.t
 [@@deriving sexp_of]
 
 type var = string Spanned.t [@@deriving sexp_of]
 
-type block = { stmts : stmt list } [@@deriving sexp_of]
+type block =
+  { block : stmt list
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
 
 and stmt =
   | Decl of decl
@@ -19,20 +23,27 @@ and stmt =
   | Post of
       { lvalue : lvalue
       ; op : post_op
+      ; span : Span.t
       }
-  | Return of expr
+  | Return of
+      { expr : expr
+      ; span : Span.t
+      }
   | If of
       { cond : expr
       ; body1 : stmt
       ; body2 : stmt option
+      ; span : Span.t
       }
   | While of
       { cond : expr
       ; body : stmt
+      ; span : Span.t
       }
   | For of
       { paren : for_paren
       ; body : stmt
+      ; span : Span.t
       }
 [@@deriving sexp_of]
 
@@ -47,6 +58,7 @@ and assign =
   { lvalue : lvalue
   ; op : assign_op
   ; expr : expr
+  ; span : Span.t
   }
 [@@deriving sexp_of]
 
@@ -123,6 +135,7 @@ and decl =
   { ty : ty
   ; name : var
   ; expr : expr option
+  ; span : Span.t
   }
 [@@deriving sexp_of]
 
@@ -143,6 +156,24 @@ let expr_span (expr : expr) =
   | Ternary { span; _ } -> span
 ;;
 
+let stmt_span (stmt : stmt) =
+  match stmt with
+  | Decl { span; _ }
+  | Block { span; _ }
+  | Assign { span; _ }
+  | Post { span; _ }
+  | If { span; _ }
+  | While { span; _ }
+  | Return { span; _ }
+  | For { span; _ } -> span
+  | Effect expr -> expr_span expr
+;;
+
+let ty_span (ty : ty) =
+  match ty with
+  | Bool span | Int span -> span
+;;
+
 let var v = Var v
 
 let bin ~lhs ~op ~rhs =
@@ -150,4 +181,4 @@ let bin ~lhs ~op ~rhs =
 ;;
 
 let bool_const b = Bool_const b
-let nop_stmt = Block { stmts = [] }
+let nop_stmt span = Block { block = []; span }

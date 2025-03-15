@@ -7,9 +7,10 @@ and stmt_returns (stmt : Ast.stmt) =
   match stmt with
   | Return _ -> true
   | Assign _ | Declare _ | While _ | Effect _ -> false
-  | Block stmts -> block_returns stmts
-  | If { cond = _; body1; body2 = Some body2 } -> stmt_returns body1 && stmt_returns body2
-  | If { cond = _; body1 = _; body2 = None } -> false
+  | Block { block; span = _ } -> block_returns block
+  | If { cond = _; body1; body2 = Some body2; span = _ } ->
+    stmt_returns body1 && stmt_returns body2
+  | If { cond = _; body1 = _; body2 = None; span = _ } -> false
 ;;
 
 let check_program (program : Ast.program) =

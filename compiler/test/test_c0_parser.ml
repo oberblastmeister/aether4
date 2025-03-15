@@ -19,13 +19,20 @@ let%expect_test "simple" =
   |};
   [%expect {|
     (Ok
-     ((ty Int)
+     ((ty
+       (Int
+        ((start ((line 2) (col 5) (offset 5)))
+         (stop ((line 2) (col 8) (offset 8))))))
       (name
        ((t bruh)
         (span
          ((start ((line 2) (col 9) (offset 9)))
           (stop ((line 2) (col 13) (offset 13)))))))
-      (block ((stmts ())))))
+      (block
+       ((block ())
+        (span
+         ((start ((line 2) (col 16) (offset 16)))
+          (stop ((line 4) (col 6) (offset 28)))))))))
     |}]
 ;;
 
@@ -40,16 +47,22 @@ let%expect_test "simple decl" =
   [%expect
     {|
     (Ok
-     ((ty Int)
+     ((ty
+       (Int
+        ((start ((line 2) (col 5) (offset 5)))
+         (stop ((line 2) (col 8) (offset 8))))))
       (name
        ((t first)
         (span
          ((start ((line 2) (col 9) (offset 9)))
           (stop ((line 2) (col 14) (offset 14)))))))
       (block
-       ((stmts
+       ((block
          ((Decl
-           ((ty Int)
+           ((ty
+             (Int
+              ((start ((line 3) (col 7) (offset 25)))
+               (stop ((line 3) (col 10) (offset 28))))))
             (name
              ((t first)
               (span
@@ -108,9 +121,15 @@ let%expect_test "simple decl" =
                    (stop ((line 3) (col 44) (offset 62)))))))
                (span
                 ((start ((line 3) (col 19) (offset 37)))
-                 (stop ((line 3) (col 44) (offset 62))))))))))
+                 (stop ((line 3) (col 44) (offset 62))))))))
+            (span
+             ((start ((line 3) (col 7) (offset 25)))
+              (stop ((line 3) (col 44) (offset 62)))))))
           (Decl
-           ((ty Int)
+           ((ty
+             (Int
+              ((start ((line 4) (col 7) (offset 70)))
+               (stop ((line 4) (col 10) (offset 73))))))
             (name
              ((t second)
               (span
@@ -145,7 +164,13 @@ let%expect_test "simple decl" =
                     (stop ((line 4) (col 34) (offset 97))))))))
                (span
                 ((start ((line 4) (col 20) (offset 83)))
-                 (stop ((line 4) (col 34) (offset 97))))))))))))))))
+                 (stop ((line 4) (col 34) (offset 97))))))))
+            (span
+             ((start ((line 4) (col 7) (offset 70)))
+              (stop ((line 4) (col 34) (offset 97)))))))))
+        (span
+         ((start ((line 2) (col 17) (offset 17)))
+          (stop ((line 5) (col 6) (offset 104)))))))))
     |}]
 ;;
 
@@ -162,16 +187,22 @@ let%expect_test "simple control flow" =
   [%expect
     {|
     (Ok
-     ((ty Int)
+     ((ty
+       (Int
+        ((start ((line 2) (col 5) (offset 5)))
+         (stop ((line 2) (col 8) (offset 8))))))
       (name
        ((t main)
         (span
          ((start ((line 2) (col 9) (offset 9)))
           (stop ((line 2) (col 13) (offset 13)))))))
       (block
-       ((stmts
+       ((block
          ((Decl
-           ((ty Int)
+           ((ty
+             (Int
+              ((start ((line 3) (col 7) (offset 24)))
+               (stop ((line 3) (col 10) (offset 27))))))
             (name
              ((t i)
               (span
@@ -182,7 +213,10 @@ let%expect_test "simple control flow" =
                ((t 1234)
                 (span
                  ((start ((line 3) (col 15) (offset 32)))
-                  (stop ((line 3) (col 19) (offset 36)))))))))))
+                  (stop ((line 3) (col 19) (offset 36)))))))))
+            (span
+             ((start ((line 3) (col 7) (offset 24)))
+              (stop ((line 3) (col 19) (offset 36)))))))
           (If
            (cond
             (Var
@@ -192,7 +226,7 @@ let%expect_test "simple control flow" =
                 (stop ((line 4) (col 12) (offset 49))))))))
            (body1
             (Block
-             ((stmts
+             ((block
                ((Assign
                  ((lvalue
                    ((t another)
@@ -205,8 +239,20 @@ let%expect_test "simple control flow" =
                     ((t 1243)
                      (span
                       ((start ((line 5) (col 19) (offset 71)))
-                       (stop ((line 5) (col 23) (offset 75)))))))))))))))
-           (body2 ()))))))))
+                       (stop ((line 5) (col 23) (offset 75))))))))
+                  (span
+                   ((start ((line 5) (col 9) (offset 61)))
+                    (stop ((line 5) (col 23) (offset 75)))))))))
+              (span
+               ((start ((line 4) (col 14) (offset 51)))
+                (stop ((line 6) (col 8) (offset 84))))))))
+           (body2 ())
+           (span
+            ((start ((line 4) (col 7) (offset 44)))
+             (stop ((line 6) (col 8) (offset 84))))))))
+        (span
+         ((start ((line 2) (col 16) (offset 16)))
+          (stop ((line 7) (col 6) (offset 90)))))))))
     |}]
 ;;
 
@@ -221,14 +267,17 @@ let%expect_test "simple assign" =
   [%expect
     {|
     (Ok
-     ((ty Int)
+     ((ty
+       (Int
+        ((start ((line 2) (col 7) (offset 7)))
+         (stop ((line 2) (col 10) (offset 10))))))
       (name
        ((t first)
         (span
          ((start ((line 2) (col 11) (offset 11)))
           (stop ((line 2) (col 16) (offset 16)))))))
       (block
-       ((stmts
+       ((block
          ((Assign
            ((lvalue
              ((t first)
@@ -253,7 +302,10 @@ let%expect_test "simple assign" =
                    (stop ((line 3) (col 25) (offset 45))))))))
               (span
                ((start ((line 3) (col 18) (offset 38)))
-                (stop ((line 3) (col 25) (offset 45)))))))))
+                (stop ((line 3) (col 25) (offset 45)))))))
+            (span
+             ((start ((line 3) (col 9) (offset 29)))
+              (stop ((line 3) (col 25) (offset 45)))))))
           (Assign
            ((lvalue
              ((t another)
@@ -278,7 +330,13 @@ let%expect_test "simple assign" =
                    (stop ((line 4) (col 31) (offset 77))))))))
               (span
                ((start ((line 4) (col 24) (offset 70)))
-                (stop ((line 4) (col 31) (offset 77)))))))))))))))
+                (stop ((line 4) (col 31) (offset 77)))))))
+            (span
+             ((start ((line 4) (col 11) (offset 57)))
+              (stop ((line 4) (col 31) (offset 77)))))))))
+        (span
+         ((start ((line 2) (col 19) (offset 19)))
+          (stop ((line 5) (col 8) (offset 92)))))))))
     |}]
 ;;
 
@@ -293,16 +351,22 @@ let%expect_test "bool" =
   |};
   [%expect {|
     (Ok
-     ((ty Int)
+     ((ty
+       (Int
+        ((start ((line 2) (col 5) (offset 5)))
+         (stop ((line 2) (col 8) (offset 8))))))
       (name
        ((t main)
         (span
          ((start ((line 2) (col 9) (offset 9)))
           (stop ((line 2) (col 13) (offset 13)))))))
       (block
-       ((stmts
+       ((block
          ((Decl
-           ((ty Int)
+           ((ty
+             (Int
+              ((start ((line 3) (col 11) (offset 28)))
+               (stop ((line 3) (col 14) (offset 31))))))
             (name
              ((t first)
               (span
@@ -313,9 +377,15 @@ let%expect_test "bool" =
                ((t 0)
                 (span
                  ((start ((line 3) (col 23) (offset 40)))
-                  (stop ((line 3) (col 24) (offset 41)))))))))))
+                  (stop ((line 3) (col 24) (offset 41)))))))))
+            (span
+             ((start ((line 3) (col 11) (offset 28)))
+              (stop ((line 3) (col 24) (offset 41)))))))
           (Decl
-           ((ty Int)
+           ((ty
+             (Int
+              ((start ((line 4) (col 11) (offset 53)))
+               (stop ((line 4) (col 14) (offset 56))))))
             (name
              ((t second)
               (span
@@ -326,9 +396,15 @@ let%expect_test "bool" =
                ((t 1234)
                 (span
                  ((start ((line 4) (col 24) (offset 66)))
-                  (stop ((line 4) (col 28) (offset 70)))))))))))
+                  (stop ((line 4) (col 28) (offset 70)))))))))
+            (span
+             ((start ((line 4) (col 11) (offset 53)))
+              (stop ((line 4) (col 28) (offset 70)))))))
           (Decl
-           ((ty Bool)
+           ((ty
+             (Bool
+              ((start ((line 5) (col 11) (offset 82)))
+               (stop ((line 5) (col 15) (offset 86))))))
             (name
              ((t third)
               (span
@@ -339,23 +415,33 @@ let%expect_test "bool" =
                ((t true)
                 (span
                  ((start ((line 5) (col 24) (offset 95)))
-                  (stop ((line 5) (col 28) (offset 99)))))))))))
-          (Return
-           (Bin
-            (lhs
-             (Var
-              ((t first)
-               (span
-                ((start ((line 6) (col 18) (offset 118)))
-                 (stop ((line 6) (col 23) (offset 123))))))))
-            (op Add)
-            (rhs
-             (Var
-              ((t second)
-               (span
-                ((start ((line 6) (col 26) (offset 126)))
-                 (stop ((line 6) (col 32) (offset 132))))))))
+                  (stop ((line 5) (col 28) (offset 99)))))))))
             (span
-             ((start ((line 6) (col 18) (offset 118)))
-              (stop ((line 6) (col 32) (offset 132)))))))))))))
+             ((start ((line 5) (col 11) (offset 82)))
+              (stop ((line 5) (col 28) (offset 99)))))))
+          (Return
+           (expr
+            (Bin
+             (lhs
+              (Var
+               ((t first)
+                (span
+                 ((start ((line 6) (col 18) (offset 118)))
+                  (stop ((line 6) (col 23) (offset 123))))))))
+             (op Add)
+             (rhs
+              (Var
+               ((t second)
+                (span
+                 ((start ((line 6) (col 26) (offset 126)))
+                  (stop ((line 6) (col 32) (offset 132))))))))
+             (span
+              ((start ((line 6) (col 18) (offset 118)))
+               (stop ((line 6) (col 32) (offset 132)))))))
+           (span
+            ((start ((line 6) (col 11) (offset 111)))
+             (stop ((line 6) (col 32) (offset 132))))))))
+        (span
+         ((start ((line 2) (col 16) (offset 16)))
+          (stop ((line 7) (col 10) (offset 143)))))))))
     |}]

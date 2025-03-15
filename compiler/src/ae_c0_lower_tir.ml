@@ -70,8 +70,8 @@ let add_fresh_block ?name t instrs : Label.t =
 
 let lower_ty (ty : Ast.ty) : Tir.Ty.t =
   match ty with
-  | Int -> Int
-  | Bool -> Bool
+  | Int _ -> Int
+  | Bool _ -> Bool
 ;;
 
 let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =
@@ -100,29 +100,29 @@ and add_cond_jump st cont cond_temp body1 body2 =
 *)
 and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
   match stmt with
-  | Declare { ty = _; var } ->
+  | Declare { ty = _; var; span = _ } ->
     let _ = var_temp st var in
     empty ++ cont
-  | Assign { lvalue; expr } ->
+  | Assign { lvalue; expr; span = _ } ->
     let temp = var_temp st lvalue in
     lower_expr st cont temp expr
-  | Block block -> lower_block st cont block
+  | Block { block; span = _ } -> lower_block st cont block
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
     lower_expr st cont dst expr
-  | Return expr ->
+  | Return { expr; span = _ } ->
     let dst = fresh_temp ~name:"ret" st in
     let ty = Ast.expr_ty_exn expr in
     (* important: we override the continuation here because nothing should be after a Ret *)
     let cont = empty +> [ ins (Ret { src = dst; ty = lower_ty ty }) ] in
     lower_expr st cont dst expr
-  | If { cond; body1; body2 } ->
+  | If { cond; body1; body2; span = _ } ->
     let cond_temp = fresh_temp ~name:"cond" st in
     let body1 cont = lower_stmt st cont body1 in
     let body2 cont = Option.value_map body2 ~f:(lower_stmt st cont) ~default:cont in
     let cont = add_cond_jump st cont cond_temp body1 body2 in
     lower_expr st cont cond_temp cond
-  | While { cond; body } ->
+  | While { cond; body; span = _ } ->
     let done_label = add_fresh_block ~name:"done" st cont in
     let cond_temp = fresh_temp ~name:"cond" st in
     let loop_label = fresh_label ~name:"loop" st in
@@ -171,7 +171,7 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
 *)
 and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
-  | Ternary { cond; then_expr; else_expr; ty = _ } ->
+  | Ternary { cond; then_expr; else_expr; ty = _; span = _ } ->
     let cond_dst = fresh_temp ~name:"cond" st in
     let cont =
       add_cond_jump
@@ -183,9 +183,11 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     in
     let cont = lower_expr st cont cond_dst cond in
     cont
-  | Int_const const -> empty +> [ ins (Nullary { dst; op = Int_const const }) ] ++ cont
-  | Bool_const const -> empty +> [ ins (Nullary { dst; op = Bool_const const }) ] ++ cont
-  | Bin { lhs; op; rhs; ty = _ } ->
+  | Int_const { t = const; span = _ } ->
+    empty +> [ ins (Nullary { dst; op = Int_const const }) ] ++ cont
+  | Bool_const { t = const; span = _ } ->
+    empty +> [ ins (Nullary { dst; op = Bool_const const }) ] ++ cont
+  | Bin { lhs; op; rhs; ty = _; span = _ } ->
     let op : Tir.Bin_op.t =
       match op with
       | Eq -> Eq (lower_ty (Ast.expr_ty_exn lhs))

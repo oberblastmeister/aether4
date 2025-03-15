@@ -34,7 +34,13 @@ let expect_eq_ token env =
 ;;
 
 let parse_ty env : Cst.ty =
-  (expect_eq_ Int $> Cst.Int <|> (expect_eq_ Bool $> Cst.Bool)) env
+  ((fun env ->
+     let int = expect_eq Int env in
+     Cst.Int int.span)
+   <|> fun env ->
+   let bool = expect_eq Bool env in
+   Cst.Bool bool.span)
+    env
 ;;
 
 let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
@@ -75,16 +81,19 @@ let rec parse_program env : Cst.program =
     env
 
 and parse_block env : Cst.block =
-  expect_eq_ LBrace env;
-  let stmts = Parser.many parse_stmt env in
-  expect_eq_ RBrace
-  |> Parser.cut
-       (Sexp
-          [%message
-            "expected closing brace for block"
-              (Stream.peek (Parser.stream env) : Token.t Spanned.t option)])
-  |> Fn.( |> ) env;
-  { stmts }
+  let open Span.Syntax in
+  let lbrace = expect_eq LBrace env in
+  let block = Parser.many parse_stmt env in
+  let rbrace =
+    expect_eq RBrace
+    |> Parser.cut
+         (Sexp
+            [%message
+              "expected closing brace for block"
+                (Stream.peek (Parser.stream env) : Token.t Spanned.t option)])
+    |> Fn.( |> ) env
+  in
+  { block; span = lbrace.span ++ rbrace.span }
 
 and parse_stmt env : Cst.stmt =
   let stmt =
@@ -102,7 +111,7 @@ and parse_semi_stmt env : Cst.stmt =
     ((fun d -> Cst.Decl d)
      <$> parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
-     <|> ((fun e -> Cst.Return e) <$> parse_return)
+     <|> ( parse_return)
      <|> parse_post
      <|> ((fun e -> Cst.Effect e) <$> parse_expr))
       env
@@ -110,7 +119,8 @@ and parse_semi_stmt env : Cst.stmt =
   res
 
 and parse_if env : Cst.stmt =
-  expect_eq_ If env;
+  let open Span.Syntax in
+  let if_tok = expect_eq If env in
   let cond =
     parens parse_expr
     |> Parser.cut (Sexp [%message "expected condition expression for if"])
@@ -126,10 +136,21 @@ and parse_if env : Cst.stmt =
          parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env)
       env
   in
-  Cst.If { cond; body1; body2 }
+  Cst.If
+    { cond
+    ; body1
+    ; body2
+    ; span =
+        if_tok.span
+        ++ Option.value_map
+             body2
+             ~f:(fun body2 -> Cst.stmt_span body1 ++ Cst.stmt_span body2)
+             ~default:(Cst.stmt_span body1)
+    }
 
 and parse_while env : Cst.stmt =
-  expect_eq_ While env;
+  let open Span.Syntax in
+  let while_tok = expect_eq While env in
   let cond =
     parens parse_expr
     |> Parser.cut (Sexp [%message "expected while condition expression"])
@@ -138,10 +159,11 @@ and parse_while env : Cst.stmt =
   let body =
     parse_stmt |> Parser.cut (Sexp [%message "expected while stmt"]) |> Fn.( |> ) env
   in
-  Cst.While { cond; body }
+  Cst.While { cond; body; span = while_tok.span ++ Cst.stmt_span body }
 
 and parse_for env : Cst.stmt =
-  expect_eq_ For env;
+  let open Span.Syntax in
+  let for_tok = expect_eq For env in
   let paren =
     parens parse_for_paren
     |> Parser.cut (Sexp [%message "expected for parens"])
@@ -150,7 +172,7 @@ and parse_for env : Cst.stmt =
   let body =
     parse_stmt |> Parser.cut (Sexp [%message "expected for stmt"]) |> Fn.( |> ) env
   in
-  Cst.For { paren; body }
+  Cst.For { paren; body; span = for_tok.span ++ Cst.stmt_span body }
 
 and parse_for_paren env : Cst.for_paren =
   let init = (Parser.optional parse_semi_stmt) env in
@@ -160,11 +182,14 @@ and parse_for_paren env : Cst.for_paren =
   let incr = (Parser.optional parse_semi_stmt) env in
   { init; cond; incr }
 
-and parse_return env : Cst.expr =
-  expect_eq_ Return env;
-  parse_expr env
+and parse_return env : Cst.stmt =
+  let open Span.Syntax in
+  let ret = expect_eq Return env in
+  let expr = parse_expr env in
+  Cst.Return { expr; span = ret.span ++ Cst.expr_span expr }
 
 and parse_decl env : Cst.decl =
+  let open Span.Syntax in
   let ty = parse_ty env in
   let name = parse_ident env in
   let expr =
@@ -179,21 +204,31 @@ and parse_decl env : Cst.decl =
          expr)
       env
   in
-  ({ ty; name; expr } : Cst.decl)
+  ({ ty
+   ; name
+   ; expr
+   ; span =
+       Cst.ty_span ty ++ Option.value_map expr ~f:Cst.expr_span ~default:(Cst.ty_span ty)
+   }
+   : Cst.decl)
 
 and parse_post env : Cst.stmt =
+  let open Span.Syntax in
   let lvalue = parse_lvalue env in
   let op = parse_post_op env in
-  Cst.Post { lvalue; op }
+  Cst.Post { lvalue; op = op.t; span = lvalue.span ++ op.span }
 
-and parse_post_op env : Cst.post_op =
-  (Cst.Incr <$ expect_eq_ PlusPlus <|> (Cst.Decr <$ expect_eq_ DashDash)) env
+and parse_post_op env : Cst.post_op Spanned.t =
+  ((Parser.map & Spanned.map) (expect_eq PlusPlus) ~f:(Fn.const Cst.Incr)
+   <|> (Parser.map & Spanned.map) (expect_eq DashDash) ~f:(Fn.const Cst.Decr))
+    env
 
 and parse_assign env : Cst.assign =
+  let open Span.Syntax in
   let lvalue = parse_lvalue env in
   let op = parse_assign_op env in
   let expr = parse_expr env in
-  { lvalue; op; expr }
+  { lvalue; op; expr; span = lvalue.span ++ Cst.expr_span expr }
 
 and parse_assign_op env : Cst.assign_op =
   (Cst.Mul_assign

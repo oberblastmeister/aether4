@@ -22,8 +22,8 @@ let create_state () =
 
 let elab_ty _st (ty : Cst.ty) : Ast.ty =
   match ty with
-  | Bool -> Bool
-  | Int -> Int
+  | Bool span -> Bool span
+  | Int span -> Int span
 ;;
 
 let throw_s s = raise (Exn s)
@@ -37,7 +37,7 @@ let elab_var st (var : Cst.var) : Ast.var =
 let fresh_var st (var : Cst.var) : Ast.var =
   let id : int = !(st.next_temp_id) in
   st.next_temp_id := id + 1;
-  { name = var.t; id }
+  { name = var.t; id; span = var.span }
 ;;
 
 let declare_var st (var : Cst.var) : Ast.var * st =
@@ -50,31 +50,32 @@ let declare_var st (var : Cst.var) : Ast.var * st =
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
-  | Decl { ty; name; expr } ->
+  | Decl { ty; name; expr; span } ->
     let var, st' = declare_var st name in
     let ty = elab_ty st ty in
     let stmts =
       match expr with
-      | None -> empty +> Ast.[ Declare { ty; var } ]
+      | None -> empty +> Ast.[ Declare { ty; var; span } ]
       | Some expr ->
         let tmp = fresh_var st { t = "tmp"; span = Span.none } in
         let expr = elab_expr st expr in
         empty
         +> Ast.
-             [ Declare { ty; var = tmp }
-             ; Assign { lvalue = tmp; expr }
-             ; Declare { ty; var }
-             ; Assign { lvalue = var; expr = Var { var = tmp; ty = None } }
+             [ Declare { ty; var = tmp; span }
+             ; Assign { lvalue = tmp; expr; span }
+             ; Declare { ty; var; span }
+             ; Assign { lvalue = var; expr = Var { var = tmp; ty = None }; span }
              ]
     in
     stmts, st'
-  | Block block -> (empty +> Ast.[ Block (elab_block st block) ]), st
-  | Post { lvalue; op } ->
+  | Block { block; span } ->
+    (empty +> Ast.[ Block { block = elab_block st block; span } ]), st
+  | Post { lvalue; op; span } ->
     let lvalue = elab_var st lvalue in
     let expr =
       match op with
-      | Incr -> Ast.Int_const 1L
-      | Decr -> Ast.Int_const (-1L)
+      | Incr -> Ast.Int_const { t = 1L; span }
+      | Decr -> Ast.Int_const { t = -1L; span }
     in
     let stmts =
       empty
@@ -87,7 +88,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
                      ; op = Add
                      ; rhs = expr
                      ; ty = None
+                     ; span
                      }
+               ; span
                }
            ]
     in
@@ -95,11 +98,11 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   | Effect e ->
     let e = elab_expr st e in
     (empty +> Ast.[ Effect e ]), st
-  | Assign { lvalue; op; expr } ->
+  | Assign { lvalue; op; expr; span } ->
     let expr = elab_expr st expr in
     let lvalue = elab_var st lvalue in
     let bin_expr op =
-      Ast.(Bin { lhs = Var { var = lvalue; ty = None }; op; rhs = expr; ty = None })
+      Ast.(Bin { lhs = Var { var = lvalue; ty = None }; op; rhs = expr; ty = None; span })
     in
     let expr =
       match op with
@@ -115,63 +118,80 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       | Lshift_assign -> bin_expr Lshift
       | Rshift_assign -> bin_expr Rshift
     in
-    (empty +> Ast.[ Assign { lvalue; expr } ]), st
-  | Return expr ->
+    (empty +> Ast.[ Assign { lvalue; expr; span } ]), st
+  | Return { expr; span } ->
     let expr = elab_expr st expr in
-    (empty +> Ast.[ Return expr ]), st
-  | If { cond; body1; body2 } ->
+    (empty +> Ast.[ Return { expr; span } ]), st
+  | If { cond; body1; body2; span } ->
     let cond = elab_expr st cond in
     let body1 = elab_stmt_to_block st body1 in
     let body2 = body2 |> Option.map ~f:(elab_stmt_to_block st) in
-    (empty +> Ast.[ If { cond; body1; body2 } ]), st
-  | While { cond; body } ->
+    (empty +> Ast.[ If { cond; body1; body2; span } ]), st
+  | While { cond; body; span } ->
     let cond = elab_expr st cond in
     let body = elab_stmt_to_block st body in
-    (empty +> Ast.[ While { cond; body } ]), st
-  | For { paren = { init; cond; incr }; body } ->
+    (empty +> Ast.[ While { cond; body; span } ]), st
+  | For { paren = { init; cond; incr }; body; span } ->
     let init_stmts, init_st =
       Option.value_map ~f:(elab_stmt st) ~default:(empty, st) init
     in
+    let body_span = Cst.stmt_span body in
     let cond = elab_expr init_st cond in
     let body = elab_stmt_to_block init_st body in
     let incr =
-      Option.value_map ~f:(elab_stmt_to_block init_st) ~default:Ast.nop_stmt incr
+      Option.value_map
+        ~f:(elab_stmt_to_block init_st)
+        ~default:(Ast.nop_stmt Span.none)
+        incr
     in
-    let while_stmt = Ast.(While { cond; body = Block [ body; incr ] }) in
-    let res = Ast.(Block (Bag.to_list (empty ++ init_stmts +> [ while_stmt ]))) in
+    let while_stmt =
+      Ast.(
+        While
+          { cond
+          ; body = Block { block = [ body; incr ]; span = body_span }
+          ; span = body_span
+          })
+    in
+    let res =
+      Ast.(Block { block = Bag.to_list (empty ++ init_stmts +> [ while_stmt ]); span })
+    in
     empty +> [ res ], st
 
 and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
   let res, _ = elab_stmt st stmt in
-  Block (Bag.to_list res)
+  Block { block = Bag.to_list res; span = Cst.stmt_span stmt }
 
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
-  | Int_const { t = i; span = _ } ->
+  | Int_const { t = i; span } ->
     (match Z.to_int64 i with
      | None ->
        if Z.(equal i (shift_left (of_int 1) 63))
        then (
-         try Int_const (Z.to_int64_unsigned i) with
+         try Int_const { t = Z.to_int64_unsigned i; span } with
          | Z.Overflow ->
            raise_s [%message "Bug: unexpected overflow on integer" (i : Z.t)])
        else throw_s [%message "Int did not fit in 64 bits" (i : Z.t)]
-     | Some i -> Int_const i)
-  | Bool_const { t = b; span = _ } -> Bool_const b
+     | Some i -> Int_const { t = i; span })
+  | Bool_const { t = b; span } -> Bool_const { t = b; span }
   | Var var ->
     let var = elab_var st var in
     Var { var; ty = None }
-  | Unary { op; expr; span = _ } ->
+  | Unary { op; expr; span } ->
     let expr = elab_expr st expr in
     (match op with
-     | Neg -> Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
-     | Bit_not -> Bin { lhs = Int_const (-1L); op = Bit_xor; rhs = expr; ty = None }
-     | Log_not -> Bin { lhs = Bool_const false; op = Eq; rhs = expr; ty = None })
-  | Ternary { cond; then_expr; else_expr; span = _ } ->
+     | Neg ->
+       Bin { lhs = Int_const { t = 0L; span }; op = Sub; rhs = expr; ty = None; span }
+     | Bit_not ->
+       Bin
+         { lhs = Int_const { t = -1L; span }; op = Bit_xor; rhs = expr; ty = None; span }
+     | Log_not ->
+       Bin { lhs = Bool_const { t = false; span }; op = Eq; rhs = expr; ty = None; span })
+  | Ternary { cond; then_expr; else_expr; span } ->
     let cond = elab_expr st cond in
     let then_expr = elab_expr st then_expr in
     let else_expr = elab_expr st else_expr in
-    Ternary { cond; then_expr; else_expr; ty = None }
+    Ternary { cond; then_expr; else_expr; ty = None; span }
   | Bin { lhs; op = Neq; rhs; span = _ } ->
     elab_expr
       st
@@ -180,17 +200,29 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
          ; expr = Bin { lhs; op = Eq; rhs; span = Span.none }
          ; span = Span.none
          })
-  | Bin { lhs; op; rhs; span = _ } ->
+  | Bin { lhs; op; rhs; span } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in
     (match op with
      | Log_and ->
-       Ternary { cond = lhs; then_expr = rhs; else_expr = Bool_const false; ty = None }
+       Ternary
+         { cond = lhs
+         ; then_expr = rhs
+         ; else_expr = Bool_const { t = false; span }
+         ; ty = None
+         ; span
+         }
      | Log_or ->
-       Ternary { cond = lhs; then_expr = Bool_const true; else_expr = rhs; ty = None }
+       Ternary
+         { cond = lhs
+         ; then_expr = Bool_const { t = true; span }
+         ; else_expr = rhs
+         ; ty = None
+         ; span
+         }
      | _ ->
        let op = elab_bin_op op in
-       Bin { lhs; op; rhs; ty = None })
+       Bin { lhs; op; rhs; ty = None; span })
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with
@@ -213,7 +245,7 @@ and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   | Lshift -> Lshift
   | Rshift -> Rshift
 
-and elab_block st (block : Cst.block) : Ast.block =
+and elab_block st (block : Cst.stmt list) : Ast.block =
   let rec go st stmts =
     match stmts with
     | [] -> Bag.empty
@@ -222,13 +254,13 @@ and elab_block st (block : Cst.block) : Ast.block =
       let stmts = go st' stmts in
       stmt ++ stmts
   in
-  go st block.stmts |> Bag.to_list
+  go st block |> Bag.to_list
 ;;
 
 let elab_program st (prog : Cst.program) : Ast.program =
   let ty = elab_ty st prog.ty in
   let name = prog.name in
-  let block = elab_block st prog.block in
+  let block = elab_block st prog.block.block in
   { ty; name = name.t; block }
 ;;
 
