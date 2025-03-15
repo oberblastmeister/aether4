@@ -17,7 +17,16 @@ let%expect_test "simple" =
     
     }
   |};
-  [%expect {| (Ok ((ty Int) (name bruh) (block ((stmts ()))))) |}]
+  [%expect {|
+    (Ok
+     ((ty Int)
+      (name
+       ((t bruh)
+        (span
+         ((start ((line 2) (col 9) (offset 9)))
+          (stop ((line 2) (col 13) (offset 13)))))))
+      (block ((stmts ())))))
+    |}]
 ;;
 
 let%expect_test "simple decl" =
@@ -31,27 +40,112 @@ let%expect_test "simple decl" =
   [%expect
     {|
     (Ok
-     ((ty Int) (name first)
+     ((ty Int)
+      (name
+       ((t first)
+        (span
+         ((start ((line 2) (col 9) (offset 9)))
+          (stop ((line 2) (col 14) (offset 14)))))))
       (block
        ((stmts
          ((Decl
-           ((ty Int) (name first)
+           ((ty Int)
+            (name
+             ((t first)
+              (span
+               ((start ((line 3) (col 11) (offset 29)))
+                (stop ((line 3) (col 16) (offset 34)))))))
             (expr
-             ((Bin (lhs (Int_const 12)) (op Add)
+             ((Bin
+               (lhs
+                (Int_const
+                 ((t 12)
+                  (span
+                   ((start ((line 3) (col 19) (offset 37)))
+                    (stop ((line 3) (col 21) (offset 39))))))))
+               (op Add)
                (rhs
                 (Bin
                  (lhs
                   (Bin
                    (lhs
-                    (Bin (lhs (Int_const 1234)) (op Mod) (rhs (Int_const 1234))))
-                   (op Mul) (rhs (Int_const 12))))
-                 (op Div) (rhs (Int_const 2)))))))))
+                    (Bin
+                     (lhs
+                      (Int_const
+                       ((t 1234)
+                        (span
+                         ((start ((line 3) (col 24) (offset 42)))
+                          (stop ((line 3) (col 28) (offset 46))))))))
+                     (op Mod)
+                     (rhs
+                      (Int_const
+                       ((t 1234)
+                        (span
+                         ((start ((line 3) (col 31) (offset 49)))
+                          (stop ((line 3) (col 35) (offset 53))))))))
+                     (span
+                      ((start ((line 3) (col 24) (offset 42)))
+                       (stop ((line 3) (col 35) (offset 53)))))))
+                   (op Mul)
+                   (rhs
+                    (Int_const
+                     ((t 12)
+                      (span
+                       ((start ((line 3) (col 38) (offset 56)))
+                        (stop ((line 3) (col 40) (offset 58))))))))
+                   (span
+                    ((start ((line 3) (col 24) (offset 42)))
+                     (stop ((line 3) (col 40) (offset 58)))))))
+                 (op Div)
+                 (rhs
+                  (Int_const
+                   ((t 2)
+                    (span
+                     ((start ((line 3) (col 43) (offset 61)))
+                      (stop ((line 3) (col 44) (offset 62))))))))
+                 (span
+                  ((start ((line 3) (col 24) (offset 42)))
+                   (stop ((line 3) (col 44) (offset 62)))))))
+               (span
+                ((start ((line 3) (col 19) (offset 37)))
+                 (stop ((line 3) (col 44) (offset 62))))))))))
           (Decl
-           ((ty Int) (name second)
+           ((ty Int)
+            (name
+             ((t second)
+              (span
+               ((start ((line 4) (col 11) (offset 74)))
+                (stop ((line 4) (col 17) (offset 80)))))))
             (expr
              ((Bin
-               (lhs (Bin (lhs (Int_const 1234)) (op Add) (rhs (Int_const 12))))
-               (op Add) (rhs (Int_const 12)))))))))))))
+               (lhs
+                (Bin
+                 (lhs
+                  (Int_const
+                   ((t 1234)
+                    (span
+                     ((start ((line 4) (col 20) (offset 83)))
+                      (stop ((line 4) (col 24) (offset 87))))))))
+                 (op Add)
+                 (rhs
+                  (Int_const
+                   ((t 12)
+                    (span
+                     ((start ((line 4) (col 27) (offset 90)))
+                      (stop ((line 4) (col 29) (offset 92))))))))
+                 (span
+                  ((start ((line 4) (col 20) (offset 83)))
+                   (stop ((line 4) (col 29) (offset 92)))))))
+               (op Add)
+               (rhs
+                (Int_const
+                 ((t 12)
+                  (span
+                   ((start ((line 4) (col 32) (offset 95)))
+                    (stop ((line 4) (col 34) (offset 97))))))))
+               (span
+                ((start ((line 4) (col 20) (offset 83)))
+                 (stop ((line 4) (col 34) (offset 97))))))))))))))))
     |}]
 ;;
 
@@ -68,16 +162,50 @@ let%expect_test "simple control flow" =
   [%expect
     {|
     (Ok
-     ((ty Int) (name main)
+     ((ty Int)
+      (name
+       ((t main)
+        (span
+         ((start ((line 2) (col 9) (offset 9)))
+          (stop ((line 2) (col 13) (offset 13)))))))
       (block
        ((stmts
-         ((Decl ((ty Int) (name i) (expr ((Int_const 1234)))))
-          (If (cond (Var b))
+         ((Decl
+           ((ty Int)
+            (name
+             ((t i)
+              (span
+               ((start ((line 3) (col 11) (offset 28)))
+                (stop ((line 3) (col 12) (offset 29)))))))
+            (expr
+             ((Int_const
+               ((t 1234)
+                (span
+                 ((start ((line 3) (col 15) (offset 32)))
+                  (stop ((line 3) (col 19) (offset 36)))))))))))
+          (If
+           (cond
+            (Var
+             ((t b)
+              (span
+               ((start ((line 4) (col 11) (offset 48)))
+                (stop ((line 4) (col 12) (offset 49))))))))
            (body1
             (Block
              ((stmts
                ((Assign
-                 ((lvalue another) (op Id_assign) (expr (Int_const 1243)))))))))
+                 ((lvalue
+                   ((t another)
+                    (span
+                     ((start ((line 5) (col 9) (offset 61)))
+                      (stop ((line 5) (col 16) (offset 68)))))))
+                  (op Id_assign)
+                  (expr
+                   (Int_const
+                    ((t 1243)
+                     (span
+                      ((start ((line 5) (col 19) (offset 71)))
+                       (stop ((line 5) (col 23) (offset 75)))))))))))))))
            (body2 ()))))))))
     |}]
 ;;
@@ -93,15 +221,64 @@ let%expect_test "simple assign" =
   [%expect
     {|
     (Ok
-     ((ty Int) (name first)
+     ((ty Int)
+      (name
+       ((t first)
+        (span
+         ((start ((line 2) (col 11) (offset 11)))
+          (stop ((line 2) (col 16) (offset 16)))))))
       (block
        ((stmts
          ((Assign
-           ((lvalue first) (op Mul_assign)
-            (expr (Bin (lhs (Int_const 12)) (op Add) (rhs (Int_const 12))))))
+           ((lvalue
+             ((t first)
+              (span
+               ((start ((line 3) (col 9) (offset 29)))
+                (stop ((line 3) (col 14) (offset 34)))))))
+            (op Mul_assign)
+            (expr
+             (Bin
+              (lhs
+               (Int_const
+                ((t 12)
+                 (span
+                  ((start ((line 3) (col 18) (offset 38)))
+                   (stop ((line 3) (col 20) (offset 40))))))))
+              (op Add)
+              (rhs
+               (Int_const
+                ((t 12)
+                 (span
+                  ((start ((line 3) (col 23) (offset 43)))
+                   (stop ((line 3) (col 25) (offset 45))))))))
+              (span
+               ((start ((line 3) (col 18) (offset 38)))
+                (stop ((line 3) (col 25) (offset 45)))))))))
           (Assign
-           ((lvalue another) (op Mod_assign)
-            (expr (Bin (lhs (Int_const 12)) (op Div) (rhs (Int_const 12))))))))))))
+           ((lvalue
+             ((t another)
+              (span
+               ((start ((line 4) (col 11) (offset 57)))
+                (stop ((line 4) (col 18) (offset 64)))))))
+            (op Mod_assign)
+            (expr
+             (Bin
+              (lhs
+               (Int_const
+                ((t 12)
+                 (span
+                  ((start ((line 4) (col 24) (offset 70)))
+                   (stop ((line 4) (col 26) (offset 72))))))))
+              (op Div)
+              (rhs
+               (Int_const
+                ((t 12)
+                 (span
+                  ((start ((line 4) (col 29) (offset 75)))
+                   (stop ((line 4) (col 31) (offset 77))))))))
+              (span
+               ((start ((line 4) (col 24) (offset 70)))
+                (stop ((line 4) (col 31) (offset 77)))))))))))))))
     |}]
 ;;
 
@@ -116,11 +293,69 @@ let%expect_test "bool" =
   |};
   [%expect {|
     (Ok
-     ((ty Int) (name main)
+     ((ty Int)
+      (name
+       ((t main)
+        (span
+         ((start ((line 2) (col 9) (offset 9)))
+          (stop ((line 2) (col 13) (offset 13)))))))
       (block
        ((stmts
-         ((Decl ((ty Int) (name first) (expr ((Int_const 0)))))
-          (Decl ((ty Int) (name second) (expr ((Int_const 1234)))))
-          (Decl ((ty Bool) (name third) (expr ((Bool_const true)))))
-          (Return (Bin (lhs (Var first)) (op Add) (rhs (Var second))))))))))
+         ((Decl
+           ((ty Int)
+            (name
+             ((t first)
+              (span
+               ((start ((line 3) (col 15) (offset 32)))
+                (stop ((line 3) (col 20) (offset 37)))))))
+            (expr
+             ((Int_const
+               ((t 0)
+                (span
+                 ((start ((line 3) (col 23) (offset 40)))
+                  (stop ((line 3) (col 24) (offset 41)))))))))))
+          (Decl
+           ((ty Int)
+            (name
+             ((t second)
+              (span
+               ((start ((line 4) (col 15) (offset 57)))
+                (stop ((line 4) (col 21) (offset 63)))))))
+            (expr
+             ((Int_const
+               ((t 1234)
+                (span
+                 ((start ((line 4) (col 24) (offset 66)))
+                  (stop ((line 4) (col 28) (offset 70)))))))))))
+          (Decl
+           ((ty Bool)
+            (name
+             ((t third)
+              (span
+               ((start ((line 5) (col 16) (offset 87)))
+                (stop ((line 5) (col 21) (offset 92)))))))
+            (expr
+             ((Bool_const
+               ((t true)
+                (span
+                 ((start ((line 5) (col 24) (offset 95)))
+                  (stop ((line 5) (col 28) (offset 99)))))))))))
+          (Return
+           (Bin
+            (lhs
+             (Var
+              ((t first)
+               (span
+                ((start ((line 6) (col 18) (offset 118)))
+                 (stop ((line 6) (col 23) (offset 123))))))))
+            (op Add)
+            (rhs
+             (Var
+              ((t second)
+               (span
+                ((start ((line 6) (col 26) (offset 126)))
+                 (stop ((line 6) (col 32) (offset 132))))))))
+            (span
+             ((start ((line 6) (col 18) (offset 118)))
+              (stop ((line 6) (col 32) (offset 132)))))))))))))
     |}]

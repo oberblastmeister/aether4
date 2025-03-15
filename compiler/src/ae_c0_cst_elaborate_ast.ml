@@ -2,6 +2,7 @@ open Std
 module Cst = Ae_c0_cst
 module Ast = Ae_c0_ast
 module Bag = Ae_data_bag
+module Span = Ae_span
 open Bag.Syntax
 
 let empty = Bag.empty
@@ -28,7 +29,7 @@ let elab_ty _st (ty : Cst.ty) : Ast.ty =
 let throw_s s = raise (Exn s)
 
 let elab_var st (var : Cst.var) : Ast.var =
-  Map.find st.context var
+  Map.find st.context var.t
   |> Option.value_or_thunk ~default:(fun () ->
     throw_s [%message "Variable not found" (var : Cst.var)])
 ;;
@@ -36,14 +37,14 @@ let elab_var st (var : Cst.var) : Ast.var =
 let fresh_var st (var : Cst.var) : Ast.var =
   let id : int = !(st.next_temp_id) in
   st.next_temp_id := id + 1;
-  { name = var; id }
+  { name = var.t; id }
 ;;
 
 let declare_var st (var : Cst.var) : Ast.var * st =
-  match Map.find st.context var with
+  match Map.find st.context var.t with
   | None ->
     let var' = fresh_var st var in
-    var', { st with context = Map.add_exn st.context ~key:var ~data:var' }
+    var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
   | Some _ -> throw_s [%message "Var was already declared!" (var : Cst.var)]
 ;;
 
@@ -56,7 +57,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       match expr with
       | None -> empty +> Ast.[ Declare { ty; var } ]
       | Some expr ->
-        let tmp = fresh_var st "tmp" in
+        let tmp = fresh_var st { t = "tmp"; span = Span.none } in
         let expr = elab_expr st expr in
         empty
         +> Ast.
@@ -146,7 +147,7 @@ and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
 
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
-  | Int_const i ->
+  | Int_const { t = i; span = _ } ->
     (match Z.to_int64 i with
      | None ->
        if Z.(equal i (shift_left (of_int 1) 63))
@@ -156,24 +157,30 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
            raise_s [%message "Bug: unexpected overflow on integer" (i : Z.t)])
        else throw_s [%message "Int did not fit in 64 bits" (i : Z.t)]
      | Some i -> Int_const i)
-  | Bool_const b -> Bool_const b
+  | Bool_const { t = b; span = _ } -> Bool_const b
   | Var var ->
     let var = elab_var st var in
     Var { var; ty = None }
-  | Unary { op; expr } ->
+  | Unary { op; expr; span = _ } ->
     let expr = elab_expr st expr in
     (match op with
      | Neg -> Bin { lhs = Int_const 0L; op = Sub; rhs = expr; ty = None }
      | Bit_not -> Bin { lhs = Int_const (-1L); op = Bit_xor; rhs = expr; ty = None }
      | Log_not -> Bin { lhs = Bool_const false; op = Eq; rhs = expr; ty = None })
-  | Ternary { cond; then_expr; else_expr } ->
+  | Ternary { cond; then_expr; else_expr; span = _ } ->
     let cond = elab_expr st cond in
     let then_expr = elab_expr st then_expr in
     let else_expr = elab_expr st else_expr in
     Ternary { cond; then_expr; else_expr; ty = None }
-  | Bin { lhs; op = Neq; rhs } ->
-    elab_expr st (Unary { op = Log_not; expr = Bin { lhs; op = Eq; rhs } })
-  | Bin { lhs; op; rhs } ->
+  | Bin { lhs; op = Neq; rhs; span = _ } ->
+    elab_expr
+      st
+      (Unary
+         { op = Log_not
+         ; expr = Bin { lhs; op = Eq; rhs; span = Span.none }
+         ; span = Span.none
+         })
+  | Bin { lhs; op; rhs; span = _ } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in
     (match op with
@@ -222,7 +229,7 @@ let elab_program st (prog : Cst.program) : Ast.program =
   let ty = elab_ty st prog.ty in
   let name = prog.name in
   let block = elab_block st prog.block in
-  { ty; name; block }
+  { ty; name = name.t; block }
 ;;
 
 let elaborate_program prog =

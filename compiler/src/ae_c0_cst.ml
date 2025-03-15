@@ -1,11 +1,13 @@
 open Std
+module Spanned = Ae_spanned
+module Span = Ae_span
 
 type ty =
   | Int
   | Bool
 [@@deriving sexp_of]
 
-type var = string [@@deriving sexp_of]
+type var = string Spanned.t [@@deriving sexp_of]
 
 type block = { stmts : stmt list } [@@deriving sexp_of]
 
@@ -48,7 +50,7 @@ and assign =
   }
 [@@deriving sexp_of]
 
-and lvalue = string [@@deriving sexp_of]
+and lvalue = var [@@deriving sexp_of]
 
 and assign_op =
   | Id_assign
@@ -69,22 +71,25 @@ and post_op =
   | Decr
 
 and expr =
-  | Int_const of Z.t
-  | Bool_const of bool
-  | Var of string
+  | Int_const of Z.t Spanned.t
+  | Bool_const of bool Spanned.t
+  | Var of var
   | Unary of
       { op : unary_op
       ; expr : expr
+      ; span : Span.t
       }
   | Bin of
       { lhs : expr
       ; op : bin_op
       ; rhs : expr
+      ; span : Span.t
       }
   | Ternary of
       { cond : expr
       ; then_expr : expr
       ; else_expr : expr
+      ; span : Span.t
       }
 [@@deriving sexp_of]
 
@@ -116,17 +121,33 @@ and bin_op =
 
 and decl =
   { ty : ty
-  ; name : string
+  ; name : var
   ; expr : expr option
   }
 [@@deriving sexp_of]
 
 type program =
   { ty : ty
-  ; name : string
+  ; name : var
   ; block : block
   }
 [@@deriving sexp_of]
 
-let bin ~lhs ~op ~rhs = Bin { lhs; rhs; op }
+let expr_span (expr : expr) =
+  match expr with
+  | Int_const { span; _ }
+  | Bool_const { span; _ }
+  | Var { span; _ }
+  | Unary { span; _ }
+  | Bin { span; _ }
+  | Ternary { span; _ } -> span
+;;
+
+let var v = Var v
+
+let bin ~lhs ~op ~rhs =
+  Bin { lhs; rhs; op; span = Span.Syntax.(expr_span lhs ++ expr_span rhs) }
+;;
+
+let bool_const b = Bool_const b
 let nop_stmt = Block { stmts = [] }

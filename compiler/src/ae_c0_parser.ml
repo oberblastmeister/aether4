@@ -1,6 +1,7 @@
 open Std
 module Token = Ae_c0_token
 module Cst = Ae_c0_cst
+module Span = Ae_span
 module Spanned = Ae_spanned
 
 module Stream_token = struct
@@ -36,7 +37,7 @@ let parse_ty env : Cst.ty =
   (expect_eq_ Int $> Cst.Int <|> (expect_eq_ Bool $> Cst.Bool)) env
 ;;
 
-let parse_ident env = Parser.expect (Fn.compose Token.ident_val Spanned.value) env
+let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
 
 let parens p env =
   expect_eq_ LParen env;
@@ -223,6 +224,7 @@ and parse_expr env : Cst.expr =
   expr
 
 and parse_ternary env : Cst.expr =
+  let open Span.Syntax in
   let cond = parse_log_or env in
   ((fun env ->
      expect_eq_ Question env;
@@ -231,7 +233,12 @@ and parse_ternary env : Cst.expr =
      |> Parser.cut (Sexp [%message "expected colon in ternary"])
      |> Fn.( |> ) env;
      let else_expr = parse_expr env in
-     Cst.Ternary { cond; then_expr; else_expr })
+     Cst.Ternary
+       { cond
+       ; then_expr
+       ; else_expr
+       ; span = Cst.expr_span cond ++ Cst.expr_span then_expr ++ Cst.expr_span else_expr
+       })
    <|> Parser.pure cond)
     env
 
@@ -299,18 +306,19 @@ and parse_mul env : Cst.expr =
     env
 
 and parse_unary_expr env : Cst.expr =
+  let open Span.Syntax in
   ((fun env ->
-     expect_eq_ Dash env;
+     let dash = expect_eq Dash env in
      let expr = parse_unary_expr env in
-     Cst.Unary { op = Neg; expr })
+     Cst.Unary { op = Neg; expr; span = dash.span ++ Cst.expr_span expr })
    <|> (fun env ->
-   expect_eq_ Tilde env;
+   let tilde = expect_eq Tilde env in
    let expr = parse_unary_expr env in
-   Cst.Unary { op = Bit_not; expr })
+   Cst.Unary { op = Bit_not; expr; span = tilde.span ++ Cst.expr_span expr })
    <|> (fun env ->
-   expect_eq_ Bang env;
+   let bang = expect_eq Bang env in
    let expr = parse_unary_expr env in
-   Cst.Unary { op = Log_not; expr })
+   Cst.Unary { op = Log_not; expr; span = bang.span ++ Cst.expr_span expr })
    <|> parse_atom)
     env
 
@@ -318,19 +326,22 @@ and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)
    <$> parse_num
    <|> parens parse_expr
-   <|> (expect_eq_ True $> Cst.Bool_const true)
-   <|> (expect_eq_ False $> Cst.Bool_const false)
-   <|> ((fun v -> Cst.Var v) <$> parse_ident))
+   <|> (Cst.bool_const <$> parse_true)
+   <|> (Cst.bool_const <$> parse_false)
+   <|> (Cst.var <$> parse_ident))
     env
 
-and parse_num env : Z.t =
-  Parser.map
-    (fun s ->
-       Z.of_string s
-       |> Option.value_or_thunk ~default:(fun () ->
-         Parser.error env (Sexp [%message "invalid number"])))
-    (Parser.expect (Fn.compose Token.hexnum_val Spanned.value)
-     <|> Parser.expect (Fn.compose Token.decnum_val Spanned.value))
+and parse_true = (Parser.map & Spanned.map) (expect_eq True) ~f:(Fn.const true)
+and parse_false = (Parser.map & Spanned.map) (expect_eq False) ~f:(Fn.const false)
+
+and parse_num env : Z.t Spanned.t =
+  (Parser.map & Spanned.map)
+    ~f:(fun s ->
+      Z.of_string s
+      |> Option.value_or_thunk ~default:(fun () ->
+        Parser.error env (Sexp [%message "invalid number"])))
+    (Parser.expect (Spanned.map_option ~f:Token.hexnum_val)
+     <|> Parser.expect (Spanned.map_option ~f:Token.decnum_val))
     env
 ;;
 

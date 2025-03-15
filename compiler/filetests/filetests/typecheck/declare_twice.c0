@@ -8,4 +8,9 @@ int main() {
     return 0;
 }
 ----
-("Var was already declared!" (var first))
+("Var was already declared!"
+ (var
+  ((t first)
+   (span
+    ((start ((line 7) (col 9) (offset 68)))
+     (stop ((line 7) (col 14) (offset 73))))))))

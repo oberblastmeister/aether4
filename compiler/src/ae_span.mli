@@ -7,6 +7,10 @@ type t =
   }
 [@@deriving sexp, compare, equal, hash]
 
+val none : t
 val combine : t -> t -> t
-
 val of_positions : start:Lexing.position -> stop:Lexing.position -> t
+
+module Syntax : sig
+  val ( ++ ) : t -> t -> t
+end

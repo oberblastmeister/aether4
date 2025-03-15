@@ -16,4 +16,9 @@ int main() {
 	return t;
 }
 ----
-("Variable not found" (var t))
+("Variable not found"
+ (var
+  ((t t)
+   (span
+    ((start ((line 11) (col 7) (offset 120)))
+     (stop ((line 11) (col 8) (offset 121))))))))

@@ -66,7 +66,7 @@ module Make (Arg : Arg) : sig
   val pure : 'a -> 'a t
   val optional : 'a t -> 'a option t
   val either : 'a t -> 'b t -> ('a, 'b) Either.t t
-  val map : ('a -> 'b) -> 'a t -> 'b t
+  val map : 'a t -> f:('a -> 'b) -> 'b t
   val many : 'a t -> 'a list t
   val some : 'a t -> 'a list t
 

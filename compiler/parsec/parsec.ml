@@ -131,7 +131,7 @@ module Make (Arg : Arg) = struct
     | x -> x
   ;;
 
-  let map f p env = f (p env)
+  let map p ~f env = f (p env)
 
   let many p env =
     let rec loop acc =
@@ -152,7 +152,7 @@ module Make (Arg : Arg) = struct
 
   module Syntax = struct
     let ( <|> ) = orelse
-    let ( <$> ) = map
+    let ( <$> ) f p = map p ~f
 
     let ( <$ ) x p env =
       p env |> ignore;
