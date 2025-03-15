@@ -71,7 +71,7 @@ rule lex =
 
 and line_comment =
   parse
-  | newline { lex lexbuf }
+  | newline { Lexing.new_line lexbuf; lex lexbuf }
   | _ { line_comment lexbuf }
   | eof { Token.Eof }
 
@@ -79,6 +79,7 @@ and block_comment nesting =
   parse
   | "*/" { if nesting = 1 then lex lexbuf else block_comment (nesting - 1) lexbuf }
   | "/*" { block_comment (nesting + 1) lexbuf }
+  | newline { Lexing.new_line lexbuf; block_comment nesting lexbuf }
   | _ { block_comment nesting lexbuf }
   | eof { Token.Eof }
 

@@ -12,6 +12,7 @@ module Process = Eio.Process
 module File = Eio.File
 module Flow = Eio.Flow
 module Fs = Eio.Fs
+module Spanned = Ae_spanned
 
 module Emit = struct
   type t =
@@ -73,7 +74,8 @@ let link_files_with_runtime mgr paths out_path =
 let compile_source_to_tir ?(emit = []) source =
   let open Result.Let_syntax in
   let tokens = C0.Lexer.tokenize source in
-  if Emit.mem emit Tokens then print_s [%message "tokens" (tokens : C0.Token.t list)];
+  if Emit.mem emit Tokens
+  then print_s [%message "tokens" (tokens : C0.Token.t Spanned.t list)];
   let%bind program =
     C0.Parser.parse tokens
     |> Result.map_error ~f:(Error.tag_s ~tag:[%message "Parse error"])

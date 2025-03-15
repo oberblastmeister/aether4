@@ -1,7 +1,16 @@
 open Std
 module Token = Ae_c0_token
 module Cst = Ae_c0_cst
-module Stream = Parsec.Make_stream (Token)
+module Spanned = Ae_spanned
+
+module Stream_token = struct
+  type t = Token.t Spanned.t [@@deriving sexp_of]
+
+  let compare t1 t2 = Token.compare t1.Spanned.t t2.Spanned.t
+  let equal t1 t2 = Token.equal t1.Spanned.t t2.Spanned.t
+end
+
+module Stream = Parsec.Make_stream (Stream_token)
 open Ae_trace
 
 module Error = struct
@@ -15,16 +24,24 @@ module Parser = Parsec.Make (struct
 
 open Parser.Syntax
 
-let parse_ty env : Cst.ty =
-  (Parser.expect_eq Int $> Cst.Int <|> (Parser.expect_eq Bool $> Cst.Bool)) env
+let expect_eq token env =
+  Parser.expect (fun t -> if Token.equal t.t token then Some t else None) env
 ;;
 
-let parse_ident env = Parser.expect Token.ident_val env
+let expect_eq_ token env =
+  Parser.expect (fun t -> if Token.equal t.t token then Some t else None) env |> ignore
+;;
+
+let parse_ty env : Cst.ty =
+  (expect_eq_ Int $> Cst.Int <|> (expect_eq_ Bool $> Cst.Bool)) env
+;;
+
+let parse_ident env = Parser.expect (Fn.compose Token.ident_val Spanned.value) env
 
 let parens p env =
-  Parser.expect_eq LParen env;
+  expect_eq_ LParen env;
   let res = p env in
-  Parser.expect_eq RParen
+  expect_eq_ RParen
   |> Parser.cut (Sexp [%message "expected closing RParen"])
   |> Fn.( |> ) env;
   res
@@ -49,22 +66,22 @@ let rec parse_program env : Cst.program =
        (Parser.cut (Sexp [%message "expected return type for function"]) parse_ty) env
      in
      let name = parse_ident env in
-     Parser.expect_eq LParen env;
-     Parser.expect_eq RParen env;
+     expect_eq_ LParen env;
+     expect_eq_ RParen env;
      let block = parse_block env in
      ({ ty; name; block } : Cst.program))
    |> Parser.cut (Sexp [%message "invalid program"]))
     env
 
 and parse_block env : Cst.block =
-  Parser.expect_eq LBrace env;
+  expect_eq_ LBrace env;
   let stmts = Parser.many parse_stmt env in
-  Parser.expect_eq RBrace
+  expect_eq_ RBrace
   |> Parser.cut
        (Sexp
           [%message
             "expected closing brace for block"
-              (Stream.peek (Parser.stream env) : Token.t option)])
+              (Stream.peek (Parser.stream env) : Token.t Spanned.t option)])
   |> Fn.( |> ) env;
   { stmts }
 
@@ -74,7 +91,7 @@ and parse_stmt env : Cst.stmt =
      <|> parse_for
      <|> parse_while
      <|> ((fun b -> Cst.Block b) <$> parse_block)
-     <|> (parse_semi_stmt <* Parser.expect_eq Semi))
+     <|> (parse_semi_stmt <* expect_eq_ Semi))
       env
   in
   stmt
@@ -92,7 +109,7 @@ and parse_semi_stmt env : Cst.stmt =
   res
 
 and parse_if env : Cst.stmt =
-  Parser.expect_eq If env;
+  expect_eq_ If env;
   let cond =
     parens parse_expr
     |> Parser.cut (Sexp [%message "expected condition expression for if"])
@@ -104,14 +121,14 @@ and parse_if env : Cst.stmt =
   let body2 =
     Parser.optional
       (fun env ->
-         Parser.expect_eq Else env;
+         expect_eq_ Else env;
          parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env)
       env
   in
   Cst.If { cond; body1; body2 }
 
 and parse_while env : Cst.stmt =
-  Parser.expect_eq While env;
+  expect_eq_ While env;
   let cond =
     parens parse_expr
     |> Parser.cut (Sexp [%message "expected while condition expression"])
@@ -123,7 +140,7 @@ and parse_while env : Cst.stmt =
   Cst.While { cond; body }
 
 and parse_for env : Cst.stmt =
-  Parser.expect_eq For env;
+  expect_eq_ For env;
   let paren =
     parens parse_for_paren
     |> Parser.cut (Sexp [%message "expected for parens"])
@@ -136,14 +153,14 @@ and parse_for env : Cst.stmt =
 
 and parse_for_paren env : Cst.for_paren =
   let init = (Parser.optional parse_semi_stmt) env in
-  Parser.expect_eq Semi env;
+  expect_eq_ Semi env;
   let cond = parse_expr env in
-  Parser.expect_eq Semi env;
+  expect_eq_ Semi env;
   let incr = (Parser.optional parse_semi_stmt) env in
   { init; cond; incr }
 
 and parse_return env : Cst.expr =
-  Parser.expect_eq Return env;
+  expect_eq_ Return env;
   parse_expr env
 
 and parse_decl env : Cst.decl =
@@ -152,7 +169,7 @@ and parse_decl env : Cst.decl =
   let expr =
     Parser.optional
       (fun env ->
-         Parser.expect_eq Eq env;
+         expect_eq_ Eq env;
          let expr =
            parse_expr
            |> Parser.cut (Sexp [%message "expected expression after equal sign"])
@@ -169,7 +186,7 @@ and parse_post env : Cst.stmt =
   Cst.Post { lvalue; op }
 
 and parse_post_op env : Cst.post_op =
-  (Cst.Incr <$ Parser.expect_eq PlusPlus <|> (Cst.Decr <$ Parser.expect_eq DashDash)) env
+  (Cst.Incr <$ expect_eq_ PlusPlus <|> (Cst.Decr <$ expect_eq_ DashDash)) env
 
 and parse_assign env : Cst.assign =
   let lvalue = parse_lvalue env in
@@ -179,24 +196,24 @@ and parse_assign env : Cst.assign =
 
 and parse_assign_op env : Cst.assign_op =
   (Cst.Mul_assign
-   <$ Parser.expect_eq StarEq
-   <|> (Cst.Add_assign <$ Parser.expect_eq PlusEq)
-   <|> (Cst.Sub_assign <$ Parser.expect_eq DashEq)
-   <|> (Cst.Mod_assign <$ Parser.expect_eq PercentEq)
-   <|> (Cst.Div_assign <$ Parser.expect_eq SlashEq)
-   <|> (Cst.Bit_and_assign <$ Parser.expect_eq AmpersandEq)
-   <|> (Cst.Bit_or_assign <$ Parser.expect_eq PipeEq)
-   <|> (Cst.Bit_xor_assign <$ Parser.expect_eq CaretEq)
-   <|> (Cst.Lshift_assign <$ Parser.expect_eq LangleLangleEq)
-   <|> (Cst.Rshift_assign <$ Parser.expect_eq RangleRangleEq)
-   <|> (Cst.Id_assign <$ Parser.expect_eq Eq))
+   <$ expect_eq_ StarEq
+   <|> (Cst.Add_assign <$ expect_eq_ PlusEq)
+   <|> (Cst.Sub_assign <$ expect_eq_ DashEq)
+   <|> (Cst.Mod_assign <$ expect_eq_ PercentEq)
+   <|> (Cst.Div_assign <$ expect_eq_ SlashEq)
+   <|> (Cst.Bit_and_assign <$ expect_eq_ AmpersandEq)
+   <|> (Cst.Bit_or_assign <$ expect_eq_ PipeEq)
+   <|> (Cst.Bit_xor_assign <$ expect_eq_ CaretEq)
+   <|> (Cst.Lshift_assign <$ expect_eq_ LangleLangleEq)
+   <|> (Cst.Rshift_assign <$ expect_eq_ RangleRangleEq)
+   <|> (Cst.Id_assign <$ expect_eq_ Eq))
     env
 
 and parse_lvalue env : Cst.lvalue =
   ((fun env ->
-     Parser.expect_eq LParen env;
+     expect_eq_ LParen env;
      let lvalue = parse_lvalue env in
-     Parser.expect_eq RParen env;
+     expect_eq_ RParen env;
      lvalue)
    <|> parse_ident)
     env
@@ -208,9 +225,9 @@ and parse_expr env : Cst.expr =
 and parse_ternary env : Cst.expr =
   let cond = parse_log_or env in
   ((fun env ->
-     Parser.expect_eq Question env;
+     expect_eq_ Question env;
      let then_expr = parse_expr env in
-     Parser.expect_eq Colon
+     expect_eq_ Colon
      |> Parser.cut (Sexp [%message "expected colon in ternary"])
      |> Fn.( |> ) env;
      let else_expr = parse_expr env in
@@ -219,32 +236,28 @@ and parse_ternary env : Cst.expr =
     env
 
 and parse_log_or env : Cst.expr =
-  chainl ~expr:parse_log_and ~op:(Cst.Log_or <$ Parser.expect_eq PipePipe) ~f:Cst.bin env
+  chainl ~expr:parse_log_and ~op:(Cst.Log_or <$ expect_eq_ PipePipe) ~f:Cst.bin env
 
 and parse_log_and env : Cst.expr =
   chainl
     ~expr:parse_bit_or
-    ~op:(Cst.Log_and <$ Parser.expect_eq AmpersandAmpersand)
+    ~op:(Cst.Log_and <$ expect_eq_ AmpersandAmpersand)
     ~f:Cst.bin
     env
 
 and parse_bit_or env : Cst.expr =
-  chainl ~expr:parse_bit_xor ~op:(Cst.Bit_or <$ Parser.expect_eq Pipe) ~f:Cst.bin env
+  chainl ~expr:parse_bit_xor ~op:(Cst.Bit_or <$ expect_eq_ Pipe) ~f:Cst.bin env
 
 and parse_bit_xor env : Cst.expr =
-  chainl ~expr:parse_bit_and ~op:(Cst.Bit_xor <$ Parser.expect_eq Caret) ~f:Cst.bin env
+  chainl ~expr:parse_bit_and ~op:(Cst.Bit_xor <$ expect_eq_ Caret) ~f:Cst.bin env
 
 and parse_bit_and env : Cst.expr =
-  chainl
-    ~expr:parse_equality
-    ~op:(Cst.Bit_and <$ Parser.expect_eq Ampersand)
-    ~f:Cst.bin
-    env
+  chainl ~expr:parse_equality ~op:(Cst.Bit_and <$ expect_eq_ Ampersand) ~f:Cst.bin env
 
 and parse_equality env : Cst.expr =
   chainl
     ~expr:parse_comparison
-    ~op:(Cst.Eq <$ Parser.expect_eq EqEq <|> (Cst.Neq <$ Parser.expect_eq BangEq))
+    ~op:(Cst.Eq <$ expect_eq_ EqEq <|> (Cst.Neq <$ expect_eq_ BangEq))
     ~f:Cst.bin
     env
 
@@ -253,27 +266,24 @@ and parse_comparison env : Cst.expr =
     ~expr:parse_shift
     ~op:
       (Cst.Lt
-       <$ Parser.expect_eq Langle
-       <|> (Cst.Gt <$ Parser.expect_eq Rangle)
-       <|> (Cst.Le <$ Parser.expect_eq LangleEq)
-       <|> (Cst.Ge <$ Parser.expect_eq RangleEq))
+       <$ expect_eq_ Langle
+       <|> (Cst.Gt <$ expect_eq_ Rangle)
+       <|> (Cst.Le <$ expect_eq_ LangleEq)
+       <|> (Cst.Ge <$ expect_eq_ RangleEq))
     ~f:Cst.bin
     env
 
 and parse_shift env : Cst.expr =
   chainl
     ~expr:parse_add
-    ~op:
-      (Cst.Lshift
-       <$ Parser.expect_eq LangleLangle
-       <|> (Cst.Rshift <$ Parser.expect_eq RangleRangle))
+    ~op:(Cst.Lshift <$ expect_eq_ LangleLangle <|> (Cst.Rshift <$ expect_eq_ RangleRangle))
     ~f:Cst.bin
     env
 
 and parse_add env : Cst.expr =
   chainl
     ~expr:parse_mul
-    ~op:(Cst.Add <$ Parser.expect_eq Plus <|> (Cst.Sub <$ Parser.expect_eq Dash))
+    ~op:(Cst.Add <$ expect_eq_ Plus <|> (Cst.Sub <$ expect_eq_ Dash))
     ~f:Cst.bin
     env
 
@@ -282,23 +292,23 @@ and parse_mul env : Cst.expr =
     ~expr:parse_unary_expr
     ~op:
       (Cst.Mul
-       <$ Parser.expect_eq Star
-       <|> (Cst.Div <$ Parser.expect_eq Slash)
-       <|> (Cst.Mod <$ Parser.expect_eq Percent))
+       <$ expect_eq_ Star
+       <|> (Cst.Div <$ expect_eq_ Slash)
+       <|> (Cst.Mod <$ expect_eq_ Percent))
     ~f:Cst.bin
     env
 
 and parse_unary_expr env : Cst.expr =
   ((fun env ->
-     Parser.expect_eq Dash env;
+     expect_eq_ Dash env;
      let expr = parse_unary_expr env in
      Cst.Unary { op = Neg; expr })
    <|> (fun env ->
-   Parser.expect_eq Tilde env;
+   expect_eq_ Tilde env;
    let expr = parse_unary_expr env in
    Cst.Unary { op = Bit_not; expr })
    <|> (fun env ->
-   Parser.expect_eq Bang env;
+   expect_eq_ Bang env;
    let expr = parse_unary_expr env in
    Cst.Unary { op = Log_not; expr })
    <|> parse_atom)
@@ -308,8 +318,8 @@ and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)
    <$> parse_num
    <|> parens parse_expr
-   <|> (Parser.expect_eq True $> Cst.Bool_const true)
-   <|> (Parser.expect_eq False $> Cst.Bool_const false)
+   <|> (expect_eq_ True $> Cst.Bool_const true)
+   <|> (expect_eq_ False $> Cst.Bool_const false)
    <|> ((fun v -> Cst.Var v) <$> parse_ident))
     env
 
@@ -319,7 +329,8 @@ and parse_num env : Z.t =
        Z.of_string s
        |> Option.value_or_thunk ~default:(fun () ->
          Parser.error env (Sexp [%message "invalid number"])))
-    (Parser.expect Token.hexnum_val <|> Parser.expect Token.decnum_val)
+    (Parser.expect (Fn.compose Token.hexnum_val Spanned.value)
+     <|> Parser.expect (Fn.compose Token.decnum_val Spanned.value))
     env
 ;;
 
