@@ -6,7 +6,11 @@ module T = struct
     ; col : int
     ; offset : int
     }
-  [@@deriving sexp, compare, equal, hash]
+  [@@deriving compare, equal, hash]
+
+  let to_string t = [%string "%{t.line#Int}:%{t.col#Int}"]
+  let sexp_of_t t = Sexp.Atom (to_string t)
+  let t_of_sexp _s = todol [%here]
 end
 
 include T

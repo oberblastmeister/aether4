@@ -10,8 +10,4 @@ int main() {
 ----
 ("Parse error"
  ("expected closing brace for block"
-  ("Stream.peek (Parser.stream env)"
-   (((t Return)
-     (span
-      ((start ((line 8) (col 5) (offset 79)))
-       (stop ((line 8) (col 11) (offset 85))))))))))
+  ("Stream.peek (Parser.stream env)" (((t Return) (span 8:5-11))))))

@@ -32,3 +32,17 @@ module type Mutable_set = sig
   val remove : t -> Key.t -> unit
   val mem : t -> Key.t -> bool
 end
+
+module type Semigroup = sig
+  type t
+
+  val append : t -> t -> t
+end
+
+module type Monoid = sig
+  type t
+
+  val empty : t
+
+  include Semigroup with type t := t
+end

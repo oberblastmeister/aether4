@@ -11,3 +11,4 @@ include Base.Comparable.S with type t := t
 
 val none : t
 val of_position : Lexing.position -> t
+val to_string : t -> string

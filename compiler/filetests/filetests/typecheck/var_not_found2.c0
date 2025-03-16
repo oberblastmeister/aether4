@@ -8,9 +8,4 @@ int main() {
     return second;
 }
 ----
-("Variable not found"
- (var
-  ((t third)
-   (span
-    ((start ((line 7) (col 26) (offset 91)))
-     (stop ((line 7) (col 31) (offset 96))))))))
+("Variable not found" (var ((t third) (span 7:26-31))))
