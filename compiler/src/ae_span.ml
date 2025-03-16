@@ -21,13 +21,17 @@ let to_string t =
   if Loc.equal t.start t.stop
   then Loc.to_string t.start
   else if t.start.line = t.stop.line
-  then [%string "%{t.start.line#Int}:%{t.start.col#Int}-%{t.stop.col#Int}"]
+  then
+    if t.start.col + 1 = t.stop.col
+    then [%string "%{t.start.line#Int}:%{t.start.col#Int}"]
+    else [%string "%{t.start.line#Int}:%{t.start.col#Int}-%{t.stop.col#Int}"]
   else
     [%string
-      "(%{t.start.line#Int},%{t.start.col#Int})-(%{t.stop.line#Int},%{t.stop.col#Int})"]
+      "[%{t.start.line#Int},%{t.start.col#Int}]-[%{t.stop.line#Int},%{t.stop.col#Int}]"]
 ;;
 
 let sexp_of_t t = Sexp.Atom (to_string t)
+let to_info t = Info.create_s (sexp_of_t t)
 let t_of_sexp _s = todol [%here]
 
 module Syntax = struct

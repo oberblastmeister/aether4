@@ -160,19 +160,27 @@ let format_instr (instr : Instr.t) =
   | Test { src1; src2; size } ->
     [%string "test%{suff size} %{op src2 size}, %{op src1 size}"]
   | Set { cc; dst } -> [%string "set%{string_of_cond cc} %{op dst Byte}"]
-  | Directive s -> s
   | Cqo -> "cqo"
+;;
+
+let format_line (line : Line.t) =
+  match line with
   | Label s -> [%string "%{s}:"]
   | Comment s -> [%string "# %{s}"]
+  | Directive s -> s
+  | Instr { i; info } ->
+    (* to_string_mach ensures it is only one line *)
+    format_instr i
+    ^ Option.value_map info ~f:(fun info -> " # " ^ Info.to_string_mach info) ~default:""
 ;;
 
 let format prog =
   let buf = Buffer.create 1000 in
-  List.iter prog ~f:(fun (instr : Instr.t) ->
-    (match instr with
+  List.iter prog ~f:(fun (line : Line.t) ->
+    (match line with
      | Directive _ | Label _ | Comment _ -> ()
      | _ -> Buffer.add_string buf "    ");
-    format_instr instr |> Buffer.add_string buf;
+    format_line line |> Buffer.add_string buf;
     Buffer.add_char buf '\n';
     ());
   Buffer.contents buf

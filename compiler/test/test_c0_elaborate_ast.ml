@@ -29,7 +29,7 @@ let%expect_test "smoke" =
      ((ty (Int 2:3-6)) (name main)
       (block
        ((Declare (ty (Int 3:13-16)) (var tmp@1) (span 3:13-26))
-        (Assign (lvalue tmp@1) (expr (Int_const ((t 0) (span 3:25-26))))
+        (Assign (lvalue tmp@1) (expr (Int_const ((t 0) (span 3:25))))
          (span 3:13-26))
         (Declare (ty (Int 3:13-16)) (var first@0) (span 3:13-26))
         (Assign (lvalue first@0) (expr (Var (var tmp@1) (ty ()))) (span 3:13-26))
@@ -48,6 +48,7 @@ let%expect_test "smoke" =
          (expr
           (Bin (lhs (Var (var first@0) (ty ()))) (op Add)
            (rhs (Var (var second@2) (ty ()))) (ty ()) (span 6:20-34)))
-         (span 6:13-34))))))
+         (span 6:13-34))))
+      (span [2,3]-[7,12])))
     |}]
 ;;

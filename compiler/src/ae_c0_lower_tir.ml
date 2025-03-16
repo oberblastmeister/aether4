@@ -8,6 +8,7 @@ module Entity = Ae_entity_std
 module Temp = Tir.Temp
 module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
+module Span = Ae_span
 open Bag.Syntax
 
 let empty = Bag.empty
@@ -34,21 +35,21 @@ let create_state () =
 let var_temp t var =
   Hashtbl.find_or_add t.var_to_temp var ~default:(fun () ->
     let id = Id_gen.next t.temp_gen in
-    let temp = { Entity.Ident.id; name = var.name } in
+    let temp = Entity.Ident.create ~info:(Span.to_info var.span) var.name id in
     temp)
 ;;
 
-let fresh_temp ?(name = "fresh") t : Temp.t =
+let fresh_temp ?(name = "fresh") ?info t : Temp.t =
   let id = Id_gen.next t.temp_gen in
-  Entity.Ident.create name id
+  Entity.Ident.create ?info name id
 ;;
 
-let fresh_label ?(name = "fresh") t : Label.t =
+let fresh_label ?(name = "fresh") ?info t : Label.t =
   let id = Id_gen.next t.label_gen in
-  Entity.Ident.create name id
+  Entity.Ident.create ?info name id
 ;;
 
-let add_block t label instrs =
+let add_block ?info t label instrs =
   (*
      make sure to add an unreachable instruction at the end so that all blocks have a terminator
   *)
@@ -56,15 +57,18 @@ let add_block t label instrs =
     Tir.Block.create
       label
       (Bag.to_arrayp
-         (empty +> [ ins (Block_params { temps = [] }) ] ++ instrs +> [ ins Unreachable ]))
+         (empty
+          +> [ ins ?info (Block_params { temps = [] }) ]
+          ++ instrs
+          +> [ ins ?info Unreachable ]))
   in
   t.blocks <- block :: t.blocks;
   ()
 ;;
 
-let add_fresh_block ?name t instrs : Label.t =
-  let label = fresh_label ?name t in
-  add_block t label instrs;
+let add_fresh_block ?name ?info t instrs : Label.t =
+  let label = fresh_label ?name ?info t in
+  add_block ?info t label instrs;
   label
 ;;
 
@@ -77,16 +81,27 @@ let lower_ty (ty : Ast.ty) : Tir.Ty.t =
 let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =
   List.fold_right block ~init:cont ~f:(fun stmt cont -> lower_stmt st cont stmt)
 
-and add_cond_jump st cont cond_temp body1 body2 =
-  let join_label = add_fresh_block ~name:"join" st cont in
+and add_cond_jump ?info st cont cond_temp body1 body2 =
+  let join_label = add_fresh_block ?info ~name:"join" st cont in
   let body1_label =
-    add_fresh_block ~name:"then" st (body1 (empty +> [ ins (Jump (bc join_label)) ]))
+    add_fresh_block
+      ?info
+      ~name:"then"
+      st
+      (body1 (empty +> [ ins ?info (Jump (bc join_label)) ]))
   in
   let body2_label =
-    add_fresh_block ~name:"else" st (body2 (empty +> [ ins (Jump (bc join_label)) ]))
+    add_fresh_block
+      ?info
+      ~name:"else"
+      st
+      (body2 (empty +> [ ins ?info (Jump (bc join_label)) ]))
   in
   empty
-  +> [ ins (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label }) ]
+  +> [ ins
+         ?info
+         (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label })
+     ]
 
 (* invariant:
 
@@ -110,36 +125,41 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
     lower_expr st cont dst expr
-  | Return { expr; span = _ } ->
+  | Return { expr; span } ->
     let dst = fresh_temp ~name:"ret" st in
     let ty = Ast.expr_ty_exn expr in
+    let info = Span.to_info span in
     (* important: we override the continuation here because nothing should be after a Ret *)
-    let cont = empty +> [ ins (Ret { src = dst; ty = lower_ty ty }) ] in
+    let cont = empty +> [ ins ~info (Ret { src = dst; ty = lower_ty ty }) ] in
     lower_expr st cont dst expr
-  | If { cond; body1; body2; span = _ } ->
-    let cond_temp = fresh_temp ~name:"cond" st in
+  | If { cond; body1; body2; span } ->
+    let info = Span.to_info span in
+    let cond_temp = fresh_temp ~info ~name:"cond" st in
     let body1 cont = lower_stmt st cont body1 in
     let body2 cont = Option.value_map body2 ~f:(lower_stmt st cont) ~default:cont in
-    let cont = add_cond_jump st cont cond_temp body1 body2 in
+    let cont = add_cond_jump ~info st cont cond_temp body1 body2 in
     lower_expr st cont cond_temp cond
-  | While { cond; body; span = _ } ->
-    let done_label = add_fresh_block ~name:"done" st cont in
-    let cond_temp = fresh_temp ~name:"cond" st in
-    let loop_label = fresh_label ~name:"loop" st in
-    let body = lower_stmt st (empty +> [ ins (Jump (bc loop_label)) ]) body in
-    let body_label = add_fresh_block ~name:"body" st body in
+  | While { cond; body; span } ->
+    let info = Span.to_info span in
+    let done_label = add_fresh_block ~info ~name:"done" st cont in
+    let cond_temp = fresh_temp ~info ~name:"cond" st in
+    let loop_label = fresh_label ~info ~name:"loop" st in
+    let body = lower_stmt st (empty +> [ ins ~info (Jump (bc loop_label)) ]) body in
+    let body_label = add_fresh_block ~info ~name:"body" st body in
     add_block
+      ~info
       st
       loop_label
       (lower_expr
          st
          (empty
           +> [ ins
+                 ~info
                  (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label })
              ])
          cond_temp
          cond);
-    empty +> [ ins (Jump (bc loop_label)) ]
+    empty +> [ ins ~info (Jump (bc loop_label)) ]
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
@@ -171,10 +191,12 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
 *)
 and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
-  | Ternary { cond; then_expr; else_expr; ty = _; span = _ } ->
-    let cond_dst = fresh_temp ~name:"cond" st in
+  | Ternary { cond; then_expr; else_expr; ty = _; span } ->
+    let info = Span.to_info span in
+    let cond_dst = fresh_temp ~info ~name:"cond" st in
     let cont =
       add_cond_jump
+        ~info
         st
         cont
         cond_dst
@@ -183,33 +205,41 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     in
     let cont = lower_expr st cont cond_dst cond in
     cont
-  | Int_const { t = const; span = _ } ->
-    empty +> [ ins (Nullary { dst; op = Int_const const }) ] ++ cont
-  | Bool_const { t = const; span = _ } ->
-    empty +> [ ins (Nullary { dst; op = Bool_const const }) ] ++ cont
-  | Bin { lhs; op; rhs; ty = _; span = _ } ->
+  | Int_const { t = const; span } ->
+    let info = Span.to_info span in
+    empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ] ++ cont
+  | Bool_const { t = const; span } ->
+    let info = Span.to_info span in
+    empty +> [ ins ~info (Nullary { dst; op = Bool_const const }) ] ++ cont
+  | Bin { lhs; op; rhs; ty = _; span } ->
+    let info = Span.to_info span in
     let op : Tir.Bin_op.t =
       match op with
       | Eq -> Eq (lower_ty (Ast.expr_ty_exn lhs))
       | _ -> lower_bin_op op
     in
-    let src1 = fresh_temp ~name:"lhs" st in
-    let src2 = fresh_temp ~name:"rhs" st in
-    let cont = empty +> [ ins (Bin { dst; src1; op; src2 }) ] ++ cont in
+    let src1 = fresh_temp ~info ~name:"lhs" st in
+    let src2 = fresh_temp ~info ~name:"rhs" st in
+    let cont = empty +> [ ins ~info (Bin { dst; src1; op; src2 }) ] ++ cont in
     let cont = lower_expr st cont src2 rhs in
     let cont = lower_expr st cont src1 lhs in
     cont
   | Var { var; ty } ->
     let src = var_temp st var in
     empty
-    +> [ ins (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src }) ]
+    +> [ ins
+           ~info:(Span.to_info var.span)
+           (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src })
+       ]
     ++ cont
 ;;
 
 let lower_program st (program : Ast.program) : Tir.Func.t =
   let name = program.name in
   let start_instrs = lower_block st empty program.block in
-  let start_label = add_fresh_block ~name:"start" st start_instrs in
+  let start_label =
+    add_fresh_block ~info:(Span.to_info program.span) ~name:"start" st start_instrs
+  in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
   let blocks = st.blocks in

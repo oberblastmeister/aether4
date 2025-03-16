@@ -50,15 +50,16 @@ module Id_gen : sig
 end
 
 module Ident : sig
-  type 'k t =
+  type 'k t = private
     { name : string
     ; id : 'k Id.t
+    ; info : Info.t option
     }
   [@@deriving sexp]
 
-  val create : string -> 'k Id.t -> 'k t
+  val create : ?info:Info.t -> string -> 'k Id.t -> 'k t
   val to_id : 'k t -> 'k Id.t
-  val fresh : ?name:string -> 'k Id_gen.t -> 'k t
+  val fresh : ?name:string -> ?info:Info.t -> 'k Id_gen.t -> 'k t
   val freshen : 'k Id_gen.t -> 'k t -> 'k t
   val unchecked_coerce : 'a t -> 'b t
 
@@ -66,7 +67,7 @@ module Ident : sig
   module Map : Map.S_phantom with type 'w Key.t = 'w t
   module Set : Set.S_phantom with type 'w Key.t = 'w t
 
-  val add_table : ?name:string -> 'a -> ('w, 'a) Table.t -> 'w t
+  val add_table : ?name:string -> ?info:Info.t -> 'a -> ('w, 'a) Table.t -> 'w t
 end
 
 module Intern : sig

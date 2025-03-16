@@ -28,13 +28,13 @@ let create_state func =
 let get_temp t (temp : Tir.Temp.t) : Lir.Temp.t =
   Entity.Ident.Table.find_or_add t.tir_to_lir temp ~default:(fun () ->
     let id = Id_gen.next t.temp_gen in
-    let temp = Entity.Ident.create temp.name id in
+    let temp = Entity.Ident.create ?info:temp.info temp.name id in
     temp)
 ;;
 
-let fresh_temp ?(name = "fresh") t : Lir.Temp.t =
+let fresh_temp ?(name = "fresh") ?info t : Lir.Temp.t =
   let id = Id_gen.next t.temp_gen in
-  Entity.Ident.create name id
+  Entity.Ident.create ?info name id
 ;;
 
 let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
@@ -67,6 +67,7 @@ let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =
 ;;
 
 let lower_instr st (instr : Tir.Instr'.t) : instrs =
+  let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
   | Unreachable -> empty +> [ ins Unreachable ]

@@ -6,4 +6,4 @@ int main() {
     return a;
 }
 ----
-("Variable not found" (var ((t a) (span 6:12-13))))
+("Variable not found" (var ((t a) (span 6:12))))

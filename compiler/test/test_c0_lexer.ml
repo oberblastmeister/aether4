@@ -15,16 +15,15 @@ let%expect_test _ =
   |};
   [%expect
     {|
-    (((t Plus) (span 2:5-6)) ((t (Decnum 123)) (span 2:7-10))
-     ((t Star) (span 2:11-12)) ((t Semi) (span 2:13-14))
+    (((t Plus) (span 2:5)) ((t (Decnum 123)) (span 2:7-10))
+     ((t Star) (span 2:11)) ((t Semi) (span 2:13))
      ((t (Ident sadf)) (span 2:15-19)) ((t Return) (span 2:20-26))
      ((t Int) (span 2:27-30)) ((t PlusEq) (span 2:31-33))
-     ((t LBrace) (span 2:34-35)) ((t RParen) (span 2:37-38))
-     ((t LParen) (span 2:39-40)) ((t RParen) (span 2:40-41))
-     ((t PlusEq) (span 2:42-44)) ((t StarEq) (span 2:45-47))
-     ((t SlashEq) (span 2:48-50)) ((t Int) (span 2:51-54))
-     ((t (Hexnum 0xFFE12)) (span 2:55-62)) ((t (Decnum 1234)) (span 2:63-67))
-     ((t (Hexnum 0xdeadbeef)) (span 2:68-78)))
+     ((t LBrace) (span 2:34)) ((t RParen) (span 2:37)) ((t LParen) (span 2:39))
+     ((t RParen) (span 2:40)) ((t PlusEq) (span 2:42-44))
+     ((t StarEq) (span 2:45-47)) ((t SlashEq) (span 2:48-50))
+     ((t Int) (span 2:51-54)) ((t (Hexnum 0xFFE12)) (span 2:55-62))
+     ((t (Decnum 1234)) (span 2:63-67)) ((t (Hexnum 0xdeadbeef)) (span 2:68-78)))
     |}]
 ;;
 

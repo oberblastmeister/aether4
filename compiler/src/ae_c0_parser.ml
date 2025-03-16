@@ -69,6 +69,7 @@ let chainl ~expr:parse_expr ~op:parse_op ~f env =
 
 let rec parse_program env : Cst.program =
   ((fun env ->
+     let open Span.Syntax in
      let ty =
        (Parser.cut (Sexp [%message "expected return type for function"]) parse_ty) env
      in
@@ -76,7 +77,7 @@ let rec parse_program env : Cst.program =
      expect_eq_ LParen env;
      expect_eq_ RParen env;
      let block = parse_block env in
-     ({ ty; name; block } : Cst.program))
+     ({ ty; name; block; span = Cst.ty_span ty ++ block.span } : Cst.program))
    |> Parser.cut (Sexp [%message "invalid program"]))
     env
 
@@ -111,7 +112,7 @@ and parse_semi_stmt env : Cst.stmt =
     ((fun d -> Cst.Decl d)
      <$> parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
-     <|> ( parse_return)
+     <|> parse_return
      <|> parse_post
      <|> ((fun e -> Cst.Effect e) <$> parse_expr))
       env

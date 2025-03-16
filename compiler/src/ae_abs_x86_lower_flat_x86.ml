@@ -12,6 +12,7 @@ module Condition_code = Ae_x86_condition_code
 module Frame = Ae_x86_frame
 module Address = Ae_x86_address
 
+let ins ?info i = Flat_x86.Line.Instr { i; info }
 let empty = Bag.empty
 
 open Bag.Syntax
@@ -34,58 +35,61 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   | Mem _ -> todol [%here]
 ;;
 
-let epilogue =
+let epilogue ?info () =
+  let ins = ins ?info in
   empty
-  +> Flat_x86.Instr.
-       [ Mov { dst = Reg RSP; src = Reg RBP; size = Qword }
-       ; Pop { dst = Reg RBP; size = Qword }
-       ; Ret
-       ]
+  +> [ ins (Mov { dst = Reg RSP; src = Reg RBP; size = Qword })
+     ; ins (Pop { dst = Reg RBP; size = Qword })
+     ; ins Ret
+     ]
 ;;
 
-let epilogue_without_base stack_size =
+let epilogue_without_base ?info stack_size =
+  let ins = ins ?info in
+  empty +> [ ins (Add { dst = Reg RSP; src = Imm stack_size; size = Qword }); ins Ret ]
+;;
+
+let prologue ?info stack_size =
+  let ins = ins ?info in
   empty
-  +> Flat_x86.Instr.[ Add { dst = Reg RSP; src = Imm stack_size; size = Qword }; Ret ]
+  +> [ ins (Push { src = Reg RBP; size = Qword })
+     ; ins (Mov { dst = Reg RBP; src = Reg RSP; size = Qword })
+     ; ins (Sub { dst = Reg RSP; src = Imm stack_size; size = Qword })
+     ]
 ;;
 
-let prologue stack_size =
-  empty
-  +> Flat_x86.Instr.
-       [ Push { src = Reg RBP; size = Qword }
-       ; Mov { dst = Reg RBP; src = Reg RSP; size = Qword }
-       ; Sub { dst = Reg RSP; src = Imm stack_size; size = Qword }
-       ]
+let prologue_without_base ?info stack_size =
+  let ins = ins ?info in
+  empty +> [ ins (Sub { dst = Reg RSP; src = Imm stack_size; size = Qword }) ]
 ;;
 
-let prologue_without_base stack_size =
-  empty +> Flat_x86.Instr.[ Sub { dst = Reg RSP; src = Imm stack_size; size = Qword } ]
-;;
-
-let label_to_string st (label : Label.t) =
+let label_to_string _st (label : Label.t) =
   [%string ".L%{label.name}_%{label.id#Entity.Id}"]
 ;;
 
-let lower_cmp (cc : Condition_code.t) size ~dst ~src1 ~src2 =
-  empty +> Flat_x86.Instr.[ Cmp { src1; src2; size }; Set { dst; cc } ]
+let lower_cmp ?info (cc : Condition_code.t) size ~dst ~src1 ~src2 =
+  let ins = ins ?info in
+  empty +> [ ins (Cmp { src1; src2; size }); ins (Set { dst; cc }) ]
 ;;
 
-let lower_simple_rmw rmw size ~dst ~src1 ~src2 =
+let lower_simple_rmw ?info rmw size ~dst ~src1 ~src2 =
+  let ins = ins ?info in
   empty
-  +> Flat_x86.Instr.
-       [ Mov { dst = Reg Mach_reg.scratch; src = src1; size }
-       ; rmw ~dst:(Flat_x86.Operand.Reg Mach_reg.scratch) ~src:src2 ~size
-       ; Mov { dst; src = Reg Mach_reg.scratch; size }
-       ]
+  +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src1; size })
+     ; ins (rmw ~dst:(Flat_x86.Operand.Reg Mach_reg.scratch) ~src:src2 ~size)
+     ; ins (Mov { dst; src = Reg Mach_reg.scratch; size })
+     ]
 ;;
 
-let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
-  match instr with
+let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
+  let ins = ins ?info:instr.info in
+  match instr.i with
   | Unreachable ->
     (* TODO: lower this to a panic in debug mode *)
     empty
   | Block_params _ -> empty
   | Nop -> empty
-  | Jump bc -> empty +> Flat_x86.Instr.[ Jmp (label_to_string st bc.label) ]
+  | Jump bc -> empty +> [ ins (Jmp (label_to_string st bc.label)) ]
   | Cond_jump { cond; b1; b2 } ->
     let instrs =
       match cond with
@@ -94,11 +98,11 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
         (* only needs Byte, but we use Dword here *)
         empty
         +> Flat_x86.Instr.
-             [ Mov { dst = Reg R11; src; size = Dword }
+             [ ins (Mov { dst = Reg R11; src; size = Dword })
                (* Important! This must be Byte because only the lower byte is valid for byte size, even though we use Dword registers *)
-             ; Test { src1 = Reg R11; src2 = Reg R11; size = Byte }
-             ; J { cc = NE; label = label_to_string st b1.label }
-             ; Jmp (label_to_string st b2.label)
+             ; ins (Test { src1 = Reg R11; src2 = Reg R11; size = Byte })
+             ; ins (J { cc = NE; label = label_to_string st b1.label })
+             ; ins (Jmp (label_to_string st b2.label))
              ]
       | _ -> todo ()
     in
@@ -106,38 +110,39 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
-    Flat_x86.Instr.(empty +> [ Mov { src; dst; size } ])
+    Flat_x86.Instr.(empty +> [ ins (Mov { src; dst; size }) ])
   | Mov_abs { dst; src } ->
     let dst = lower_operand st dst in
-    Flat_x86.Instr.(empty +> [ Mov_abs { dst; src } ])
+    Flat_x86.Instr.(empty +> [ ins (Mov_abs { dst; src }) ])
   | Bin { dst; op; src1; src2 } ->
     let dst = lower_operand st dst in
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
-    let on_cmp ?(size = Flat_x86.Size.Qword) cc = lower_cmp cc size ~dst ~src1 ~src2 in
+    let on_cmp ?(size = Flat_x86.Size.Qword) cc =
+      lower_cmp ?info:instr.info cc size ~dst ~src1 ~src2
+    in
     let on_rmw ?(size = Flat_x86.Size.Qword) rmw =
-      lower_simple_rmw rmw size ~dst ~src1 ~src2
+      lower_simple_rmw ?info:instr.info rmw size ~dst ~src1 ~src2
     in
     let size = Flat_x86.Size.Qword in
     (match op with
      | Eq size -> on_cmp ~size E
      | Lshift ->
        empty
-       +> Flat_x86.Instr.
-            [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
-              Mov { dst = Reg R11; src = src1; size }
-            ; Mov { dst = Reg RCX; src = src2; size = Dword }
-            ; Sal { dst = Reg R11; size }
-            ; Mov { dst; src = Reg R11; size }
-            ]
+       +> [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
+            ins (Mov { dst = Reg R11; src = src1; size })
+          ; ins (Mov { dst = Reg RCX; src = src2; size = Dword })
+          ; ins (Sal { dst = Reg R11; size })
+          ; ins (Mov { dst; src = Reg R11; size })
+          ]
      | Rshift ->
        empty
        +> Flat_x86.Instr.
             [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
-              Mov { dst = Reg R11; src = src1; size }
-            ; Mov { dst = Reg RCX; src = src2; size = Dword }
-            ; Sar { dst = Reg R11; size }
-            ; Mov { dst; src = Reg R11; size }
+              ins (Mov { dst = Reg R11; src = src1; size })
+            ; ins (Mov { dst = Reg RCX; src = src2; size = Dword })
+            ; ins (Sar { dst = Reg R11; size })
+            ; ins (Mov { dst; src = Reg R11; size })
             ]
      | Lt -> on_cmp L
      | Gt -> on_cmp G
@@ -154,51 +159,53 @@ let lower_instr st (instr : Abs_x86.Instr.t) : Flat_x86.Instr.t Bag.t =
          +> [ (* must move to scratch first before moving src2 to RAX,
                            because src1 may refer to RAX
               *)
-              Mov { dst = Reg Mach_reg.scratch; src = src1; size }
-            ; Mov { dst = Reg RAX; src = src2; size }
-            ; Imul { src = Reg Mach_reg.scratch; size }
+              ins (Mov { dst = Reg Mach_reg.scratch; src = src1; size })
+            ; ins (Mov { dst = Reg RAX; src = src2; size })
+            ; ins (Imul { src = Reg Mach_reg.scratch; size })
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RAX; size }
+            ; ins (Mov { dst; src = Reg RAX; size })
             ])
      | Idiv ->
        Flat_x86.Instr.(
          empty
-         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2; size }
-            ; Mov { dst = Reg RAX; src = src1; size }
+         +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
+            ; ins (Mov { dst = Reg RAX; src = src1; size })
             ; (* sign extend RAX into RDX:RAX *)
-              Cqo
-            ; Idiv { src = Reg Mach_reg.scratch; size }
+              ins Cqo
+            ; ins (Idiv { src = Reg Mach_reg.scratch; size })
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RAX; size }
+            ; ins (Mov { dst; src = Reg RAX; size })
             ])
      | Imod ->
        Flat_x86.Instr.(
          empty
-         +> [ Mov { dst = Reg Mach_reg.scratch; src = src2; size }
-            ; Mov { dst = Reg RAX; src = src1; size }
+         +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
+            ; ins (Mov { dst = Reg RAX; src = src1; size })
             ; (* sign extend RAX into RDX:RAX *)
-              Cqo
-            ; Idiv { src = Reg Mach_reg.scratch; size }
+              ins Cqo
+            ; ins (Idiv { src = Reg Mach_reg.scratch; size })
               (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; Mov { dst; src = Reg RDX; size }
+            ; ins (Mov { dst; src = Reg RDX; size })
             ]))
   | Ret { src; size } ->
     let src = lower_operand st src in
     Flat_x86.Instr.(
       empty
-      +> [ Mov { dst = Reg RAX; src; size } ]
-      ++ epilogue_without_base (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame)))
+      +> [ ins (Mov { dst = Reg RAX; src; size }) ]
+      ++ epilogue_without_base
+           ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue"))
+           (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame)))
 ;;
 
-let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Instr.t Bag.t =
+let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Line.t Bag.t =
   let instrs =
     block
     |> Abs_x86.Block.instrs
     |> Arrayp.to_list
-    |> List.map ~f:(fun instr -> lower_instr st instr.i)
+    |> List.map ~f:(lower_instr st)
     |> Bag.concat
   in
-  empty +> Flat_x86.Instr.[ Label (label_to_string st block.label) ] ++ instrs
+  empty +> Flat_x86.Line.[ Label (label_to_string st block.label) ] ++ instrs
 ;;
 
 let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
@@ -214,8 +221,10 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   in
   let instrs =
     empty
-    +> Flat_x86.Instr.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
-    ++ prologue_without_base (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame))
+    +> Flat_x86.Line.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
+    ++ prologue_without_base
+         ~info:(Info.create_s [%message "prologue"])
+         (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame))
     ++ instrs
   in
   Bag.to_list instrs

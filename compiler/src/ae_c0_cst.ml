@@ -143,6 +143,7 @@ type program =
   { ty : ty
   ; name : var
   ; block : block
+  ; span : Span.t
   }
 [@@deriving sexp_of]
 

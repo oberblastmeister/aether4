@@ -13,7 +13,7 @@ module String_to_name = struct
   let intern (t : _ t) key =
     Hashtbl.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
-      let name : _ Ident.t = { name = key; id } in
+      let name : _ Ident.t = Ident.create key id in
       t.id <- id + 1;
       name)
   ;;
@@ -21,7 +21,7 @@ module String_to_name = struct
   let fresh ?(name = "fresh") t =
     let id = t.id in
     t.id <- id + 1;
-    Ident.{ name; id }
+    Ident.create name id
   ;;
 
   let find_exn t key = Hashtbl.find_exn t.map key
@@ -45,7 +45,7 @@ module Ident_to_name = struct
   let intern (t : ('w1, 'w2) t) key =
     Ident.Table.find_or_add t.map key ~default:(fun () ->
       let id = t.id in
-      let name : _ Ident.t = { name = key.name; id } in
+      let name : _ Ident.t = Ident.create key.name id in
       t.id <- id + 1;
       name)
   ;;

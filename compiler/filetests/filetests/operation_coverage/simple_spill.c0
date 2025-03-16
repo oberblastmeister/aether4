@@ -1,6 +1,7 @@
 /*
 (
  (kind (CompileAndRun))
+ (emit (Asm))
 )
 */
 
@@ -26,4 +27,257 @@ int main() {
     +x8+x9+xA+xB+xC+xD+xE+xF;	/* sum(i=1..16) = 136 */
 }
 ----
+asm
+.text
+.globl _c0_main
+_c0_main:
+    subq $168, %rsp # prologue
+.Lstart_0:
+    movq $1, %rax # 9:12
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 136(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq 136(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq %rax, %rdi # (spilled 9:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq $1, %rax # 10:15
+    movq %rdi, %r11 # 10:12-16
+    addq %rax, %r11 # 10:12-16
+    movq %r11, %rax # 10:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 128(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 10:7-9))
+    movq 128(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 10:7-9))
+    movq %rax, %rdi # (spilled 10:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 10:7-9))
+    movq $1, %rax # 11:15
+    movq %rdi, %r11 # 11:12-16
+    addq %rax, %r11 # 11:12-16
+    movq %r11, %rax # 11:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 120(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 11:7-9))
+    movq 120(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 11:7-9))
+    movq %rax, %rdi # (spilled 11:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 11:7-9))
+    movq $1, %rax # 12:15
+    movq %rdi, %r11 # 12:12-16
+    addq %rax, %r11 # 12:12-16
+    movq %r11, %rax # 12:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 112(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 12:7-9))
+    movq 112(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 12:7-9))
+    movq %rax, %rdi # (spilled 12:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 12:7-9))
+    movq $1, %rax # 13:15
+    movq %rdi, %r11 # 13:12-16
+    addq %rax, %r11 # 13:12-16
+    movq %r11, %rax # 13:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 104(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 13:7-9))
+    movq 104(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 13:7-9))
+    movq %rax, %rdi # (spilled 13:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 13:7-9))
+    movq $1, %rax # 14:15
+    movq %rdi, %r11 # 14:12-16
+    addq %rax, %r11 # 14:12-16
+    movq %r11, %rax # 14:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 96(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 14:7-9))
+    movq 96(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 14:7-9))
+    movq %rax, %rdi # (spilled 14:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 14:7-9))
+    movq $1, %rax # 15:15
+    movq %rdi, %r11 # 15:12-16
+    addq %rax, %r11 # 15:12-16
+    movq %r11, %rax # 15:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 88(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 15:7-9))
+    movq 88(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 15:7-9))
+    movq %rax, %rdi # (spilled 15:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 15:7-9))
+    movq $1, %rax # 16:15
+    movq %rdi, %r11 # 16:12-16
+    addq %rax, %r11 # 16:12-16
+    movq %r11, %rax # 16:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 80(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 16:7-9))
+    movq 80(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 16:7-9))
+    movq %rax, %rdi # (spilled 16:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 16:7-9))
+    movq $1, %rax # 17:15
+    movq %rdi, %r11 # 17:12-16
+    addq %rax, %r11 # 17:12-16
+    movq %r11, %rax # 17:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 72(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 17:7-9))
+    movq 72(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 17:7-9))
+    movq %rax, %rdi # (spilled 17:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 17:7-9))
+    movq $1, %rax # 18:15
+    movq %rdi, %r11 # 18:12-16
+    addq %rax, %r11 # 18:12-16
+    movq %r11, %rax # 18:12-16
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, %rdi # (spilled -1:-1)
+    movq %rdi, 64(%rsp) # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill -1:-1))
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 18:7-9))
+    movq 64(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 18:7-9))
+    movq %rax, %rdi # (spilled 18:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 18:7-9))
+    movq $1, %rax # 19:15
+    movq %rdi, %r11 # 19:12-16
+    addq %rax, %r11 # 19:12-16
+    movq %r11, %rax # 19:12-16
+    movq %rax, %r10 # -1:-1
+    movq %r10, %rdi # 19:7-9
+    movq $1, %rax # 20:15
+    movq %rdi, %r11 # 20:12-16
+    addq %rax, %r11 # 20:12-16
+    movq %r11, %rax # 20:12-16
+    movq %rax, %r9 # -1:-1
+    movq %r9, %rdi # 20:7-9
+    movq $1, %rax # 21:15
+    movq %rdi, %r11 # 21:12-16
+    addq %rax, %r11 # 21:12-16
+    movq %r11, %rax # 21:12-16
+    movq %rax, %r8 # -1:-1
+    movq %r8, %rdi # 21:7-9
+    movq $1, %rax # 22:15
+    movq %rdi, %r11 # 22:12-16
+    addq %rax, %r11 # 22:12-16
+    movq %r11, %rax # 22:12-16
+    movq %rax, %rcx # -1:-1
+    movq %rcx, %rdi # 22:7-9
+    movq $1, %rax # 23:15
+    movq %rdi, %r11 # 23:12-16
+    addq %rax, %r11 # 23:12-16
+    movq %r11, %rax # 23:12-16
+    movq %rax, %rdx # -1:-1
+    movq %rdx, %rdi # 23:7-9
+    movq $1, %rax # 24:15
+    movq %rdi, %r11 # 24:12-16
+    addq %rax, %r11 # 24:12-16
+    movq %r11, %rax # 24:12-16
+    movq %rax, %rsi # -1:-1
+    movq %rax, 152(%rsp) # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq 136(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq %rax, %rdi # (spilled 9:7-9)
+    movq 152(%rsp), %rax # ((evict(evicted_mach_reg RAX))(spill 9:7-9))
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 10:7-9))
+    movq 128(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 10:7-9))
+    movq %rdi, %rax # (spilled 10:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 10:7-9))
+    movq %rdi, %r11 # 26:6-11
+    addq %rax, %r11 # 26:6-11
+    movq %r11, %rdi # 26:6-11
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 11:7-9))
+    movq 120(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 11:7-9))
+    movq %rdi, %rax # (spilled 11:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 11:7-9))
+    movq %rdi, %r11 # 26:6-14
+    addq %rax, %r11 # 26:6-14
+    movq %r11, %rdi # 26:6-14
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 12:7-9))
+    movq 112(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 12:7-9))
+    movq %rdi, %rax # (spilled 12:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 12:7-9))
+    movq %rdi, %r11 # 26:6-17
+    addq %rax, %r11 # 26:6-17
+    movq %r11, %rdi # 26:6-17
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 13:7-9))
+    movq 104(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 13:7-9))
+    movq %rdi, %rax # (spilled 13:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 13:7-9))
+    movq %rdi, %r11 # 26:6-20
+    addq %rax, %r11 # 26:6-20
+    movq %r11, %rdi # 26:6-20
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 14:7-9))
+    movq 96(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 14:7-9))
+    movq %rdi, %rax # (spilled 14:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 14:7-9))
+    movq %rdi, %r11 # 26:6-23
+    addq %rax, %r11 # 26:6-23
+    movq %r11, %rdi # 26:6-23
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 15:7-9))
+    movq 88(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 15:7-9))
+    movq %rdi, %rax # (spilled 15:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 15:7-9))
+    movq %rdi, %r11 # 26:6-26
+    addq %rax, %r11 # 26:6-26
+    movq %r11, %rdi # 26:6-26
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 16:7-9))
+    movq 80(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 16:7-9))
+    movq %rdi, %rax # (spilled 16:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 16:7-9))
+    movq %rdi, %r11 # 26:6-29
+    addq %rax, %r11 # 26:6-29
+    movq %r11, %rdi # 26:6-29
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 17:7-9))
+    movq 72(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 17:7-9))
+    movq %rdi, %rax # (spilled 17:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 17:7-9))
+    movq %rdi, %r11 # [26,6]-[27,8]
+    addq %rax, %r11 # [26,6]-[27,8]
+    movq %r11, %rdi # [26,6]-[27,8]
+    movq %rdi, 144(%rsp) # ((evict(evicted_mach_reg RDI))(spill 18:7-9))
+    movq 64(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 18:7-9))
+    movq %rdi, %rax # (spilled 18:7-9)
+    movq 144(%rsp), %rdi # ((evict(evicted_mach_reg RDI))(spill 18:7-9))
+    movq %rdi, %r11 # [26,6]-[27,11]
+    addq %rax, %r11 # [26,6]-[27,11]
+    movq %r11, %rdi # [26,6]-[27,11]
+    movq %r10, %rax # 19:7-9
+    movq %rdi, %r11 # [26,6]-[27,14]
+    addq %rax, %r11 # [26,6]-[27,14]
+    movq %r11, %rdi # [26,6]-[27,14]
+    movq %r9, %rax # 20:7-9
+    movq %rdi, %r11 # [26,6]-[27,17]
+    addq %rax, %r11 # [26,6]-[27,17]
+    movq %r11, %rdi # [26,6]-[27,17]
+    movq %r8, %rax # 21:7-9
+    movq %rdi, %r11 # [26,6]-[27,20]
+    addq %rax, %r11 # [26,6]-[27,20]
+    movq %r11, %rdi # [26,6]-[27,20]
+    movq %rcx, %rax # 22:7-9
+    movq %rdi, %r11 # [26,6]-[27,23]
+    addq %rax, %r11 # [26,6]-[27,23]
+    movq %r11, %rdi # [26,6]-[27,23]
+    movq %rdx, %rax # 23:7-9
+    movq %rdi, %r11 # [26,6]-[27,26]
+    addq %rax, %r11 # [26,6]-[27,26]
+    movq %r11, %rdi # [26,6]-[27,26]
+    movq %rsi, %rax # 24:7-9
+    movq %rdi, %r11 # [26,6]-[27,29]
+    addq %rax, %r11 # [26,6]-[27,29]
+    movq %r11, %rax # [26,6]-[27,29]
+    movq %rax, %rax # [25,3]-[27,29]
+    addq $168, %rsp # (epilogue [25,3]-[27,29])
+    ret # (epilogue [25,3]-[27,29])
+
 136

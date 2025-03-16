@@ -8,6 +8,7 @@ module T = struct
   type 'k t =
     { name : string [@compare.ignore] [@equal.ignore] [@hash.ignore]
     ; id : 'k Id.t
+    ; info : Info.t option
     }
   [@@deriving compare, equal, hash, sexp]
 end
@@ -15,13 +16,13 @@ end
 include T
 
 let to_id t = t.id
-let unchecked_coerce { name; id } = { name; id = Id.unchecked_coerce id }
-let create name id = { name; id }
+let unchecked_coerce { name; id; info } = { name; id = Id.unchecked_coerce id; info }
+let create ?info name id = { name; id; info }
 
-let fresh ?(name = "fresh") gen =
+let fresh ?(name = "fresh") ?info gen =
   let id = !gen in
   gen := id + 1;
-  { name; id }
+  { name; id; info }
 ;;
 
 let freshen gen t = fresh ~name:t.name gen
@@ -39,9 +40,9 @@ module Map = Entity_map.Make_phantom (Arg)
 module Table = Entity_table.Make_phantom (Arg)
 module Set = Entity_set.Make_phantom (Arg)
 
-let add_table ?(name = "fresh") data table =
+let add_table ?(name = "fresh") ?info data table =
   let index = Table.max_index table + 1 in
-  let ident = { name; id = index } in
+  let ident = { name; id = index; info } in
   Table.add_exn table ~key:ident ~data;
   ident
 ;;

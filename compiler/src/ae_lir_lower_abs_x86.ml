@@ -10,8 +10,10 @@ module Bag = Ae_data_bag
 module Table = Entity.Ident.Table
 module Ident = Entity.Ident
 module Label_entity = Ae_label_entity
+open Ae_trace
 
 let empty = Bag.empty
+let ins = Abs_x86.Instr'.create_unindexed
 
 open Bag.Syntax
 
@@ -28,15 +30,17 @@ let create_state func =
   }
 ;;
 
-let fresh_temp ?name st : Abs_x86.Vreg.t = Entity.Ident.fresh ?name st.temp_gen
+let fresh_temp ?name ?info st : Abs_x86.Vreg.t =
+  Entity.Ident.fresh ?name ?info st.temp_gen
+;;
 
 let get_vreg st temp =
   Table.find_or_add st.lir_to_abs_x86 temp ~default:(fun () ->
-    fresh_temp ~name:temp.name st)
+    fresh_temp ~name:temp.name ?info:temp.info st)
 ;;
 
 let get_operand st temp = Abs_x86.Operand.Reg (get_vreg st temp)
-let fresh_operand ?name st = Abs_x86.Operand.Reg (fresh_temp ?name st)
+let fresh_operand ?name ?info st = Abs_x86.Operand.Reg (fresh_temp ?name ?info st)
 
 let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
   match ty with
@@ -48,46 +52,46 @@ let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
   { label = b.label; args = List.map b.args ~f:(get_vreg st) }
 ;;
 
-let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
+let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
+  let ins = ins ?info:instr.info in
   match instr.i with
-  | Unreachable -> empty +> [ Abs_x86.Instr.Unreachable ]
+  | Unreachable -> empty +> [ ins Unreachable ]
   | Block_params { temps } ->
     empty
-    +> [ Abs_x86.Instr.Block_params
-           { temps = List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty) }
+    +> [ ins
+           (Block_params
+              { temps =
+                  List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty)
+              })
        ]
-  | Nop -> empty +> [ Abs_x86.Instr.Nop ]
+  | Nop -> empty +> [ ins Nop ]
   | Jump b ->
     let b = lower_block_call st b in
-    empty +> Abs_x86.Instr.[ Jump b ]
+    empty +> [ ins (Jump b) ]
   | Cond_jump { cond; b1; b2 } ->
     let cond = get_operand st cond in
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
-    empty +> Abs_x86.Instr.[ Cond_jump { cond = Op cond; b1; b2 } ]
+    empty +> [ ins (Cond_jump { cond = Op cond; b1; b2 }) ]
   | Nullary { dst; op } ->
     (match op with
      | Int_const { const; ty = I1 } ->
        let dst = get_operand st dst in
        if Int64.(const <> 0L && const <> 1L)
        then raise_s [%message "const was not I1" (const : int64)];
-       empty
-       +> Abs_x86.Instr.
-            [ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Dword } ]
+       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Dword }) ]
      | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
        let dst = get_operand st dst in
-       empty
-       +> Abs_x86.Instr.
-            [ Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword } ]
+       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword }) ]
      | Int_const { const; ty = I64 } ->
        let dst = get_operand st dst in
-       empty +> Abs_x86.Instr.[ Mov_abs { dst; src = const } ])
+       empty +> [ ins (Mov_abs { dst; src = const }) ])
   | Unary { dst; op; src } ->
     (match op with
      | Copy ty ->
        let dst = get_operand st dst in
        let src = get_operand st src in
-       empty +> Abs_x86.Instr.[ Mov { dst; src; size = lower_ty ty } ])
+       empty +> [ ins (Mov { dst; src; size = lower_ty ty }) ])
   | Bin { dst; src1; op; src2 } ->
     let dst = get_operand st dst in
     let src1 = get_operand st src1 in
@@ -110,10 +114,10 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr.t Bag.t =
       | Lshift -> Lshift
       | Rshift -> Rshift
     in
-    empty +> [ Abs_x86.Instr.Bin { dst; src1; op; src2 } ]
+    empty +> [ ins (Abs_x86.Instr.Bin { dst; src1; op; src2 }) ]
   | Ret { src; ty } ->
     let src = get_operand st src in
-    empty +> [ Abs_x86.Instr.Ret { src; size = lower_ty ty } ]
+    empty +> [ ins (Abs_x86.Instr.Ret { src; size = lower_ty ty }) ]
 ;;
 
 let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
@@ -121,8 +125,7 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
     block
     |> Lir.Block.instrs
     |> Arrayp.to_list
-    |> List.map ~f:(fun i ->
-      lower_instr st i |> Bag.map ~f:Abs_x86.Instr'.create_unindexed)
+    |> List.map ~f:(lower_instr st)
     |> Bag.concat
     |> Bag.to_arrayp
   in

@@ -1,6 +1,7 @@
 /*
 (
  (kind (CompileAndRun))
+ (emit (Asm))
 )
 */
 
@@ -24,4 +25,89 @@ int main() {
   return q;
 }
 ----
+asm
+.text
+.globl _c0_main
+_c0_main:
+    subq $40, %rsp # prologue
+.Lstart_9:
+    movq $0, %rax # 10:11
+    movq %rax, %rdi # -1:-1
+    movq %rdi, %rdx # 10:7
+    movq $0, %rax # 13:11
+    cmpq %rax, %rdx # 13:7-12
+    setg %al # 13:7-12
+    movl %eax, %r11d # [13,3]-[16,15]
+    testb %r11b, %r11b # [13,3]-[16,15]
+    jne .Lthen_4 # [13,3]-[16,15]
+    jmp .Lelse_8 # [13,3]-[16,15]
+.Lelse_8:
+    movq %rdi, %rdx # 10:7
+    movq $0, %rax # 15:13
+    cmpq %rax, %rdx # 15:9-14
+    setl %al # 15:9-14
+    movl %eax, %r11d # [15,5]-[16,15]
+    testb %r11b, %r11b # [15,5]-[16,15]
+    jne .Lthen_6 # [15,5]-[16,15]
+    jmp .Lelse_7 # [15,5]-[16,15]
+.Lelse_7:
+    movq $0, %rax # 16:14
+    movq %rax, %rax
+    jmp .Ljoin_5 # [15,5]-[16,15]
+.Lthen_6:
+    movq $-1, %rdx # 15:20-22
+    movq $0, %rax # 15:21
+    movq %rdx, %r11 # 15:20-22
+    xorq %rax, %r11 # 15:20-22
+    movq %r11, %rax # 15:20-22
+    movq %rax, %rax
+    jmp .Ljoin_5 # [15,5]-[16,15]
+.Ljoin_5:
+    movq %rax, %rax
+    jmp .Ljoin_3 # [13,3]-[16,15]
+.Lthen_4:
+    movq $1, %rax # 13:18
+    movq %rax, %rax
+    jmp .Ljoin_3 # [13,3]-[16,15]
+.Ljoin_3:
+    movq %rdi, %rdi
+    movq %rax, %rsi
+    jmp .Lloop_1 # [19,27]-[23,4]
+.Lloop_1:
+    movq %rdi, %rdx # 10:7
+    movq $33, %rax # 19:15-17
+    cmpq %rax, %rdx # 19:11-17
+    setl %al # 19:11-17
+    movl %eax, %r11d # [19,27]-[23,4]
+    testb %r11b, %r11b # [19,27]-[23,4]
+    jne .Lbody_2 # [19,27]-[23,4]
+    jmp .Ldone_0 # [19,27]-[23,4]
+.Ldone_0:
+    movq %rsi, %rax # 11:7
+    movq %rax, %rax # 25:3-11
+    addq $40, %rsp # (epilogue 25:3-11)
+    ret # (epilogue 25:3-11)
+.Lbody_2:
+    movq %rdi, %rdx # 10:7
+    movq $1, %rax # 20:10
+    movq %rdx, %r11 # 20:5-11
+    addq %rax, %r11 # 20:5-11
+    movq %r11, %rcx # 20:5-11
+    movq %rcx, %rdi # 10:7
+    movq %rdi, %rdx # 18:7
+    movq $3, %rax # 22:13
+    movq %rdx, %r11 # 22:9-14
+    movq %rax, %rax # 22:9-14
+    imulq %r11 # 22:9-14
+    movq %rax, %rsi # 22:9-14
+    movq %rdi, %rdx # 18:7
+    movq $3, %rax # 19:24
+    movq %rdx, %r11 # 19:19-25
+    movq %rax, %rax # 19:19-25
+    imulq %r11 # 19:19-25
+    movq %rax, %rax # 19:19-25
+    movq %rcx, %rdi
+    movq %rsi, %rsi
+    jmp .Lloop_1 # [19,27]-[23,4]
+
 99

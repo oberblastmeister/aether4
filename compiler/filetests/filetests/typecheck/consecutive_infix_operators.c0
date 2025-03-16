@@ -10,4 +10,4 @@ int main() {
 ----
 ("Parse error"
  ("expected closing brace for block"
-  ("Stream.peek (Parser.stream env)" (((t (Ident y)) (span 7:3-4))))))
+  ("Stream.peek (Parser.stream env)" (((t (Ident y)) (span 7:3))))))

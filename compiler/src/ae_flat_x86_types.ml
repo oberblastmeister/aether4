@@ -105,22 +105,31 @@ module Instr = struct
         { dst : Operand.t
         ; size : Size.t
         }
+    | Cqo
     | Jmp of string
     | J of
         { cc : Condition_code.t
         ; label : string
         }
     | Ret
+  [@@deriving sexp_of, variants]
+end
+
+module Line = struct
+  type t =
     | Directive of string
     (*
        sign extends RAX and stores the result in registers RDX:RAX
     *)
-    | Cqo
     | Label of string
     | Comment of string
+    | Instr of
+        { i : Instr.t
+        ; info : Info.t option
+        }
   [@@deriving sexp_of, variants]
 end
 
 module Program = struct
-  type t = Instr.t list [@@deriving sexp_of]
+  type t = Line.t list [@@deriving sexp_of]
 end

@@ -10,6 +10,7 @@ type t =
 val none : t
 val combine : t -> t -> t
 val of_positions : start:Lexing.position -> stop:Lexing.position -> t
+val to_info : t -> Info.t
 
 module Syntax : sig
   val ( ++ ) : t -> t -> t

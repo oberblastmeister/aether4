@@ -152,20 +152,21 @@ let spill_instr
       ~spilled_temp_to_slot
       ~allocation
       ~get_evicted_temp_and_slot_for_mach_reg
-      ~(instr : Instr.t)
+      ~(instr : Instr'.t)
   =
   let module Table = Ident.Table in
   let open Table.Syntax in
   let evicted_temps = ref [] in
   let used_mach_regs =
-    Instr.iter_defs instr
-    |> Iter.append (Instr.iter_uses instr)
+    Instr.iter_defs instr.i
+    |> Iter.append (Instr.iter_uses instr.i)
     |> Iter.filter_map ~f:(Table.find allocation)
-    |> Iter.append (Instr.iter_mach_reg_defs instr)
+    |> Iter.append (Instr.iter_mach_reg_defs instr.i)
     |> Iter.to_list
     |> Set.of_list (module Mach_reg)
   in
-  let evict_some_color =
+  let ins ?info = Instr'.create_unindexed ?info:(Option.first_some info instr.info) in
+  let evict_some_mach_reg =
     (*
        There are always enough evictable colors.
       There are a maxmium of 6 vregs used per instruction.
@@ -173,75 +174,121 @@ let spill_instr
       Then each spilled vreg is one vreg that wasn't used.
       We also have to add two due to the precolored registers.
     *)
-    let evictable_colors =
+    let evictable_mach_regs =
       usable_mach_regs
       |> List.filter ~f:(fun reg -> not (Set.mem used_mach_regs reg))
       |> Lstack.of_list_rev
     in
     fun () ->
-      let evictable_color =
-        Lstack.pop evictable_colors
+      let evicted_mach_reg =
+        Lstack.pop evictable_mach_regs
         |> Option.value_exn
              ~error:
-               (Error.create "There were no evictable colors left" instr Instr.sexp_of_t)
+               (Error.create "There were no evictable colors left" instr Instr'.sexp_of_t)
       in
-      let evicted_temp = get_evicted_temp_and_slot_for_mach_reg evictable_color in
-      evicted_temps := evicted_temp :: !evicted_temps;
-      evicted_temp
+      let evicted_temp, evicted_temp_slot =
+        get_evicted_temp_and_slot_for_mach_reg evicted_mach_reg
+      in
+      evicted_temps
+      := (evicted_temp, evicted_temp_slot, evicted_mach_reg) :: !evicted_temps;
+      evicted_temp, evicted_temp_slot, evicted_mach_reg
   in
   let instrs_before = Lstack.create () in
   let instrs_after = Lstack.create () in
+  let spill_info =
+    Option.value instr.info ~default:(Info.create_s [%message ""])
+    |> Info.tag_s ~tag:[%message "spill"]
+  in
+  let did_spill = ref false in
   let instr =
-    let instr =
-      let@: temp =
-        (Instr.map_uses
-         & Traverse.filtered ~f:(fun temp ->
-           (* not in allocation means spilled *)
-           not (Table.mem allocation temp)))
-          instr
-      in
-      let evicted_temp, evicted_temp_slot = evict_some_color () in
-      let temp_slot = spilled_temp_to_slot temp in
-      Lstack.append_list
-        instrs_before
-        Instr.
-          [ Mov
-              { dst = Stack_slot evicted_temp_slot; src = Reg evicted_temp; size = Qword }
-          ; Mov { dst = Reg evicted_temp; src = Stack_slot temp_slot; size = Qword }
-          ];
-      evicted_temp
+    let@: temp =
+      (Instr'.map
+       & Instr.map_uses
+       & Traverse.filtered ~f:(fun temp ->
+         (* not in allocation means spilled *)
+         not (Table.mem allocation temp)))
+        instr
     in
-    let instr =
-      let@: temp =
-        (Instr.map_defs
-         & Traverse.filtered ~f:(fun temp ->
-           (* not in allocation means spilled *)
-           not (Table.mem allocation temp)))
-          instr
+    did_spill := true;
+    let evicted_temp, evicted_temp_slot, evicted_mach_reg = evict_some_mach_reg () in
+    let temp_slot = spilled_temp_to_slot temp in
+    begin
+      let info =
+        Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
       in
-      let evicted_temp, evicted_temp_slot = evict_some_color () in
-      let temp_slot = spilled_temp_to_slot temp in
+      let ins = ins ~info in
+      Lstack.append_list
+        instrs_before
+        [ ins
+            (Mov
+               { dst = Stack_slot evicted_temp_slot
+               ; src = Reg evicted_temp
+               ; size = Qword
+               })
+        ; ins (Mov { dst = Reg evicted_temp; src = Stack_slot temp_slot; size = Qword })
+        ]
+    end;
+    evicted_temp
+  in
+  let instr =
+    let@: temp =
+      (Instr'.map
+       & Instr.map_defs
+       & Traverse.filtered ~f:(fun temp ->
+         (* not in allocation means spilled *)
+         not (Table.mem allocation temp)))
+        instr
+    in
+    did_spill := true;
+    let evicted_temp, evicted_temp_slot, evicted_mach_reg = evict_some_mach_reg () in
+    let temp_slot = spilled_temp_to_slot temp in
+    begin
+      let info =
+        Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
+      in
+      let ins = ins ~info in
       Lstack.append_list
         instrs_before
         Instr.
-          [ Mov
-              { dst = Stack_slot evicted_temp_slot; src = Reg evicted_temp; size = Qword }
+          [ ins
+              (Mov
+                 { dst = Stack_slot evicted_temp_slot
+                 ; src = Reg evicted_temp
+                 ; size = Qword
+                 })
           ];
       Lstack.append_list
         instrs_after
-        Instr.[ Mov { dst = Stack_slot temp_slot; src = Reg evicted_temp; size = Qword } ];
-      evicted_temp
-    in
-    instr
+        [ ins (Mov { dst = Stack_slot temp_slot; src = Reg evicted_temp; size = Qword }) ]
+    end;
+    evicted_temp
+  in
+  let instr =
+    { instr with
+      info =
+        (if !did_spill
+         then Option.map instr.info ~f:(Info.tag ~tag:"spilled")
+         else instr.info)
+    }
   in
   (* reload all the evicted registers *)
   begin
-    let@: evicted_temp, evicted_temp_slot = List.iter !evicted_temps in
+    let@: evicted_temp, evicted_temp_slot, evicted_mach_reg = List.iter !evicted_temps in
+    let info =
+      Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
+    in
+    let ins = ins ~info in
     Lstack.append_list
       instrs_after
-      [ Mov { dst = Reg evicted_temp; src = Stack_slot evicted_temp_slot; size = Qword } ]
+      [ ins
+          (Mov
+             { dst = Reg evicted_temp; src = Stack_slot evicted_temp_slot; size = Qword })
+      ]
   end;
-  Lstack.to_list instrs_before, instr, Lstack.to_list instrs_after
+  ( Lstack.to_list instrs_before |> List.map ~f:(fun i -> { i with index = instr.index })
+  , instr
+  , Lstack.to_list instrs_after
+    |> List.map ~f:(fun i -> { i with index = instr.index + 1 }) )
 ;;
 
 (*
@@ -297,18 +344,12 @@ let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : F
         ~spilled_temp_to_slot
         ~allocation
         ~get_evicted_temp_and_slot_for_mach_reg
-        ~instr:instr.i
+        ~instr
     in
-    let instr_index = instr.index in
-    Multi_edit.add_inserts
-      edit
-      block.label
-      (List.map instrs_before ~f:(fun instr -> Instr'.create instr instr_index));
-    Multi_edit.add_replace edit block.label (Instr'.create new_instr instr_index);
-    Multi_edit.add_inserts
-      edit
-      block.label
-      (List.map instrs_after ~f:(fun instr -> Instr'.create instr (instr_index + 1)))
+    Multi_edit.add_inserts edit block.label instrs_before;
+    Multi_edit.add_replace edit block.label new_instr;
+    Multi_edit.add_inserts edit block.label instrs_after;
+    ()
   end;
   ( `func
       { func with
@@ -355,7 +396,6 @@ let alloc_func frame_builder (func : Func.t) =
     in
     Regalloc.color_graph graph precolored
   in
-  trace_ls [%lazy_message (coloring : int Vreg.Table.t)];
   let precolored_colors =
     get_precolored_colors
       ~precolored_range:(precolored_id_start, precolored_id_end)
@@ -368,7 +408,6 @@ let alloc_func frame_builder (func : Func.t) =
       ~max_color
       ~num_regs:(List.length usable_mach_regs)
   in
-  trace_ls [%lazy_message (spilled_colors : Bitset.t)];
   let func = Split_critical.split func in
   let scratch_temp, func, max_color =
     let temp_gen = Id_gen.of_id func.next_temp_id in
@@ -384,7 +423,6 @@ let alloc_func frame_builder (func : Func.t) =
       ~get_scratch:(fun () -> scratch_temp)
       func
   in
-  trace_ls [%lazy_message "after_spill_colors" (func : Func.t)];
   let color_to_mach_reg : Mach_reg.t Int_table.t = Int_table.create () in
   (* assign registers to the colors of precolored *)
   let find_usable_mach_reg_and_use_up =
@@ -438,6 +476,5 @@ let alloc_func frame_builder (func : Func.t) =
     let@: evicted_mach_reg_temp, evicted_mach_reg = List.iter evicted_mach_reg_temps in
     allocation.!(evicted_mach_reg_temp) <- evicted_mach_reg
   end;
-  trace_ls [%lazy_message (allocation : Allocation.t)];
   allocation, func
 ;;

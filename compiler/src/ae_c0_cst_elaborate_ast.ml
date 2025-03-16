@@ -261,7 +261,7 @@ let elab_program st (prog : Cst.program) : Ast.program =
   let ty = elab_ty st prog.ty in
   let name = prog.name in
   let block = elab_block st prog.block.block in
-  { ty; name = name.t; block }
+  { ty; name = name.t; block; span = prog.span }
 ;;
 
 let elaborate_program prog =
