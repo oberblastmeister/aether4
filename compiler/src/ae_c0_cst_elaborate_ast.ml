@@ -57,7 +57,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       match expr with
       | None -> empty +> Ast.[ Declare { ty; var; span } ]
       | Some expr ->
-        let tmp = fresh_var st { t = "tmp"; span = Span.none } in
+        let tmp = fresh_var st { t = "tmp"; span = name.span } in
         let expr = elab_expr st expr in
         empty
         +> Ast.
@@ -192,14 +192,8 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     let then_expr = elab_expr st then_expr in
     let else_expr = elab_expr st else_expr in
     Ternary { cond; then_expr; else_expr; ty = None; span }
-  | Bin { lhs; op = Neq; rhs; span = _ } ->
-    elab_expr
-      st
-      (Unary
-         { op = Log_not
-         ; expr = Bin { lhs; op = Eq; rhs; span = Span.none }
-         ; span = Span.none
-         })
+  | Bin { lhs; op = Neq; rhs; span } ->
+    elab_expr st (Unary { op = Log_not; expr = Bin { lhs; op = Eq; rhs; span }; span })
   | Bin { lhs; op; rhs; span } ->
     let lhs = elab_expr st lhs in
     let rhs = elab_expr st rhs in

@@ -32,7 +32,7 @@ _c0_main:
     subq $40, %rsp # prologue
 .Lstart_9:
     movq $0, %rax # 10:11
-    movq %rax, %rdi # -1:-1
+    movq %rax, %rdi # 10:7
     movq %rdi, %rdx # 10:7
     movq $0, %rax # 13:11
     cmpq %rax, %rdx # 13:7-12
