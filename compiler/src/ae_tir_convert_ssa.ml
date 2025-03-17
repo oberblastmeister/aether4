@@ -52,7 +52,7 @@ let convert (func : Func.t) =
   let open Table.Syntax in
   let idoms = Func.compute_idoms func in
   let dom_tree = Dominators.Tree.of_immediate idoms in
-  let def_to_ty = Liveness.compute_ty_table func in
+  let def_to_ty = Func.get_ty_table func in
   let block_to_phis = compute_phi_placements func in
   let temp_gen = Id_gen.of_id func.next_temp_id in
   let multi_edit = Multi_edit.create () in
@@ -114,7 +114,7 @@ let convert (func : Func.t) =
     blocks =
       func.blocks
       (*
-        The unreachable blocks were not in the dominator tree, so were not converted at all.
+         The unreachable blocks were not in the dominator tree, so were not converted at all.
         Just remove them here.
       *)
       |> Ident.Map.filteri ~f:(fun ~key ~data:_ ->

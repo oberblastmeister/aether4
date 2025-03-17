@@ -1,3 +1,4 @@
+(* TODO: reformulate this as a forward analysis *)
 open Std
 module Ast = Ae_c0_ast
 
@@ -17,7 +18,7 @@ let rec check_block (block : Ast.block) =
 
 and iter_expr_uses (expr : Ast.expr) ~f =
   match expr with
-  | Ternary { cond; then_expr; else_expr; ty = _ } ->
+  | Ternary { cond; then_expr; else_expr; ty = _; span = _ } ->
     iter_expr_uses cond ~f;
     iter_expr_uses then_expr ~f;
     iter_expr_uses else_expr ~f;
@@ -26,7 +27,7 @@ and iter_expr_uses (expr : Ast.expr) ~f =
     f var;
     ()
   | Int_const _ | Bool_const _ -> ()
-  | Bin { lhs; op = _; rhs; ty = _ } ->
+  | Bin { lhs; op = _; rhs; ty = _; span = _ } ->
     iter_expr_uses lhs ~f;
     iter_expr_uses rhs ~f;
     ()

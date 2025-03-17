@@ -54,25 +54,6 @@ module Make (Ir : Ir) = struct
     defs, upward_exposed
   ;;
 
-  let compute_ty_table func =
-    let module Table = Ident.Table in
-    let open Table.Syntax in
-    let table = Table.create () in
-    begin
-      let@: block = Func.iter_blocks func in
-      let@: instr = Block.iter_fwd block in
-      let@: def, ty = Instr.iter_defs_with_ty instr.i in
-      if not (Table.mem table def)
-      then begin
-        table.!(def) <- ty
-      end
-      else begin
-        assert (Ty.equal table.!(def) ty)
-      end
-    end;
-    table
-  ;;
-
   let compute_def_blocks_non_ssa func =
     let defs, _ = compute_defs_and_upward_exposed func in
     defs

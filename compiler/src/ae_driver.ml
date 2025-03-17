@@ -97,10 +97,10 @@ let compile_source_to_asm ?(emit = []) source =
   let%bind tir = compile_source_to_tir ~emit source in
   let%bind () = Tir.Check.check tir in
   let lir = Tir.Lower_lir.lower tir in
-  (* let%bind () = Lir.Check.check lir in *)
+  let%bind () = Lir.Check.check lir in
   if Emit.mem emit Emit.Lir then print_s [%message (lir : Lir.Func.t)];
   let abs_x86 = Lir.Lower_abs_x86.lower lir in
-  (* let%bind () = Abs_x86.Check.check abs_x86 in *)
+  let%bind () = Abs_x86.Check.check abs_x86 in
   if Emit.mem emit Emit.Abs_asm then print_s [%message (abs_x86 : Abs_x86.Func.t)];
   let asm = Abs_x86.Driver.convert abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in

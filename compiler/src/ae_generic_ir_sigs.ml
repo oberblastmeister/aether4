@@ -31,6 +31,15 @@ module type Arg = sig
     val jump_val : t -> Block_call.t option
     val is_jump : t -> bool
     val is_control : t -> bool
+
+    (*
+       Sometimes the type of the use is not directly known just by inspecting the instruction alone.
+      This function only needs to iterate over the *known* types alone with the associated temporary.
+      This is as opposed to definitions which always have a known type by inspecting the instruction alone.
+      For example, for block calls we have to inspect the block parameters of the destination label.
+      For function calls we need to inspect the parameters in function definition.
+    *)
+    val iter_uses_with_known_ty : t -> (Temp.t * Ty.t) Iter.t
     val iter_uses : t -> Temp.t Iter.t
     val iter_defs : t -> Temp.t Iter.t
     val iter_defs_with_ty : t -> (Temp.t * Ty.t) Iter.t
@@ -122,6 +131,7 @@ module type Ir = sig
     val graph : t -> Label.t Graph.t
     val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Immediate.t
     val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
+    val get_ty_table : t -> Ty.t Temp.Table.t
   end
 
   module Edit : sig

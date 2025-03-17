@@ -217,6 +217,9 @@ module Instr = struct
       ~on_use:(fun o -> Operand.iter_any_regs o ~f)
   ;;
 
+  let iter_uses_with_known_ty instr ~f = 
+    todol [%here]
+
   let iter_defs instr ~f =
     iter_operand_use_defs
       instr

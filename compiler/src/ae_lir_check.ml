@@ -1,3 +1,8 @@
-module Check_ssa = Ae_lir_types.Check_ssa
+open Std
+open Ae_lir_types
 
-let check func = Check_ssa.check func
+let check func =
+  let open Or_error.Let_syntax in
+  let%bind () = Check.check func in
+  return ()
+;;

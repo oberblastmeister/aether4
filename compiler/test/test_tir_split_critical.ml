@@ -36,7 +36,7 @@ let%expect_test "smoke" =
         ] )
     ; ( lab "loop"
       , [ ins (Block_params { temps = [ temp "loop1", Int; temp "loop2", Bool ] })
-        ; ins (Jump (Block_call.create (lab "loop")))
+        ; ins (Jump (Block_call.create (lab "loop") ~args:[ temp "loop1"; temp "loop2" ]))
         ] )
     ]
   in
@@ -54,6 +54,7 @@ let%expect_test "smoke" =
     }
   in
   Check.check func |> Or_error.ok_exn;
+  print_s [%message (func : Func.t)];
   let func = Split_critical.split func in
   print_s [%message (func : Func.t)];
   Check.check func |> Or_error.ok_exn;
@@ -68,7 +69,37 @@ let%expect_test "smoke" =
           (body
            (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool))))) (index 0)
              (info ()))
-            ((i (Jump ((label loop@0) (args ())))) (index 1) (info ()))))))
+            ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
+             (info ()))))))
+        (done@1
+         ((label done@1)
+          (body
+           (((i (Block_params (temps ((ret@2 Int))))) (index 0) (info ()))
+            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
+        (start@2
+         ((label start@2)
+          (body
+           (((i (Block_params (temps ()))) (index 0) (info ()))
+            ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
+             (info ()))
+            ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
+             (info ()))
+            ((i
+              (Cond_jump (cond const_bool@4)
+               (b1 ((label loop@0) (args (const_int@3 const_bool@4))))
+               (b2 ((label done@1) (args (const_int@3))))))
+             (index 3) (info ()))))))))
+      (start start@2) (next_temp_id 5) (next_label_id 3)))
+    (func
+     ((name main)
+      (blocks
+       ((loop@0
+         ((label loop@0)
+          (body
+           (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool))))) (index 0)
+             (info ()))
+            ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
+             (info ()))))))
         (done@1
          ((label done@1)
           (body

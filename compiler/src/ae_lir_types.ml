@@ -118,6 +118,32 @@ module Instr = struct
     | Unreachable -> ()
   ;;
 
+  let iter_uses_with_known_ty (instr : t) ~f =
+    match instr with
+    | Unreachable | Block_params { temps = _ } | Nop -> ()
+    | Bin { dst = _; op; src1; src2 } ->
+      let ty : Ty.t =
+        match op with
+        | Add | Sub | Mul | Div | Mod | Lshift | Rshift | Lt | Gt | Le | Ge -> I64
+        | And ty | Or ty | Xor ty | Eq ty -> ty
+      in
+      f (src1, ty);
+      f (src2, ty);
+      ()
+    | Unary { dst = _; op; src } ->
+      (match op with
+       | Copy ty -> f (src, ty));
+      ()
+    | Nullary { dst = _; op = _ } -> ()
+    | Jump _b -> ()
+    | Cond_jump { cond; b1 = _; b2 = _ } ->
+      f (cond, I1);
+      ()
+    | Ret { src; ty } ->
+      f (src, ty);
+      ()
+  ;;
+
   let iter_defs_with_ty (instr : t) ~f =
     match instr with
     | Block_params { temps } -> List.iter temps ~f
