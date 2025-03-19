@@ -154,6 +154,10 @@ module type Ir = sig
     val apply_blocks : ?no_sort:unit -> t -> Block.t Label.Map.t -> Block.t Label.Map.t
   end
 
+  module Program : sig
+    type t = { funcs : Func.t } [@@deriving sexp_of]
+  end
+
   module Std : sig
     module Instr : sig
       include module type of struct

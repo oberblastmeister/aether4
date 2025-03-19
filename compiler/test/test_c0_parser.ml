@@ -17,7 +17,8 @@ let%expect_test "simple" =
     
     }
   |};
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((Func
        ((extern false) (ty (Int 2:5-8)) (name ((t bruh) (span 2:9-13)))
@@ -139,7 +140,8 @@ let%expect_test "simple assign" =
 ;;
 
 let%expect_test "bool" =
-  check {|
+  check
+    {|
     int main() {
           int first = 0;
           int second = 1234;
@@ -147,7 +149,8 @@ let%expect_test "bool" =
           return first + second;
         }
   |};
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((Func
        ((extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
@@ -168,3 +171,61 @@ let%expect_test "bool" =
            (span [2,16]-[7,10]))))
         (span [2,5]-[7,10])))))
     |}]
+;;
+
+let%expect_test "typedef" =
+  check
+    {|
+  typedef testing int;
+  
+  typedef another int;
+  
+  testing main() {
+    testing first = 0;
+  }
+  
+  testing another() {
+    testing second = 1234;
+  }
+  
+  testing another();
+  
+  extern testing another();
+  |};
+  [%expect
+    {|
+    (Ok
+     ((Typedef (ty (Int 2:19-22)) (name ((t testing) (span 2:11-18)))
+       (span 2:3-18))
+      (Typedef (ty (Int 4:19-22)) (name ((t another) (span 4:11-18)))
+       (span 4:3-18))
+      (Func
+       ((extern false) (ty (Ty_var ((t testing) (span 6:3-10))))
+        (name ((t main) (span 6:11-15))) (params ())
+        (body
+         (((block
+            ((Decl (ty (Ty_var ((t testing) (span 7:5-12))))
+              (name ((t first) (span 7:13-18)))
+              (expr ((Int_const ((t 0) (span 7:21))))) (span 7:5-22))))
+           (span [6,18]-[8,4]))))
+        (span [6,3]-[8,4])))
+      (Func
+       ((extern false) (ty (Ty_var ((t testing) (span 10:3-10))))
+        (name ((t another) (span 10:11-18))) (params ())
+        (body
+         (((block
+            ((Decl (ty (Ty_var ((t testing) (span 11:5-12))))
+              (name ((t second) (span 11:13-19)))
+              (expr ((Int_const ((t 1234) (span 11:22-26))))) (span 11:5-26))))
+           (span [10,21]-[12,4]))))
+        (span [10,3]-[12,4])))
+      (Func
+       ((extern false) (ty (Ty_var ((t testing) (span 14:3-10))))
+        (name ((t another) (span 14:11-18))) (params ()) (body ())
+        (span 14:3-20)))
+      (Func
+       ((extern true) (ty (Ty_var ((t testing) (span 16:10-17))))
+        (name ((t another) (span 16:18-25))) (params ()) (body ())
+        (span 16:10-27)))))
+    |}]
+;;

@@ -3,11 +3,6 @@ open Std
 module Span = Ae_span
 module Spanned = Ae_spanned
 
-type ty =
-  | Int of Span.t
-  | Bool of Span.t
-[@@deriving sexp_of]
-
 module Var = struct
   module T = struct
     type t =
@@ -27,6 +22,12 @@ module Var = struct
 end
 
 type var = Var.t [@@deriving sexp_of, compare, hash, equal]
+
+type ty =
+  | Int of Span.t
+  | Bool of Span.t
+  | Ty_var of var
+[@@deriving sexp_of]
 
 type stmt =
   | If of

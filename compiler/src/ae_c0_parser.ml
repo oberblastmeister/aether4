@@ -33,16 +33,6 @@ let expect_eq_ token env =
   Parser.expect (fun t -> if Token.equal t.t token then Some t else None) env |> ignore
 ;;
 
-let parse_ty env : Cst.ty =
-  ((fun env ->
-     let int = expect_eq Int env in
-     Cst.Int int.span)
-   <|> fun env ->
-   let bool = expect_eq Bool env in
-   Cst.Bool bool.span)
-    env
-;;
-
 let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
 
 let spanned_parens p env =
@@ -69,6 +59,19 @@ let chainl ~expr:parse_expr ~op:parse_op ~f env =
   in
   let lhs = parse_expr env in
   loop lhs env
+;;
+
+let parse_ty env : Cst.ty =
+  ((fun env ->
+     let int = expect_eq Int env in
+     Cst.Int int.span)
+   <|> (fun env ->
+   let bool = expect_eq Bool env in
+   Cst.Bool bool.span)
+   <|> fun env ->
+   let var = parse_ident env in
+   Cst.Ty_var var)
+    env
 ;;
 
 let rec parse_block env : Cst.block =
@@ -386,7 +389,7 @@ let parse_func env : Cst.global_decl =
   let ty = parse_ty env in
   let name = parse_ident env in
   let params = parse_params env in
-  let body = Parser.optional parse_block env in
+  let body = (Option.some <$> parse_block <|> (None <$ expect_eq_ Semi)) env in
   let open Span.Syntax in
   Cst.Func
     { extern
@@ -402,15 +405,23 @@ let parse_func env : Cst.global_decl =
 
 let parse_typedef env : Cst.global_decl =
   let typedef = expect_eq Typedef env in
-  let ty = parse_ty env in
-  let name = parse_ident env in
-  Cst.Typedef { ty; name; span = Span.Syntax.(typedef.span ++ name.span) }
+  Parser.cut
+    (Sexp [%message "invalid typedef"])
+    (fun env ->
+       let name = parse_ident env in
+       let ty = parse_ty env in
+       expect_eq_ Semi env;
+       Cst.Typedef { ty; name; span = Span.Syntax.(typedef.span ++ name.span) })
+    env
 ;;
 
 let parse_global_decl env : Cst.global_decl = (parse_func <|> parse_typedef) env
 
 let rec parse_program env : Cst.program =
-  ((fun env -> Parser.many parse_global_decl env)
+  ((fun env ->
+     let res = Parser.many parse_global_decl env in
+     expect_eq_ Eof env;
+     res)
    |> Parser.cut (Sexp [%message "invalid program"]))
     env
 ;;

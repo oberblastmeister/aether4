@@ -76,6 +76,7 @@ let lower_ty (ty : Ast.ty) : Tir.Ty.t =
   match ty with
   | Int _ -> Int
   | Bool _ -> Bool
+  | _ -> todol [%here]
 ;;
 
 let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =

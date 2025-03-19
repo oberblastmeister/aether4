@@ -23,7 +23,8 @@ let%expect_test _ =
      ((t RParen) (span 2:40)) ((t PlusEq) (span 2:42-44))
      ((t StarEq) (span 2:45-47)) ((t SlashEq) (span 2:48-50))
      ((t Int) (span 2:51-54)) ((t (Hexnum 0xFFE12)) (span 2:55-62))
-     ((t (Decnum 1234)) (span 2:63-67)) ((t (Hexnum 0xdeadbeef)) (span 2:68-78)))
+     ((t (Decnum 1234)) (span 2:63-67)) ((t (Hexnum 0xdeadbeef)) (span 2:68-78))
+     ((t Eof) (span 3:3)))
     |}]
 ;;
 
@@ -51,6 +52,6 @@ let%expect_test "comments" =
   [%expect
     {|
     (((t (Decnum 1324)) (span 5:5-9)) ((t (Decnum 1234)) (span 5:10-14))
-     ((t (Ident poawei)) (span 5:15-21)))
+     ((t (Ident poawei)) (span 5:15-21)) ((t Eof) (span 19:5)))
     |}]
 ;;

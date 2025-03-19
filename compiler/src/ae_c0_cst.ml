@@ -2,12 +2,13 @@ open Std
 module Spanned = Ae_spanned
 module Span = Ae_span
 
+type var = string Spanned.t [@@deriving sexp_of]
+
 type ty =
   | Int of Span.t
   | Bool of Span.t
+  | Ty_var of var
 [@@deriving sexp_of]
-
-type var = string Spanned.t [@@deriving sexp_of]
 
 type block =
   { block : stmt list
@@ -190,6 +191,7 @@ let stmt_span (stmt : stmt) =
 let ty_span (ty : ty) =
   match ty with
   | Bool span | Int span -> span
+  | Ty_var { span; _ } -> span
 ;;
 
 let var v = Var v

@@ -28,6 +28,7 @@ let elab_ty _st (ty : Cst.ty) : Ast.ty =
   match ty with
   | Bool span -> Bool span
   | Int span -> Int span
+  | Ty_var _ -> todol [%here]
 ;;
 
 let throw_s s = raise (Exn s)

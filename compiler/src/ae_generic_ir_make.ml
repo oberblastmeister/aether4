@@ -261,6 +261,10 @@ module Make_ir (Arg : Arg) = struct
     ;;
   end
 
+  module Program = struct
+    type t = { funcs : Func.t } [@@deriving sexp_of]
+  end
+
   module Std = struct
     module Instr = struct
       include Instr
