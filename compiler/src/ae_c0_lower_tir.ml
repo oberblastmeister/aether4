@@ -1,7 +1,6 @@
 open Std
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
-open Ae_trace
 module Ast = Ae_c0_ast
 module Tir = Ae_tir_types
 module Entity = Ae_entity_std
@@ -233,6 +232,7 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
            (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src })
        ]
     ++ cont
+  | Call _ -> todol [%here]
 ;;
 
 let lower_program st (program : Ast.program) : Tir.Func.t =

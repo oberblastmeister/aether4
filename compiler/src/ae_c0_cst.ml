@@ -109,6 +109,11 @@ and expr =
       ; else_expr : expr
       ; span : Span.t
       }
+  | Call of
+      { func : var
+      ; args : expr list
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and unary_op =
@@ -172,7 +177,8 @@ let expr_span (expr : expr) =
   | Var { span; _ }
   | Unary { span; _ }
   | Bin { span; _ }
-  | Ternary { span; _ } -> span
+  | Ternary { span; _ }
+  | Call { span; _ } -> span
 ;;
 
 let stmt_span (stmt : stmt) =

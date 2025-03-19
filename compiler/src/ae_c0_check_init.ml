@@ -31,6 +31,9 @@ and iter_expr_uses (expr : Ast.expr) ~f =
     iter_expr_uses lhs ~f;
     iter_expr_uses rhs ~f;
     ()
+  | Call { func = _; args; ty = _; span = _ } ->
+    (List.iter @> iter_expr_uses) args ~f;
+    ()
 
 and expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_list
 

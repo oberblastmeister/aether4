@@ -182,6 +182,7 @@ let%expect_test "typedef" =
   
   testing main() {
     testing first = 0;
+    first(second(first, third));
   }
   
   testing another() {
@@ -206,26 +207,35 @@ let%expect_test "typedef" =
          (((block
             ((Decl (ty (Ty_var ((t testing) (span 7:5-12))))
               (name ((t first) (span 7:13-18)))
-              (expr ((Int_const ((t 0) (span 7:21))))) (span 7:5-22))))
-           (span [6,18]-[8,4]))))
-        (span [6,3]-[8,4])))
+              (expr ((Int_const ((t 0) (span 7:21))))) (span 7:5-22))
+             (Effect
+              (Call (func ((t first) (span 8:5-10)))
+               (args
+                ((Call (func ((t second) (span 8:11-17)))
+                  (args
+                   ((Var ((t first) (span 8:18-23)))
+                    (Var ((t third) (span 8:25-30)))))
+                  (span 8:11-31))))
+               (span 8:5-32)))))
+           (span [6,18]-[9,4]))))
+        (span [6,3]-[9,4])))
       (Func
-       ((extern false) (ty (Ty_var ((t testing) (span 10:3-10))))
-        (name ((t another) (span 10:11-18))) (params ())
+       ((extern false) (ty (Ty_var ((t testing) (span 11:3-10))))
+        (name ((t another) (span 11:11-18))) (params ())
         (body
          (((block
-            ((Decl (ty (Ty_var ((t testing) (span 11:5-12))))
-              (name ((t second) (span 11:13-19)))
-              (expr ((Int_const ((t 1234) (span 11:22-26))))) (span 11:5-26))))
-           (span [10,21]-[12,4]))))
-        (span [10,3]-[12,4])))
+            ((Decl (ty (Ty_var ((t testing) (span 12:5-12))))
+              (name ((t second) (span 12:13-19)))
+              (expr ((Int_const ((t 1234) (span 12:22-26))))) (span 12:5-26))))
+           (span [11,21]-[13,4]))))
+        (span [11,3]-[13,4])))
       (Func
-       ((extern false) (ty (Ty_var ((t testing) (span 14:3-10))))
-        (name ((t another) (span 14:11-18))) (params ()) (body ())
-        (span 14:3-20)))
+       ((extern false) (ty (Ty_var ((t testing) (span 15:3-10))))
+        (name ((t another) (span 15:11-18))) (params ()) (body ())
+        (span 15:3-20)))
       (Func
-       ((extern true) (ty (Ty_var ((t testing) (span 16:10-17))))
-        (name ((t another) (span 16:18-25))) (params ()) (body ())
-        (span 16:10-27)))))
+       ((extern true) (ty (Ty_var ((t testing) (span 17:10-17))))
+        (name ((t another) (span 17:18-25))) (params ()) (body ())
+        (span 17:10-27)))))
     |}]
 ;;

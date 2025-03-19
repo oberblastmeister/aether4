@@ -58,6 +58,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
        let rhs = infer_expr st rhs in
        check_ty_eq st (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
+  | Call { func; args; ty = _; span = _ } -> todol [%here]
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in

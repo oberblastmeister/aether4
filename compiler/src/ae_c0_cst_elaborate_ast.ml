@@ -39,6 +39,12 @@ let elab_var st (var : Cst.var) : Ast.var =
     throw_s [%message "Variable not found" (var : Cst.var)])
 ;;
 
+let elab_func_var st (func_var : Cst.var) : Ast.var =
+  Map.find st.func_context func_var.t
+  |> Option.value_or_thunk ~default:(fun () ->
+    throw_s [%message "Function variable not found" (func_var : Cst.var)])
+;;
+
 let fresh_var st (var : Cst.var) : Ast.var =
   let id : int = !(st.next_temp_id) in
   st.next_temp_id := id + 1;
@@ -236,6 +242,11 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
      | _ ->
        let op = elab_bin_op op in
        Bin { lhs; op; rhs; ty = None; span })
+  | Call { func; args; span } ->
+    if Map.mem st.context func.t then throw_s [%message "Cannot call local variable"];
+    let func = elab_func_var st func in
+    let args = List.map args ~f:(elab_expr st) in
+    Call { func; args; span; ty = None }
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with

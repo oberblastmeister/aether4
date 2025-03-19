@@ -356,8 +356,16 @@ and parse_atom env : Cst.expr =
    <|> parens parse_expr
    <|> (Cst.bool_const <$> parse_true)
    <|> (Cst.bool_const <$> parse_false)
+   <|> parse_call
    <|> (Cst.var <$> parse_ident))
     env
+
+and parse_args env : Cst.expr list = Parser.sep parse_expr ~by:(expect_eq_ Comma) env
+
+and parse_call env : Cst.expr =
+  let func = parse_ident env in
+  let args = spanned_parens parse_args env in
+  Call { func; args = args.t; span = Span.Syntax.(func.span ++ args.span) }
 
 and parse_true = (Parser.map & Spanned.map) (expect_eq True) ~f:(Fn.const true)
 and parse_false = (Parser.map & Spanned.map) (expect_eq False) ~f:(Fn.const false)

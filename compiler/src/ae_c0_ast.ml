@@ -86,6 +86,12 @@ and expr =
       ; ty : ty option
       ; span : Span.t
       }
+  | Call of
+      { func : var
+      ; args : expr list
+      ; ty : ty option
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and bin_op =
@@ -153,7 +159,8 @@ let bool_ty = Bool Span.none
 let int_ty = Int Span.none
 
 let expr_ty_exn = function
-  | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } -> Option.value_exn ty
+  | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } | Call { ty; _ } ->
+    Option.value_exn ty
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
 ;;
