@@ -299,11 +299,6 @@ let spill_instr
    this will insert instructions that redefine temporaries.
    
    every thing that is not spilled must be present in allocation.
-   
-   TODO:
-   the spilling is very wrong.
-   we can only evict registers that are **not currently used**,
-   while we just pick the first available register
 *)
 let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : Func.t) =
   let module Table = Ident.Table in

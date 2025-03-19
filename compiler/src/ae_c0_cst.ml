@@ -16,7 +16,12 @@ type block =
 [@@deriving sexp_of]
 
 and stmt =
-  | Decl of decl
+  | Decl of
+      { ty : ty
+      ; name : var
+      ; expr : expr option
+      ; span : Span.t
+      }
   | Block of block
   | Assign of assign
   | Effect of expr
@@ -131,21 +136,33 @@ and bin_op =
   | Neq
 [@@deriving sexp_of]
 
-and decl =
-  { ty : ty
-  ; name : var
-  ; expr : expr option
+type param =
+  { var : var
+  ; ty : ty
   ; span : Span.t
   }
 [@@deriving sexp_of]
 
-type program =
-  { ty : ty
+type func =
+  { extern : bool
+  ; ty : ty
   ; name : var
-  ; block : block
+  ; params : param list
+  ; body : block option
   ; span : Span.t
   }
 [@@deriving sexp_of]
+
+type global_decl =
+  | Func of func
+  | Typedef of
+      { ty : ty
+      ; name : var
+      ; span : Span.t
+      }
+[@@deriving sexp_of]
+
+type program = global_decl list [@@deriving sexp_of]
 
 let expr_span (expr : expr) =
   match expr with

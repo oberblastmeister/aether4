@@ -11,13 +11,17 @@ exception Exn of Sexp.t
 
 type st =
   { next_temp_id : int ref
+  ; next_func_id : int ref
   ; context : Ast.var String.Map.t
+  ; func_context : Ast.var String.Map.t
   }
 
 let create_state () =
   let next_temp_id = ref 0 in
+  let next_func_id = ref 0 in
   let context = String.Map.empty in
-  { next_temp_id; context }
+  let func_context = String.Map.empty in
+  { next_temp_id; next_func_id; context; func_context }
 ;;
 
 let elab_ty _st (ty : Cst.ty) : Ast.ty =
@@ -40,12 +44,26 @@ let fresh_var st (var : Cst.var) : Ast.var =
   { name = var.t; id; span = var.span }
 ;;
 
+let fresh_func_var st (var : Cst.var) : Ast.var =
+  let id : int = !(st.next_func_id) in
+  st.next_func_id := id + 1;
+  { name = var.t; id; span = var.span }
+;;
+
 let declare_var st (var : Cst.var) : Ast.var * st =
   match Map.find st.context var.t with
   | None ->
     let var' = fresh_var st var in
     var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
   | Some _ -> throw_s [%message "Var was already declared!" (var : Cst.var)]
+;;
+
+let declare_func_var st (var : Cst.var) : Ast.var * st =
+  match Map.find st.context var.t with
+  | None ->
+    let var' = fresh_func_var st var in
+    var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
+  | Some var -> var, st
 ;;
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
@@ -251,11 +269,79 @@ and elab_block st (block : Cst.stmt list) : Ast.block =
   go st block |> Bag.to_list
 ;;
 
+let elab_decl_param st (param : Cst.param) : Ast.param =
+  let var = fresh_var st param.var in
+  let ty = elab_ty st param.ty in
+  { var; ty; span = param.span }
+;;
+
+let elab_decl_param st (func : Cst.func) : Ast.func_sig =
+  let ty = elab_ty st func.ty in
+  let params = List.map ~f:(elab_decl_param st) func.params in
+  { ty; params; span = func.span }
+;;
+
+let elab_defn_param st (param : Cst.param) : Ast.param * st =
+  let var, st' = declare_var st param.var in
+  let ty = elab_ty st' param.ty in
+  { var; ty; span = param.span }, st'
+;;
+
+let elab_defn_params st params =
+  let st = ref st in
+  let res =
+    List.map params ~f:(fun param ->
+      let param, st' = elab_defn_param !st param in
+      st := st';
+      param)
+  in
+  res, !st
+;;
+
+let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
+  match decl with
+  | Cst.Func func ->
+    if func.extern
+    then begin
+      if Option.is_some func.body
+      then throw_s [%message "Extern function must have no body"];
+      let name, st' = declare_func_var st func.name in
+      let func_sig = elab_decl_param st' func in
+      Extern_func_defn { name; ty = func_sig }, st'
+    end
+    else begin
+      match func.body with
+      | None ->
+        let name, st' = declare_func_var st func.name in
+        let func_sig = elab_decl_param st' func in
+        Func_decl { name; ty = func_sig }, st
+      | Some body ->
+        let ty = elab_ty st func.ty in
+        let name, st' = declare_func_var st func.name in
+        let params, st_with_params = elab_defn_params st' func.params in
+        let body = elab_block st_with_params body.block in
+        Func_defn { ty; name; params; body; span = func.span }, st'
+    end
+  | Cst.Typedef typedef ->
+    let ty = elab_ty st typedef.ty in
+    let name, st = declare_var st typedef.name in
+    Ast.Typedef { ty; name; span = typedef.span }, st
+;;
+
 let elab_program st (prog : Cst.program) : Ast.program =
-  let ty = elab_ty st prog.ty in
-  let name = prog.name in
-  let block = elab_block st prog.block.block in
-  { ty; name = name.t; block; span = prog.span }
+  let st = ref st in
+  let res =
+    List.map prog ~f:(fun decl ->
+      let decl, st' = elab_global_decl !st decl in
+      st := st';
+      decl)
+  in
+  let st = !st in
+  let main, _st = declare_func_var st { t = "main"; span = Span.none } in
+  let main_decl =
+    Ast.Func_decl { name = main; ty = { ty = Ast.int_ty; params = []; span = Span.none } }
+  in
+  main_decl :: res
 ;;
 
 let elaborate_program prog =

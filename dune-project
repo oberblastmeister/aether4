@@ -67,7 +67,6 @@
    (= 3.5.1))
   menhir
   (shexp (= v0.17.0))
-  feather
   )
  (tags
   ("add topics" "to describe" your project))

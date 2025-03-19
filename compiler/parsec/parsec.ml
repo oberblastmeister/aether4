@@ -50,6 +50,10 @@ module Make_stream (Token : Token) :
 end
 
 module type Arg = sig
+  module Data : sig
+    type t [@@deriving sexp_of]
+  end
+
   module Error : sig
     type t [@@deriving sexp_of]
   end
@@ -82,10 +86,14 @@ module Make (Arg : Arg) = struct
 
   open Exceptions
 
-  type env = { mutable stream : Stream.t } [@@deriving sexp_of]
+  type env =
+    { data : Data.t
+    ; mutable stream : Stream.t
+    }
+  [@@deriving sexp_of]
 
-  let with_env stream f =
-    let env = { stream } in
+  let with_env data stream f =
+    let env = { data; stream } in
     match f env with
     | exception Error e -> Parse_result.Error e
     | exception Fail -> Parse_result.Fail
@@ -175,6 +183,23 @@ module Make (Arg : Arg) = struct
       p2 env
     ;;
   end
+
+  let sep p ~by env =
+    let open Syntax in
+    let rec loop acc env =
+      ((fun env ->
+         by env;
+         let x = p env in
+         loop (x :: acc) env)
+       <|> fun _env -> List.rev acc)
+        env
+    in
+    ((fun env ->
+       let x = p env in
+       loop [ x ] env)
+     <|> pure [])
+      env
+  ;;
 
   let optional p = Syntax.(Option.some <$> p <|> pure None)
   let either p1 p2 = Syntax.(Either.first <$> p1 <|> (Either.second <$> p2))

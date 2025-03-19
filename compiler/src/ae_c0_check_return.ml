@@ -1,6 +1,10 @@
 open Std
 module Ast = Ae_c0_ast
 
+exception Exn of Error.t
+
+let throw_s s = raise (Exn (Error.create_s s))
+
 let rec block_returns (block : Ast.block) = List.exists block ~f:stmt_returns
 
 and stmt_returns (stmt : Ast.stmt) =
@@ -13,9 +17,22 @@ and stmt_returns (stmt : Ast.stmt) =
   | If { cond = _; body1 = _; body2 = None; span = _ } -> false
 ;;
 
+let check_global_decl (global_decl : Ast.global_decl) =
+  match global_decl with
+  | Ast.Extern_func_defn _ | Ast.Func_decl _ | Ast.Typedef _ -> ()
+  | Ast.Func_defn func ->
+    let does_return = block_returns func.body in
+    if not does_return
+    then
+      throw_s
+        [%message
+          "Function does not return on all control flow paths" (func.name : Ast.var)]
+;;
+
+let check_program (program : Ast.program) = List.iter program ~f:check_global_decl
+
 let check_program (program : Ast.program) =
-  let does_return = block_returns program.block in
-  if does_return
-  then Ok ()
-  else error_s [%message "Program does not return on all control flow paths"]
+  match check_program program with
+  | exception Exn e -> Error e
+  | () -> Ok ()
 ;;

@@ -59,8 +59,16 @@ and check_stmt live (stmt : Ast.stmt) =
     live |> Fn.flip Set.remove lvalue |> Set.union (expr_uses_set expr)
 ;;
 
+let check_global_decl (decl : Ast.global_decl) =
+  match decl with
+  | Func_defn func -> check_block func.body |> ignore
+  | _ -> ()
+;;
+
+let check_program program = List.iter program ~f:check_global_decl
+
 let check_program (program : Ast.program) =
-  match check_block program.block |> ignore with
+  match check_program program with
   | exception Exn s -> error_s s
   | _ -> Ok ()
 ;;

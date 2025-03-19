@@ -12,13 +12,13 @@ module Stream_token = struct
 end
 
 module Stream = Parsec.Make_stream (Stream_token)
-open Ae_trace
 
 module Error = struct
   type t = Sexp of Sexp.t [@@deriving sexp_of]
 end
 
 module Parser = Parsec.Make (struct
+    module Data = Unit
     module Stream = Stream
     module Error = Error
   end)
@@ -45,14 +45,18 @@ let parse_ty env : Cst.ty =
 
 let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
 
-let parens p env =
-  expect_eq_ LParen env;
+let spanned_parens p env =
+  let lparen = expect_eq LParen env in
   let res = p env in
-  expect_eq_ RParen
-  |> Parser.cut (Sexp [%message "expected closing RParen"])
-  |> Fn.( |> ) env;
-  res
+  let rparen =
+    expect_eq RParen
+    |> Parser.cut (Sexp [%message "expected closing RParen"])
+    |> Fn.( |> ) env
+  in
+  { Spanned.t = res; span = Span.Syntax.(lparen.span ++ rparen.span) }
 ;;
+
+let parens p env = (Spanned.value <$> spanned_parens p) env
 
 let chainl ~expr:parse_expr ~op:parse_op ~f env =
   let rec loop lhs env =
@@ -67,21 +71,7 @@ let chainl ~expr:parse_expr ~op:parse_op ~f env =
   loop lhs env
 ;;
 
-let rec parse_program env : Cst.program =
-  ((fun env ->
-     let open Span.Syntax in
-     let ty =
-       (Parser.cut (Sexp [%message "expected return type for function"]) parse_ty) env
-     in
-     let name = parse_ident env in
-     expect_eq_ LParen env;
-     expect_eq_ RParen env;
-     let block = parse_block env in
-     ({ ty; name; block; span = Cst.ty_span ty ++ block.span } : Cst.program))
-   |> Parser.cut (Sexp [%message "invalid program"]))
-    env
-
-and parse_block env : Cst.block =
+let rec parse_block env : Cst.block =
   let open Span.Syntax in
   let lbrace = expect_eq LBrace env in
   let block = Parser.many parse_stmt env in
@@ -109,8 +99,7 @@ and parse_stmt env : Cst.stmt =
 
 and parse_semi_stmt env : Cst.stmt =
   let res =
-    ((fun d -> Cst.Decl d)
-     <$> parse_decl
+    (parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
      <|> parse_return
      <|> parse_post
@@ -189,7 +178,7 @@ and parse_return env : Cst.stmt =
   let expr = parse_expr env in
   Cst.Return { expr; span = ret.span ++ Cst.expr_span expr }
 
-and parse_decl env : Cst.decl =
+and parse_decl env : Cst.stmt =
   let open Span.Syntax in
   let ty = parse_ty env in
   let name = parse_ident env in
@@ -205,13 +194,13 @@ and parse_decl env : Cst.decl =
          expr)
       env
   in
-  ({ ty
-   ; name
-   ; expr
-   ; span =
-       Cst.ty_span ty ++ Option.value_map expr ~f:Cst.expr_span ~default:(Cst.ty_span ty)
-   }
-   : Cst.decl)
+  Cst.Decl
+    { ty
+    ; name
+    ; expr
+    ; span =
+        Cst.ty_span ty ++ Option.value_map expr ~f:Cst.expr_span ~default:(Cst.ty_span ty)
+    }
 
 and parse_post env : Cst.stmt =
   let open Span.Syntax in
@@ -381,9 +370,54 @@ and parse_num env : Z.t Spanned.t =
     env
 ;;
 
+let parse_param env : Cst.param =
+  let open Span.Syntax in
+  let ty = parse_ty env in
+  let var = parse_ident env in
+  { ty; var; span = Cst.ty_span ty ++ var.span }
+;;
+
+let parse_params env : Cst.param list Spanned.t =
+  spanned_parens (Parser.sep parse_param ~by:(expect_eq_ Comma)) env
+;;
+
+let parse_func env : Cst.global_decl =
+  let extern = Parser.optional (expect_eq_ Extern) env |> Option.is_some in
+  let ty = parse_ty env in
+  let name = parse_ident env in
+  let params = parse_params env in
+  let body = Parser.optional parse_block env in
+  let open Span.Syntax in
+  Cst.Func
+    { extern
+    ; ty
+    ; name
+    ; params = params.t
+    ; body
+    ; span =
+        Cst.ty_span ty
+        ++ Option.value_map body ~f:(fun body -> body.span) ~default:params.span
+    }
+;;
+
+let parse_typedef env : Cst.global_decl =
+  let typedef = expect_eq Typedef env in
+  let ty = parse_ty env in
+  let name = parse_ident env in
+  Cst.Typedef { ty; name; span = Span.Syntax.(typedef.span ++ name.span) }
+;;
+
+let parse_global_decl env : Cst.global_decl = (parse_func <|> parse_typedef) env
+
+let rec parse_program env : Cst.program =
+  ((fun env -> Parser.many parse_global_decl env)
+   |> Parser.cut (Sexp [%message "invalid program"]))
+    env
+;;
+
 let parse tokens =
   let stream = Stream.of_chunk tokens in
-  Parser.with_env stream (fun env -> parse_program env)
+  Parser.with_env () stream (fun env -> parse_program env)
   |> Parsec.Parse_result.to_result_exn
   |> Result.map_error ~f:(fun (Sexp s) -> Core.Error.create_s s)
 ;;

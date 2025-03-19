@@ -3,9 +3,21 @@ module Ast = Ae_c0_ast
 
 exception Exn of Sexp.t
 
-type st = { context : Ast.ty Ast.Var.Map.t }
+type st =
+  { context : Ast.ty Ast.Var.Map.t
+  ; declared_funcs : Ast.func_sig Ast.Var.Map.t
+  ; defined_funcs : Ast.Var.Set.t
+  ; typedefs : Ast.ty Ast.Var.Map.t
+  }
 
-let create_state () = { context = Ast.Var.Map.empty }
+let create_state () =
+  { context = Ast.Var.Map.empty
+  ; declared_funcs = Ast.Var.Map.empty
+  ; defined_funcs = Ast.Var.Set.empty
+  ; typedefs = Ast.Var.Map.empty
+  }
+;;
+
 let throw_s s = raise (Exn s)
 
 let var_ty st var =
@@ -93,10 +105,72 @@ and check_block st (block : Ast.block) : Ast.block =
   loop st block
 ;;
 
+let check_func_sig_eq st (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_sig) =
+  let params =
+    match List.zip func_sig1.params func_sig2.params with
+    | Ok t -> t
+    | Unequal_lengths -> throw_s [%message "Parameters had unequal lengths"]
+  in
+  begin
+    let@: param1, param2 = List.iter params in
+    check_ty_eq st param1.ty param2.ty
+  end
+;;
+
+let declare_func st name (func_sig : Ast.func_sig) =
+  match Map.find st.declared_funcs name with
+  | None ->
+    { st with declared_funcs = Map.set st.declared_funcs ~key:name ~data:func_sig }
+  | Some func_sig' ->
+    check_func_sig_eq st func_sig' func_sig;
+    st
+;;
+
+let define_func st name =
+  if Set.mem st.defined_funcs name
+  then throw_s [%message "Function defined multiple times!" (name : Ast.var)];
+  { st with defined_funcs = Set.add st.defined_funcs name }
+;;
+
+let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st =
+  match global_decl with
+  | Ast.Extern_func_defn { name; ty } ->
+    let st = declare_func st name ty in
+    let st = define_func st name in
+    global_decl, st
+  | Ast.Func_decl { name; ty } ->
+    let st = declare_func st name ty in
+    global_decl, st
+  | Ast.Func_defn func ->
+    let st = declare_func st func.name (Ast.func_defn_to_ty func) in
+    let st = define_func st func.name in
+    let st_with_params =
+      List.fold func.params ~init:st ~f:(fun st param ->
+        { st with context = Map.add_exn st.context ~key:param.var ~data:param.ty })
+    in
+    let body = check_block st_with_params func.body in
+    let func = { func with body } in
+    Ast.Func_defn func, st
+  | Ast.Typedef typedef ->
+    ( global_decl
+    , { st with typedefs = Map.add_exn st.typedefs ~key:typedef.name ~data:typedef.ty } )
+;;
+
 let check_program st (prog : Ast.program) =
-  check_ty_eq st Ast.int_ty prog.ty;
-  let block = check_block st prog.block in
-  { prog with block }
+  let res, st =
+    let st = ref st in
+    let res =
+      List.map prog ~f:(fun global_decl ->
+        let global_decl, st' = check_global_decl !st global_decl in
+        st := st';
+        global_decl)
+    in
+    res, !st
+  in
+  Map.iter_keys st.declared_funcs ~f:(fun declared_func ->
+    if not (Set.mem st.defined_funcs declared_func)
+    then throw_s [%message "Declared function was not defined" (declared_func : Ast.var)]);
+  res
 ;;
 
 let check_program prog =

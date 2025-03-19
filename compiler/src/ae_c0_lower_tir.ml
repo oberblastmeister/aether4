@@ -235,16 +235,22 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
 ;;
 
 let lower_program st (program : Ast.program) : Tir.Func.t =
-  let name = program.name in
-  let start_instrs = lower_block st empty program.block in
+  let main_func =
+    List.find_map program ~f:(function
+      | Func_defn func -> Some func
+      | _ -> None)
+    |> Option.value_exn
+  in
+  let name = main_func.name in
+  let start_instrs = lower_block st empty main_func.body in
   let start_label =
-    add_fresh_block ~info:(Span.to_info program.span) ~name:"start" st start_instrs
+    add_fresh_block ~info:(Span.to_info main_func.span) ~name:"start" st start_instrs
   in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
   let blocks = st.blocks in
   let func : Tir.Func.t =
-    { name
+    { name = name.name
     ; blocks =
         blocks |> List.map ~f:(fun b -> b.label, b) |> Entity.Ident.Map.of_alist_exn
     ; start = start_label

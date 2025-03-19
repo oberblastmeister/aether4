@@ -26,6 +26,10 @@ module Make_stream (Token : Token) :
   Stream with module Token = Token and type Chunk.t = Token.t list
 
 module type Arg = sig
+  module Data : sig
+    type t [@@deriving sexp_of]
+  end
+
   module Error : sig
     type t [@@deriving sexp_of]
   end
@@ -55,7 +59,8 @@ module Make (Arg : Arg) : sig
     exception Fail [@@deriving sexp_of]
   end
 
-  val with_env : Stream.t -> (env -> 'a) -> ('a, Error.t) Parse_result.t
+  val sep : 'a t -> by:unit t -> 'a list t
+  val with_env : Data.t -> Stream.t -> (env -> 'a) -> ('a, Error.t) Parse_result.t
   val expect_eq : Token.t -> unit t
   val expect : (Token.t -> 'a option) -> 'a t
   val fail : env -> _

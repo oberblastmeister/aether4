@@ -35,7 +35,6 @@ depends: [
   "base64" {= "3.5.1"}
   "menhir"
   "shexp" {= "v0.17.0"}
-  "feather"
   "odoc" {with-doc}
 ]
 build: [

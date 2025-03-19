@@ -16,6 +16,7 @@ rule lex =
   | decnum { Token.Decnum (Lexing.lexeme lexbuf) }
   | "//" { line_comment lexbuf }
   | "/*" { block_comment 1 lexbuf }
+  | ',' { Token.Comma }
   | ':' { Token.Colon }
   | ';' { Token.Semi }
   | '+' { Token.Plus }
@@ -56,6 +57,8 @@ rule lex =
   | ')' { Token.RParen }
   | '{' { Token.LBrace }
   | '}' { Token.RBrace }
+  | "extern" { Token.Extern }
+  | "typedef" { Token.Typedef }
   | "return" { Token.Return }
   | "if" { Token.If }
   | "else" { Token.Else }

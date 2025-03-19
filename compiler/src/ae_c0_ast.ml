@@ -105,14 +105,49 @@ and bin_op =
   | Rshift
 [@@deriving sexp_of]
 
-type program =
-  { ty : ty
-  ; name : string
-  ; block : block
+type param =
+  { var : var
+  ; ty : ty
   ; span : Span.t
   }
 [@@deriving sexp_of]
 
+type func_sig =
+  { ty : ty
+  ; params : param list
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
+type func_defn =
+  { ty : ty
+  ; name : var
+  ; params : param list
+  ; body : block
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
+type global_decl =
+  | Extern_func_defn of
+      { name : var
+      ; ty : func_sig
+      }
+  | Func_decl of
+      { name : var
+      ; ty : func_sig
+      }
+  | Func_defn of func_defn
+  | Typedef of
+      { ty : ty
+      ; name : var
+      ; span : Span.t
+      }
+[@@deriving sexp_of]
+
+type program = global_decl list [@@deriving sexp_of]
+
+let func_defn_to_ty func = { ty = func.ty; params = func.params; span = func.span }
 let bool_ty = Bool Span.none
 let int_ty = Int Span.none
 

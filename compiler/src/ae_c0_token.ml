@@ -5,6 +5,8 @@ type t =
   | Hexnum of string
   | Decnum of string
   | Semi
+  | Extern
+  | Typedef
   | Colon
   | Plus
   | Question
@@ -21,6 +23,7 @@ type t =
   | StarEq
   | SlashEq
   | PercentEq
+  | Comma
   | PlusPlus
   | DashDash
   | Langle
