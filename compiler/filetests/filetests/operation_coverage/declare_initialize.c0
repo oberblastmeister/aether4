@@ -1,8 +1,10 @@
 /*
-( (kind (CompileAndRun)) )
+(
+ (kind (CompileAndRun))
+)
 */
 
-int first() {
+int main() {
     int first;
     int second;
     first = 1234;

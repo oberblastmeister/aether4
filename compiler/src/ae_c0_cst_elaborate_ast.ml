@@ -59,10 +59,10 @@ let declare_var st (var : Cst.var) : Ast.var * st =
 ;;
 
 let declare_func_var st (var : Cst.var) : Ast.var * st =
-  match Map.find st.context var.t with
+  match Map.find st.func_context var.t with
   | None ->
     let var' = fresh_func_var st var in
-    var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
+    var', { st with func_context = Map.add_exn st.func_context ~key:var.t ~data:var' }
   | Some var -> var, st
 ;;
 

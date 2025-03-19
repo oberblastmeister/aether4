@@ -1,4 +1,4 @@
-int first() {
+int main() {
     int first = 12 + 1234 % 1234 * 12 / 2;
     int second = first + 12;
     second += first + second;
