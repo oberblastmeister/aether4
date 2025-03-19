@@ -12,23 +12,20 @@ exception Exn of Sexp.t
 type st =
   { next_temp_id : int ref
   ; next_func_id : int ref
+  ; next_type_id : int ref
   ; context : Ast.var String.Map.t
   ; func_context : Ast.var String.Map.t
+  ; typedef_context : Ast.var String.Map.t
   }
 
 let create_state () =
   let next_temp_id = ref 0 in
   let next_func_id = ref 0 in
+  let next_type_id = ref 0 in
   let context = String.Map.empty in
   let func_context = String.Map.empty in
-  { next_temp_id; next_func_id; context; func_context }
-;;
-
-let elab_ty _st (ty : Cst.ty) : Ast.ty =
-  match ty with
-  | Bool span -> Bool span
-  | Int span -> Int span
-  | Ty_var _ -> todol [%here]
+  let typedef_context = String.Map.empty in
+  { next_temp_id; next_func_id; next_type_id; context; func_context; typedef_context }
 ;;
 
 let throw_s s = raise (Exn s)
@@ -57,15 +54,38 @@ let fresh_func_var st (var : Cst.var) : Ast.var =
   { name = var.t; id; span = var.span }
 ;;
 
+let fresh_typedef_var st (var : Cst.var) : Ast.var =
+  let id : int = !(st.next_type_id) in
+  st.next_type_id := id + 1;
+  { name = var.t; id; span = var.span }
+;;
+
+let declare_typedef_var st (var : Cst.var) : Ast.var * st =
+  assert (Map.is_empty st.context);
+  if Map.mem st.func_context var.t
+  then
+    throw_s [%message "Cannot declare typedef with same name as function" (var : Cst.var)];
+  if Map.mem st.typedef_context var.t
+  then
+    throw_s
+      [%message
+        "Cannot declare typedef with same name as existing typedef" (var : Cst.var)];
+  let var' = fresh_typedef_var st var in
+  var', { st with typedef_context = Map.add_exn st.typedef_context ~key:var.t ~data:var' }
+;;
+
 let declare_var st (var : Cst.var) : Ast.var * st =
-  match Map.find st.context var.t with
-  | None ->
-    let var' = fresh_var st var in
-    var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
-  | Some _ -> throw_s [%message "Var was already declared!" (var : Cst.var)]
+  if Map.mem st.typedef_context var.t
+  then throw_s [%message "Cannot declare var with same name as typedef" (var : Cst.var)];
+  if Map.mem st.context var.t
+  then throw_s [%message "Var was already declared!" (var : Cst.var)];
+  let var' = fresh_var st var in
+  var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
 ;;
 
 let declare_func_var st (var : Cst.var) : Ast.var * st =
+  if Map.mem st.typedef_context var.t
+  then throw_s [%message "Cannot declare func with same name as typedef" (var : Cst.var)];
   match Map.find st.func_context var.t with
   | None ->
     let var' = fresh_func_var st var in
@@ -73,11 +93,25 @@ let declare_func_var st (var : Cst.var) : Ast.var * st =
   | Some var -> var, st
 ;;
 
+let elab_ty st (ty : Cst.ty) : Ast.ty =
+  match ty with
+  | Bool span -> Bool span
+  | Int span -> Int span
+  | Void span -> Void span
+  | Ty_var var ->
+    let var = elab_var st var in
+    Ty_var var
+;;
+
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
   | Decl { ty; name; expr; span } ->
+    (match ty with
+     | Void span ->
+       throw_s [%message "Variable declarations cannot have type void" (span : Span.t)]
+     | _ -> ());
     let var, st' = declare_var st name in
-    let ty = elab_ty st ty in
+    let ty = elab_ty st' ty in
     let stmts =
       match expr with
       | None -> empty +> Ast.[ Declare { ty; var; span } ]
@@ -283,6 +317,10 @@ and elab_block st (block : Cst.stmt list) : Ast.block =
 
 let elab_decl_param st (param : Cst.param) : Ast.param =
   let var = fresh_var st param.var in
+  (match param.ty with
+   | Void span ->
+     throw_s [%message "Function parameters cannot have type void" (span : Span.t)]
+   | _ -> ());
   let ty = elab_ty st param.ty in
   { var; ty; span = param.span }
 ;;
@@ -295,6 +333,10 @@ let elab_decl_param st (func : Cst.func) : Ast.func_sig =
 
 let elab_defn_param st (param : Cst.param) : Ast.param * st =
   let var, st' = declare_var st param.var in
+  (match param.ty with
+   | Void span ->
+     throw_s [%message "Function parameters cannot have type void" (span : Span.t)]
+   | _ -> ());
   let ty = elab_ty st' param.ty in
   { var; ty; span = param.span }, st'
 ;;

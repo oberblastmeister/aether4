@@ -106,11 +106,12 @@ and check_block st (block : Ast.block) : Ast.block =
   loop st block
 ;;
 
-let check_func_sig_eq st (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_sig) =
+let check_func_sig_eq st name (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_sig) =
   let params =
     match List.zip func_sig1.params func_sig2.params with
     | Ok t -> t
-    | Unequal_lengths -> throw_s [%message "Parameters had unequal lengths"]
+    | Unequal_lengths ->
+      throw_s [%message "Parameters had unequal lengths" (name : Ast.var)]
   in
   begin
     let@: param1, param2 = List.iter params in
@@ -123,7 +124,7 @@ let declare_func st name (func_sig : Ast.func_sig) =
   | None ->
     { st with declared_funcs = Map.set st.declared_funcs ~key:name ~data:func_sig }
   | Some func_sig' ->
-    check_func_sig_eq st func_sig' func_sig;
+    check_func_sig_eq st name func_sig' func_sig;
     st
 ;;
 

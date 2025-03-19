@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    return 0;
+}
+
+int another(void first, void second) {
+    return 0;
+}
+----
+("Function parameters cannot have type void" (span 9:13-17))

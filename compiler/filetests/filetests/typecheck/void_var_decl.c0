@@ -1,0 +1,10 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+    void first;
+    return 0;
+}
+----
+("Variable declarations cannot have type void" (span 6:5-9))

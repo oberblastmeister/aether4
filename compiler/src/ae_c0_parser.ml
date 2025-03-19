@@ -68,6 +68,9 @@ let parse_ty env : Cst.ty =
    <|> (fun env ->
    let bool = expect_eq Bool env in
    Cst.Bool bool.span)
+   <|> (fun env ->
+   let void = expect_eq Void env in
+   Cst.Void void.span)
    <|> fun env ->
    let var = parse_ident env in
    Cst.Ty_var var)

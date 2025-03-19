@@ -66,6 +66,7 @@ rule lex =
   | "for" { Token.For }
   | "int" { Token.Int }
   | "bool" { Token.Bool }
+  | "void" { Token.Void }
   | "true" { Token.True }
   | "false" { Token.False }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }

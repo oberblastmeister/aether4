@@ -56,6 +56,7 @@ type t =
   | Else
   | While
   | For
+  | Void
   | Unknown of string
   | Eof
 [@@deriving sexp_of, equal, compare, variants]

@@ -26,6 +26,7 @@ type var = Var.t [@@deriving sexp_of, compare, hash, equal]
 type ty =
   | Int of Span.t
   | Bool of Span.t
+  | Void of Span.t
   | Ty_var of var
 [@@deriving sexp_of]
 
