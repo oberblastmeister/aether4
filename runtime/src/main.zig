@@ -2,6 +2,12 @@ const std = @import("std");
 
 extern fn _c0_main() i64;
 
+export fn _runtime_assert()
+export fn _runtime_assert(b: bool) void {
+    if (!b) {
+        std.debug.pani
+    }
+}
 export fn main() void {
     const res = _c0_main();
     std.io.getStdOut().writer().print("{}\n", .{res}) catch unreachable;
