@@ -62,7 +62,13 @@ module Block_param = struct
   let to_tuple2 { param; ty } = param, ty
 end
 
-module Block_call = Ae_block_call.Make (Temp)
+module Block_call = struct
+  type t =
+    { label : Label.t
+    ; args : Temp.t list
+    }
+  [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+end
 
 module Instr = struct
   type t =
@@ -128,12 +134,12 @@ module Instr = struct
       ()
     | Nullary { dst = _; op = _ } -> ()
     | Jump b ->
-      Block_call.iter_uses b ~f;
+      List.iter b.args ~f;
       ()
     | Cond_jump { cond; b1; b2 } ->
       f cond;
-      Block_call.iter_uses b1 ~f;
-      Block_call.iter_uses b2 ~f;
+      List.iter b1.args ~f;
+      List.iter b2.args ~f;
       ()
     | Ret { src; ty = _ } ->
       f src;
@@ -232,12 +238,12 @@ module Instr = struct
       Unary { p with src }
     | Nullary _ -> instr
     | Jump j ->
-      let j = Block_call.map_uses j ~f in
+      let j = (Traverse.of_field Block_call.Fields.args & List.map) j ~f in
       Jump j
     | Cond_jump { cond; b1; b2 } ->
       let cond = f cond in
-      let b1 = Block_call.map_uses b1 ~f in
-      let b2 = Block_call.map_uses b2 ~f in
+      let b1 = (Traverse.of_field Block_call.Fields.args & List.map) b1 ~f in
+      let b2 = (Traverse.of_field Block_call.Fields.args & List.map) b2 ~f in
       Cond_jump { cond; b1; b2 }
     | Ret p ->
       let src = f p.src in

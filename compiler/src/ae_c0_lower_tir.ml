@@ -12,7 +12,7 @@ open Bag.Syntax
 
 let empty = Bag.empty
 let ins = Tir.Instr'.create_unindexed
-let bc ?(args = []) label = Tir.Block_call.create label args
+let bc ?(args = []) label = { Tir.Block_call.label; args }
 
 type st =
   { temp_gen : Tir.Temp_entity.Witness.t Id_gen.t
@@ -56,10 +56,7 @@ let add_block ?info t label instrs =
     Tir.Block.create
       label
       (Bag.to_arrayp
-         (empty
-          +> [ ins ?info (Block_params []) ]
-          ++ instrs
-          +> [ ins ?info Unreachable ]))
+         (empty +> [ ins ?info (Block_params []) ] ++ instrs +> [ ins ?info Unreachable ]))
   in
   t.blocks <- block :: t.blocks;
   ()

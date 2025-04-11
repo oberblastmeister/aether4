@@ -23,12 +23,12 @@ module Make (Ir : Ir) = struct
       Block.find_block_params dst_block
       |> Instr'.instr
       |> Instr.block_params_val
-      |> Option.value_exn in
-    let block_param_tys = List.map block_params ~f:Block_param.ty
+      |> Option.value_exn
     in
+    let block_param_tys = List.map block_params ~f:Block_param.ty in
     let temp_with_ty =
       (* TODO: fix this and use the Location *)
-      let args = Iter.to_list (Block_call.iter_uses block_call) in
+      let args = List.iter block_call.args |> Iter.to_list in
       match List.zip args block_param_tys with
       | Ok t -> t
       | Unequal_lengths ->

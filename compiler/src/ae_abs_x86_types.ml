@@ -110,7 +110,13 @@ module Location = struct
   let of_temp t = Temp t
 end
 
-module Block_call = Ae_block_call.Make (Location)
+module Block_call = struct
+  type t =
+    { label : Label.t
+    ; args : Location.t list
+    }
+  [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+end
 
 module Cond_expr = struct
   type t =
@@ -193,7 +199,7 @@ module Instr = struct
         params
         ~f:(fun temp -> on_def (Operand.Reg temp))
     | Jump b ->
-      (Block_call.iter_uses @> Location.iter_temp) b ~f:(fun r -> on_use (Operand.Reg r));
+      (List.iter @> Location.iter_temp) b.args ~f:(fun r -> on_use (Operand.Reg r));
       ()
     | Cond_jump { cond; b1; b2 } ->
       (match cond with
@@ -201,8 +207,8 @@ module Instr = struct
        | Bin { src1; op = _; src2 } ->
          on_use src1;
          on_use src2);
-      (Block_call.iter_uses @> Location.iter_temp) b1 ~f:(fun r -> on_use (Reg r));
-      (Block_call.iter_uses @> Location.iter_temp) b2 ~f:(fun r -> on_use (Reg r));
+      (List.iter @> Location.iter_temp) b1.args ~f:(fun r -> on_use (Reg r));
+      (List.iter @> Location.iter_temp) b2.args ~f:(fun r -> on_use (Reg r));
       ()
     | Mov { dst; src; size = _ } ->
       on_use src;
@@ -240,7 +246,11 @@ module Instr = struct
       let params = mapper params ~f:(fun x -> map_temp ~f:on_def x) in
       Block_params params
     | Jump bc ->
-      let bc = (Block_call.map_uses & Location.map_temp) bc ~f:(map_temp ~f:on_use) in
+      let bc =
+        (Traverse.of_field Block_call.Fields.args & List.map & Location.map_temp)
+          bc
+          ~f:(map_temp ~f:on_use)
+      in
       Jump bc
     | Cond_jump { cond; b1; b2 } ->
       let cond : Cond_expr.t =
@@ -253,8 +263,16 @@ module Instr = struct
           let src2 = on_use src2 in
           Bin { src1; op; src2 }
       in
-      let b1 = (Block_call.map_uses & Location.map_temp) b1 ~f:(map_temp ~f:on_use) in
-      let b2 = (Block_call.map_uses & Location.map_temp) b2 ~f:(map_temp ~f:on_use) in
+      let b1 =
+        (Traverse.of_field Block_call.Fields.args & List.map & Location.map_temp)
+          b1
+          ~f:(map_temp ~f:on_use)
+      in
+      let b2 =
+        (Traverse.of_field Block_call.Fields.args & List.map & Location.map_temp)
+          b2
+          ~f:(map_temp ~f:on_use)
+      in
       Cond_jump { cond; b1; b2 }
     | Mov { dst; src; size } ->
       let src = on_use src in

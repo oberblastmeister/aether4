@@ -25,7 +25,9 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         dst_block.label
         { dst_block_params_instr with i = Instr.Block_params [] };
       let (`params dst_block_params) =
-        let params = Instr.block_params_val dst_block_params_instr.i |> Option.value_exn in
+        let params =
+          Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
+        in
         `params params
       in
       let module M = struct
@@ -37,8 +39,7 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
       end
       in
       let parallel_moves =
-        let args = Block_call.iter_uses block_call |> Iter.to_list in
-        List.zip_exn dst_block_params args
+        List.zip_exn dst_block_params block_call.args
         |> List.map ~f:(fun (param, src) ->
           ({ dst = param.param; src; size = param.ty } : _ M.t))
       in
@@ -85,7 +86,7 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
           (List.map sequential_moves ~f:(fun move ->
              Instr'.create move (dst_block_params_instr.index + 1)))
       end;
-      Block_call.create (Block_call.label block_call) []
+      { label = Block_call.label block_call; args = [] }
     in
     Multi_edit.add_replace edit block.label jump_instr
   end;

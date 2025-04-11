@@ -52,7 +52,13 @@ module Nullary_op = struct
   [@@deriving sexp_of]
 end
 
-module Block_call = Ae_block_call.Make (Temp)
+module Block_call = struct
+  type t =
+    { label : Label.t
+    ; args : Temp.t list
+    }
+  [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+end
 
 module Block_param = struct
   type t =
@@ -126,12 +132,12 @@ module Instr = struct
       ()
     | Nullary _ -> ()
     | Jump b ->
-      Block_call.iter_uses b ~f;
+      List.iter b.args ~f;
       ()
     | Cond_jump { cond; b1; b2 } ->
       f cond;
-      Block_call.iter_uses b1 ~f;
-      Block_call.iter_uses b2 ~f;
+      List.iter b1.args ~f;
+      List.iter b2.args ~f;
       ()
     | Ret { src; ty = _ } ->
       f src;

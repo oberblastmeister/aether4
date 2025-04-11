@@ -46,7 +46,7 @@ module Make (Ir : Ir) = struct
     label_to_phis
   ;;
 
-  (* let convert (func : Func.t) =
+  let convert (func : Func.t) =
     let module Table = Entity.Ident.Table in
     let open Table.Syntax in
     let idoms = Func.compute_idoms func in
@@ -74,12 +74,15 @@ module Make (Ir : Ir) = struct
           let@: instr = Instr'.map instr in
           let instr =
             match instr with
-            | Block_params { temps } ->
+            | _ when Instr.is_block_params instr ->
+              let params = Instr.block_params_val instr |> Option.value_exn in
               let phis = Table.find_multi block_to_phis block.label in
-              let temps =
-                temps @ List.map phis ~f:(fun temp -> temp, def_to_ty.!(temp))
+              let params =
+                params
+                @ List.map phis ~f:(fun temp ->
+                  { Block_param.param = Location.of_temp temp; ty = def_to_ty.!(temp) })
               in
-              Instr.Block_params { temps }
+              Instr.block_params params
             | _ -> instr
           in
           let instr =
@@ -96,7 +99,7 @@ module Make (Ir : Ir) = struct
             let@: block_call = Instr.map_block_calls instr in
             let new_args =
               Table.find_multi block_to_phis block_call.label
-              |> List.map ~f:find_renamed_temp
+              |> List.map ~f:(fun temp -> Location.of_temp (find_renamed_temp temp))
             in
             { block_call with args = block_call.args @ new_args }
           in
@@ -122,5 +125,5 @@ module Make (Ir : Ir) = struct
         |> Multi_edit.apply_blocks ~no_sort:() multi_edit
     ; next_temp_id = Id_gen.next temp_gen
     }
-  ;; *)
+  ;;
 end

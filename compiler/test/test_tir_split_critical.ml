@@ -24,8 +24,8 @@ let%expect_test "smoke" =
             (Cond_jump
                { cond = temp "const_bool"
                ; b1 =
-                   Block_call.create (lab "loop") [ temp "const_int"; temp "const_bool" ]
-               ; b2 = Block_call.create (lab "done") [ temp "const_int" ]
+                   { label = lab "loop"; args = [ temp "const_int"; temp "const_bool" ] }
+               ; b2 = { label = lab "done"; args = [ temp "const_int" ] }
                })
         ] )
     ; ( lab "done"
@@ -36,7 +36,7 @@ let%expect_test "smoke" =
       , [ ins
             (Block_params
                [ { param = temp "loop1"; ty = Int }; { param = temp "loop2"; ty = Bool } ])
-        ; ins (Jump (Block_call.create (lab "loop") [ temp "loop1"; temp "loop2" ]))
+        ; ins (Jump { label = lab "loop"; args = [ temp "loop1"; temp "loop2" ] })
         ] )
     ]
   in

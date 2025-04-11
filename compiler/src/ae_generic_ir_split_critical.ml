@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
-  open Make_std(Ir)
+  open Make_std (Ir)
 
   let split (func : Func.t) =
     let module Table = Ident.Table in
@@ -23,10 +23,7 @@ module Make (Ir : Ir) = struct
           if List.length preds > 1
           then begin
             let new_label = Ident.freshen label_gen (Block_call.label block_call) in
-            Multi_edit.add_insert
-              edit
-              new_label
-              (Instr'.create (Instr.block_params []) 0);
+            Multi_edit.add_insert edit new_label (Instr'.create (Instr.block_params []) 0);
             (* this block jumps to the original destination *)
             Multi_edit.add_insert edit new_label (Instr'.create (Instr.jump block_call) 0);
             (* override the original jump to the new label *)
@@ -38,7 +35,7 @@ module Make (Ir : Ir) = struct
                      Label.equal
                        (Block_call.label block_call')
                        (Block_call.label block_call)
-                   then Block_call.create new_label []
+                   then { label = new_label; args = [] }
                    else block_call')
                end
           end;

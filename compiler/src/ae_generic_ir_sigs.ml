@@ -33,12 +33,19 @@ module type Arg = sig
     [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
   end
 
-  module Block_call : Block_call.Make_S(Location).S
+  module Block_call : sig
+    type t =
+      { label : Label.t
+      ; args : Location.t list
+      }
+    [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+  end
 
   module Instr : sig
     type t [@@deriving sexp_of]
 
-    val nop : t val is_nop : t -> bool
+    val nop : t
+    val is_nop : t -> bool
     val block_params : Block_param.t list -> t
     val is_block_params : t -> bool
     val block_params_val : t -> Block_param.t list option
