@@ -2,8 +2,8 @@ open Std
 open Ae_abs_x86_types
 
 module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
-    module Temp = Vreg
-    module Ty = Size
+    module Temp = Temp
+    module Ty = Ty
   end)
 
 open Sequentialize_parallel_moves
@@ -32,7 +32,7 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         type ('d, 's) t =
           { dst : 'd
           ; src : 's
-          ; size : Size.t
+          ; size : Ty.t
           }
       end
       in
@@ -42,18 +42,18 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         |> List.map ~f:(fun (param, src) ->
           ({ dst = param.param; src; size = param.ty } : _ M.t))
       in
-      let moves_slot_loc, moves_vreg_vreg, moves_loc_slot =
+      let moves_slot_loc, moves_temp_temp, moves_loc_slot =
         List.partition3_map parallel_moves ~f:(fun move ->
           match move.dst, move.src with
           | Slot _, _ -> `Fst move
-          | Vreg dst, Vreg src -> `Snd { move with dst; src }
+          | Temp dst, Temp src -> `Snd { move with dst; src }
           | _, Slot _ -> `Trd move)
       in
       let sequential_moves =
         Sequentialize_parallel_moves.sequentialize
           ~in_same_reg
           ~get_scratch
-          (List.map moves_vreg_vreg ~f:(fun { dst; src; size } ->
+          (List.map moves_temp_temp ~f:(fun { dst; src; size } ->
              { Move.dst; src; ty = size }))
       in
       let sequential_moves =
@@ -64,10 +64,10 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
             ; size = t.size
             }
         in
-        (* these go before so the loc which may be vreg does not get clobbered *)
+        (* these go before so the loc which may be temp does not get clobbered *)
         List.map moves_slot_loc ~f:into
         @ List.map sequential_moves ~f:move_to_instr
-        (* These go after so we don't clobber the loc which may be vreg *)
+        (* These go after so we don't clobber the loc which may be temp *)
         @ List.map moves_loc_slot ~f:into
       in
       (* TODO: test both of these cases *)

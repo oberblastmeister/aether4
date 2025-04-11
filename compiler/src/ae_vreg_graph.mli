@@ -1,10 +1,10 @@
 open Std
-module Vreg_entity := Ae_vreg_entity
-module Vreg_id := Vreg_entity.Id
+module Temp_entity := Ae_abs_asm_temp_entity
+module Temp_id := Temp_entity.Id
 
 type t
 
 val create : size:int -> t
-val mem : t -> Vreg_id.t -> bool
-val iter_nodes : t -> Vreg_id.t Iter.t
-val iter_neighbors : t -> Vreg_id.t -> Vreg_id.t Iter.t
+val mem : t -> Temp_id.t -> bool
+val iter_nodes : t -> Temp_id.t Iter.t
+val iter_neighbors : t -> Temp_id.t -> Temp_id.t Iter.t

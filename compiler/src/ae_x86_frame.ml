@@ -3,7 +3,7 @@ module Stack_slot_entity = Ae_stack_slot_entity
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
 module Stack_slot = Stack_slot_entity.Ident
-module Size = Ae_x86_size
+module Ty = Ae_x86_ty
 module Table = Ident.Table
 
 module Layout = struct
@@ -23,7 +23,7 @@ module Layout = struct
 end
 
 module Builder = struct
-  type t = { table : Size.t Stack_slot.Table.t } [@@deriving sexp_of]
+  type t = { table : Ty.t Stack_slot.Table.t } [@@deriving sexp_of]
 
   let create () =
     let table = Table.create () in
@@ -45,7 +45,7 @@ module Builder = struct
     begin
       let@: slot, size = Table.iteri t.table in
       layout_table.!(slot) <- !offset;
-      offset := !offset + Int.round_up ~to_multiple_of:8 (Size.to_bytes size)
+      offset := !offset + Int.round_up ~to_multiple_of:8 (Ty.to_bytes size)
     end;
     (* (* make sure to align to 16 bits so calls are correct *)
     (* since the stack is 16 byte aligned before the call,

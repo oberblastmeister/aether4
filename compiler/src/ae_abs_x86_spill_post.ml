@@ -83,9 +83,9 @@ let spill_instr
   let evict_some_mach_reg =
     (*
        There are always enough evictable colors.
-      There are a maxmium of 6 vregs used per instruction.
-      Assume that each vreg was allocated a different machine register.
-      Then each spilled vreg is one vreg that wasn't used.
+      There are a maxmium of 6 temps used per instruction.
+      Assume that each temp was allocated a different machine register.
+      Then each spilled temp is one temp that wasn't used.
       We also have to add two due to the precolored registers.
     *)
     let evictable_mach_regs =

@@ -15,7 +15,7 @@ module Int_table = Entity.Table.Int_table
     let color_to_global_evicted = Int_table.create () in
     fun color ->
       Int_table.find_or_add color_to_global_evicted color ~default:(fun () ->
-        let temp = Vreg_intern.fresh ~name:"evicted" () in
+        let temp = Temp_intern.fresh ~name:"evicted" () in
         let stack_slot = Frame.Builder.alloc ~name:"evicted_slot" frame_builder Qword in
         coloring.!(temp) <- color;
         temp, stack_slot)
@@ -35,12 +35,12 @@ module Int_table = Entity.Table.Int_table
 
 let%expect_test _ =
   check
-    [ vreg "tmp1", 0; vreg "tmp2", 1; vreg "tmp3", 2 ]
+    [ temp "tmp1", 0; temp "tmp2", 1; temp "tmp3", 2 ]
     (Bin
-       { dst = Reg (vreg "tmp1")
+       { dst = Reg (temp "tmp1")
        ; op = Add
-       ; src1 = Reg (vreg "tmp2")
-       ; src2 = Reg (vreg "tmp3")
+       ; src1 = Reg (temp "tmp2")
+       ; src2 = Reg (temp "tmp3")
        });
   [%expect
     {|
@@ -60,12 +60,12 @@ let%expect_test _ =
 
 let%expect_test _ =
   check
-    [ vreg "tmp1", 3; vreg "tmp2", 4; vreg "tmp3", 5 ]
+    [ temp "tmp1", 3; temp "tmp2", 4; temp "tmp3", 5 ]
     (Bin
-       { dst = Reg (vreg "tmp1")
+       { dst = Reg (temp "tmp1")
        ; op = Add
-       ; src1 = Reg (vreg "tmp2")
-       ; src2 = Reg (vreg "tmp3")
+       ; src1 = Reg (temp "tmp2")
+       ; src2 = Reg (temp "tmp3")
        });
   [%expect
     {| ((Bin (dst (Reg tmp1@2)) (op Add) (src1 (Reg tmp2@1)) (src2 (Reg tmp3@0)))) |}]
@@ -73,12 +73,12 @@ let%expect_test _ =
 
 let%expect_test _ =
   check
-    [ vreg "tmp1", 1; vreg "tmp2", 4; vreg "tmp3", 5 ]
+    [ temp "tmp1", 1; temp "tmp2", 4; temp "tmp3", 5 ]
     (Bin
-       { dst = Reg (vreg "tmp1")
+       { dst = Reg (temp "tmp1")
        ; op = Add
-       ; src1 = Reg (vreg "tmp2")
-       ; src2 = Reg (vreg "tmp3")
+       ; src1 = Reg (temp "tmp2")
+       ; src2 = Reg (temp "tmp3")
        });
   [%expect
     {|

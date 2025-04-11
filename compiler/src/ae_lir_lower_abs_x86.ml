@@ -18,9 +18,9 @@ let ins = Abs_x86.Instr'.create_unindexed
 open Bag.Syntax
 
 type st =
-  { temp_gen : Abs_x86.Vreg_entity.Witness.t Id_gen.t
+  { temp_gen : Abs_x86.Temp_entity.Witness.t Id_gen.t
   ; label_gen : Label_entity.Witness.t Id_gen.t
-  ; lir_to_abs_x86 : Abs_x86.Vreg.t Lir.Temp.Table.t
+  ; lir_to_abs_x86 : Abs_x86.Temp.t Lir.Temp.Table.t
   }
 
 let create_state func =
@@ -30,19 +30,19 @@ let create_state func =
   }
 ;;
 
-let fresh_temp ?name ?info st : Abs_x86.Vreg.t =
+let fresh_temp ?name ?info st : Abs_x86.Temp.t =
   Entity.Ident.fresh ?name ?info st.temp_gen
 ;;
 
-let get_vreg st temp =
+let get_temp st temp =
   Table.find_or_add st.lir_to_abs_x86 temp ~default:(fun () ->
     fresh_temp ~name:temp.name ?info:temp.info st)
 ;;
 
-let get_operand st temp = Abs_x86.Operand.Reg (get_vreg st temp)
+let get_operand st temp = Abs_x86.Operand.Reg (get_temp st temp)
 let fresh_operand ?name ?info st = Abs_x86.Operand.Reg (fresh_temp ?name ?info st)
 
-let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
+let lower_ty (ty : Lir.Ty.t) : Abs_x86.Ty.t =
   match ty with
   | I64 -> Qword
   | I1 -> Dword
@@ -50,7 +50,7 @@ let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
 
 let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
   { label = b.label
-  ; args = List.map b.args ~f:(fun temp -> Abs_x86.Location.Vreg (get_vreg st temp))
+  ; args = List.map b.args ~f:(fun temp -> Abs_x86.Location.Temp (get_temp st temp))
   }
 ;;
 
@@ -64,9 +64,9 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
     +> [ ins
            (Block_params
              (List.map params ~f:(fun param ->
-               let vreg = get_vreg st param.Lir.Block_param.param in
+               let temp = get_temp st param.Lir.Block_param.param in
                let ty = lower_ty param.Lir.Block_param.ty in
-               { Abs_x86.Block_param.param = Vreg vreg; ty }))
+               { Abs_x86.Block_param.param = Temp temp; ty }))
            )
        ]
   | Nop -> empty +> [ ins Nop ]

@@ -11,7 +11,7 @@ module Address = struct
   type t = Mach_reg.t Ae_x86_address.t [@@deriving sexp_of]
 end
 
-module Size = Ae_x86_size
+module Ty = Ae_x86_ty
 
 module Operand = struct
   type t =
@@ -26,64 +26,64 @@ module Instr = struct
     | Add of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Sub of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Imul of
         { src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Idiv of
         { src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | And of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Or of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Xor of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Movzx of
         { dst : Operand.t
-        ; dst_size : Size.t
+        ; dst_size : Ty.t
         ; src : Operand.t
-        ; src_size : Size.t
+        ; src_size : Ty.t
         }
     | Sal of
         { dst : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Sar of
         { dst : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Cmp of
         { src1 : Operand.t
         ; src2 : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Test of
         { src1 : Operand.t
         ; src2 : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Set of
         { cc : Condition_code.t
@@ -99,11 +99,11 @@ module Instr = struct
         }
     | Push of
         { src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Pop of
         { dst : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Cqo
     | Jmp of string

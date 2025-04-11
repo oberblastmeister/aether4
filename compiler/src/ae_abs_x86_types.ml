@@ -5,9 +5,9 @@ open struct
   module Generic_ir = Ae_generic_ir_std
 end
 
-module Size = Ae_x86_size
-module Vreg_entity = Ae_vreg_entity
-module Vreg = Vreg_entity.Ident
+module Ty = Ae_x86_ty
+module Temp_entity = Ae_abs_asm_temp_entity
+module Temp = Temp_entity.Ident
 module Label_entity = Ae_label_entity
 module Label = Label_entity.Ident
 module Mach_reg = Ae_x86_mach_reg
@@ -16,13 +16,13 @@ module Stack_slot = Stack_slot_entity.Ident
 module Call_conv = Ae_x86_call_conv
 
 module Address = struct
-  type t = Vreg.t Ae_x86_address.t [@@deriving sexp_of]
+  type t = Temp.t Ae_x86_address.t [@@deriving sexp_of]
 end
 
 module Operand = struct
   type t =
     | Imm of Int32.t
-    | Reg of Vreg.t
+    | Reg of Temp.t
     | Mem of Address.t
     | Stack_slot of Stack_slot.t
   [@@deriving sexp_of, variants]
@@ -70,10 +70,10 @@ module Bin_op = struct
     | Gt
     | Le
     | Ge
-    | And of Size.t
-    | Or of Size.t
-    | Xor of Size.t
-    | Eq of Size.t
+    | And of Ty.t
+    | Or of Ty.t
+    | Xor of Ty.t
+    | Eq of Ty.t
     | Lshift
     | Rshift
   [@@deriving sexp_of]
@@ -81,33 +81,33 @@ end
 
 module Location = struct
   type t =
-    | Vreg of Vreg.t
+    | Temp of Temp.t
     | Slot of Stack_slot.t
   [@@deriving sexp_of, variants]
 
   let temp_val = function
-    | Vreg vreg -> Some vreg
+    | Temp temp -> Some temp
     | Slot _ -> None
   ;;
 
-  let iter_vreg t ~f =
+  let iter_temp t ~f =
     match t with
-    | Vreg vreg -> f vreg
+    | Temp temp -> f temp
     | Slot _ -> ()
   ;;
 
-  let map_vreg t ~f =
+  let map_temp t ~f =
     match t with
-    | Vreg vreg -> Vreg (f vreg)
+    | Temp temp -> Temp (f temp)
     | Slot _ -> t
   ;;
 
   let to_operand = function
-    | Vreg v -> Operand.Reg v
+    | Temp v -> Operand.Reg v
     | Slot s -> Operand.Stack_slot s
   ;;
 
-  let of_temp t = Vreg t
+  let of_temp t = Temp t
 end
 
 module Block_call = Ae_block_call.Make (Location)
@@ -126,7 +126,7 @@ end
 module Block_param = struct
   type t =
     { param : Location.t
-    ; ty : Size.t
+    ; ty : Ty.t
     }
   [@@deriving sexp_of, fields]
 end
@@ -138,7 +138,7 @@ module Instr = struct
     | Mov of
         { dst : Operand.t
         ; src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Mov_abs of
         { dst : Operand.t
@@ -158,12 +158,12 @@ module Instr = struct
         }
     | Ret of
         { src : Operand.t
-        ; size : Size.t
+        ; size : Ty.t
         }
     | Call of
-        { dst : Vreg.t
-        ; size : Size.t
-        ; args : Vreg.t list
+        { dst : Temp.t
+        ; size : Ty.t
+        ; args : Temp.t list
         }
     | Unreachable
   [@@deriving sexp_of, variants]
@@ -187,13 +187,13 @@ module Instr = struct
     | Nop -> ()
     | Call { dst; size = _; args } ->
       on_def (Operand.Reg dst);
-      List.iter args ~f:(fun vreg -> on_use (Operand.Reg vreg))
+      List.iter args ~f:(fun temp -> on_use (Operand.Reg temp))
     | Block_params params ->
-      (List.iter @> Fold.of_fn Block_param.param @> Location.iter_vreg)
+      (List.iter @> Fold.of_fn Block_param.param @> Location.iter_temp)
         params
         ~f:(fun temp -> on_def (Operand.Reg temp))
     | Jump b ->
-      (Block_call.iter_uses @> Location.iter_vreg) b ~f:(fun r -> on_use (Operand.Reg r));
+      (Block_call.iter_uses @> Location.iter_temp) b ~f:(fun r -> on_use (Operand.Reg r));
       ()
     | Cond_jump { cond; b1; b2 } ->
       (match cond with
@@ -201,8 +201,8 @@ module Instr = struct
        | Bin { src1; op = _; src2 } ->
          on_use src1;
          on_use src2);
-      (Block_call.iter_uses @> Location.iter_vreg) b1 ~f:(fun r -> on_use (Reg r));
-      (Block_call.iter_uses @> Location.iter_vreg) b2 ~f:(fun r -> on_use (Reg r));
+      (Block_call.iter_uses @> Location.iter_temp) b1 ~f:(fun r -> on_use (Reg r));
+      (Block_call.iter_uses @> Location.iter_temp) b2 ~f:(fun r -> on_use (Reg r));
       ()
     | Mov { dst; src; size = _ } ->
       on_use src;
@@ -235,12 +235,12 @@ module Instr = struct
       Call { p with args }
     | Block_params params ->
       let mapper =
-        List.map & Traverse.of_field Block_param.Fields.param & Location.map_vreg
+        List.map & Traverse.of_field Block_param.Fields.param & Location.map_temp
       in
       let params = mapper params ~f:(fun x -> map_temp ~f:on_def x) in
       Block_params params
     | Jump bc ->
-      let bc = (Block_call.map_uses & Location.map_vreg) bc ~f:(map_temp ~f:on_use) in
+      let bc = (Block_call.map_uses & Location.map_temp) bc ~f:(map_temp ~f:on_use) in
       Jump bc
     | Cond_jump { cond; b1; b2 } ->
       let cond : Cond_expr.t =
@@ -253,8 +253,8 @@ module Instr = struct
           let src2 = on_use src2 in
           Bin { src1; op; src2 }
       in
-      let b1 = (Block_call.map_uses & Location.map_vreg) b1 ~f:(map_temp ~f:on_use) in
-      let b2 = (Block_call.map_uses & Location.map_vreg) b2 ~f:(map_temp ~f:on_use) in
+      let b1 = (Block_call.map_uses & Location.map_temp) b1 ~f:(map_temp ~f:on_use) in
+      let b2 = (Block_call.map_uses & Location.map_temp) b2 ~f:(map_temp ~f:on_use) in
       Cond_jump { cond; b1; b2 }
     | Mov { dst; src; size } ->
       let src = on_use src in
@@ -397,7 +397,7 @@ end
 module Func_data = struct
   type t =
     { next_stack_slot_id : Stack_slot_entity.Id.t
-    ; stack_slots : (Stack_slot.t * Size.t) list
+    ; stack_slots : (Stack_slot.t * Ty.t) list
     }
   [@@deriving sexp_of]
 end
@@ -407,8 +407,8 @@ include Generic_ir.Make_all (struct
     module Block_call = Block_call
     module Location = Location
     module Instr = Instr
-    module Temp_entity = Vreg_entity
-    module Ty = Size
+    module Temp_entity = Temp_entity
+    module Ty = Ty
     module Func_data = Func_data
   end)
 

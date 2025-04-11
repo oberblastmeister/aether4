@@ -1,8 +1,8 @@
 open Std
-module Vreg_entity = Ae_vreg_entity
+module Temp_entity = Ae_abs_asm_temp_entity
 module Entity = Ae_entity_std
 module Id = Entity.Id
-module Vreg = Vreg_entity.Ident
+module Temp = Temp_entity.Ident
 module Bitvec = Ae_data_bitvec
 
 type t =

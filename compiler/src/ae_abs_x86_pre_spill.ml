@@ -1,7 +1,7 @@
 open Std
 open Ae_abs_x86_types
-module Vreg_entity = Ae_vreg_entity
-module Vreg = Vreg_entity.Ident
+module Temp_entity = Ae_abs_asm_temp_entity
+module Temp = Temp_entity.Ident
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
 module Label = Ae_label_entity.Ident
@@ -84,7 +84,7 @@ let spill_block
         let new_params =
           (List.map & Traverse.of_field Block_param.Fields.param) params ~f:(function
             | Slot slot -> Location.Slot slot
-            | Vreg temp as loc ->
+            | Temp temp as loc ->
               Ident.Map.find temps_spilled temp
               |> Option.value_map ~f:Location.slot ~default:loc)
         in
@@ -112,7 +112,7 @@ let spill_block
             let new_args =
               List.map block_call.args ~f:(function
                 | Slot slot -> Location.Slot slot
-                | Vreg temp as loc ->
+                | Temp temp as loc ->
                   Ident.Map.find temps_spilled temp
                   |> Option.value_map ~f:Location.slot ~default:loc)
             in
@@ -235,7 +235,7 @@ let insert_spills ~spilled func =
 
 (* critical edges MUST be split before calling this function, because we have to insert fixup code on the edges *)
 let spill_func ~num_regs (func : Func.t) =
-  let spilled = Hashtbl.create (module Vreg) in
+  let spilled = Hashtbl.create (module Temp) in
   let func =
     let pred_table = Func.pred_table func in
     let _next_use_in_table, next_use_out_table =

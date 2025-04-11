@@ -7,13 +7,13 @@ module Int_table := Entity.Table.Int_table
 module Allocation : sig
   type t
 
-  val find_exn : t -> Vreg.t -> Mach_reg.t
+  val find_exn : t -> Temp.t -> Mach_reg.t
 end
 
 (* val spill_instr
   :  spilled_color_to_slot:Stack_slot.t Int_table.t
-  -> get_evicted_temp_and_slot_for_mach_reg:(Mach_reg.t -> Vreg.t * Stack_slot.t)
-  -> coloring:int Vreg.Table.t
+  -> get_evicted_temp_and_slot_for_mach_reg:(Mach_reg.t -> Temp.t * Stack_slot.t)
+  -> coloring:int Temp.Table.t
   -> instr:Instr.t
   -> Instr.t list * Instr.t * Instr.t list *)
 

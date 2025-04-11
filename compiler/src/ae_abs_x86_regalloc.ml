@@ -36,7 +36,7 @@ let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : I
   iter_pairs defs ~f:(fun (def1, def2) -> Graph.add_edge graph def1 def2);
   let can_add_edge_to =
     let currently_defining = defs in
-    fun live -> not @@ List.mem ~equal:Vreg.equal currently_defining live
+    fun live -> not @@ List.mem ~equal:Temp.equal currently_defining live
   in
   (* add interference edges *)
   begin
@@ -62,8 +62,8 @@ let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : I
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
       let precolored_name = get_precolored_name mach_reg in
       begin
-        let@: vreg = Ae_x86_address.iter_regs addr in
-        Graph.add_edge graph precolored_name vreg
+        let@: temp = Ae_x86_address.iter_regs addr in
+        Graph.add_edge graph precolored_name temp
       end
     end
     | _ -> ()
@@ -76,7 +76,7 @@ let build_graph_block ~get_precolored_name ~graph ~live_out ~(block : Block.t) =
   begin
     let@: instr = Block.iter_bwd block in
     live_out := build_graph_instr ~get_precolored_name ~graph ~live_out:!live_out ~instr
-    (* trace_s [%message (live_out : Vreg.Set.t ref)] *)
+    (* trace_s [%message (live_out : Temp.Set.t ref)] *)
   end
 ;;
 
@@ -170,9 +170,9 @@ let spill_instr
   let evict_some_mach_reg =
     (*
        There are always enough evictable colors.
-      There are a maxmium of 6 vregs used per instruction.
-      Assume that each vreg was allocated a different machine register.
-      Then each spilled vreg is one vreg that wasn't used.
+      There are a maxmium of 6 temps used per instruction.
+      Assume that each temp was allocated a different machine register.
+      Then each spilled temp is one temp that wasn't used.
       We also have to add two due to the precolored registers.
     *)
     let evictable_mach_regs =
@@ -369,7 +369,7 @@ let get_precolored_colors
 ;;
 
 module Allocation = struct
-  type t = Mach_reg.t Vreg.Table.t [@@deriving sexp_of]
+  type t = Mach_reg.t Temp.Table.t [@@deriving sexp_of]
 
   let find_exn = Ident.Table.find_exn
 end
@@ -382,12 +382,12 @@ let alloc_func frame_builder (func : Func.t) =
   let precolored_name_to_mach_reg =
     Hashtbl.to_alist mach_reg_to_precolored_name
     |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
-    |> Hashtbl.of_alist_exn (module Vreg)
+    |> Hashtbl.of_alist_exn (module Temp)
   in
   let coloring, max_color =
     let precolored =
       Hashtbl.to_alist mach_reg_to_precolored_name
-      |> List.map ~f:(fun (_, vreg) -> vreg)
+      |> List.map ~f:(fun (_, temp) -> temp)
       |> Ident.Set.of_list_exn
     in
     Regalloc.color_graph graph precolored

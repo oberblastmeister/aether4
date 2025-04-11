@@ -23,7 +23,7 @@ type st =
   }
 
 let create_state stack_frame allocation = { stack_frame; allocation }
-let get_vreg t vreg = Regalloc.Allocation.find_exn t.allocation vreg
+let get_temp t temp = Regalloc.Allocation.find_exn t.allocation temp
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
@@ -31,7 +31,7 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   | Stack_slot slot ->
     let offset = Frame.Layout.resolve_frame_offset st.stack_frame slot in
     Mem (Address.create Mach_reg.RSP offset)
-  | Reg vreg -> Reg (get_vreg st vreg)
+  | Reg temp -> Reg (get_temp st temp)
   | Mem _ -> todol [%here]
 ;;
 
@@ -118,13 +118,13 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     let dst = lower_operand st dst in
     let src1 = lower_operand st src1 in
     let src2 = lower_operand st src2 in
-    let on_cmp ?(size = Flat_x86.Size.Qword) cc =
+    let on_cmp ?(size = Flat_x86.Ty.Qword) cc =
       lower_cmp ?info:instr.info cc size ~dst ~src1 ~src2
     in
-    let on_rmw ?(size = Flat_x86.Size.Qword) rmw =
+    let on_rmw ?(size = Flat_x86.Ty.Qword) rmw =
       lower_simple_rmw ?info:instr.info rmw size ~dst ~src1 ~src2
     in
-    let size = Flat_x86.Size.Qword in
+    let size = Flat_x86.Ty.Qword in
     (match op with
      | Eq size -> on_cmp ~size E
      | Lshift ->

@@ -1,6 +1,6 @@
 open Std
 open Ae_flat_x86_types
-module Size = Ae_x86_size
+module Ty = Ae_x86_ty
 module Condition_code = Ae_x86_condition_code
 
 let string_of_reg8l (m : Mach_reg.t) =
@@ -83,7 +83,7 @@ let string_of_reg64 (m : Mach_reg.t) =
   | R15 -> "r15"
 ;;
 
-let string_of_mach_reg : Size.t -> _ = function
+let string_of_mach_reg : Ty.t -> _ = function
   | Byte -> string_of_reg8l
   | Word -> string_of_reg16
   | Dword -> string_of_reg32
@@ -108,7 +108,7 @@ let format_operand (operand : Operand.t) size =
           index.index}, %{index.scale#Int})"])
 ;;
 
-let suffix_of_size (s : Size.t) =
+let suffix_of_size (s : Ty.t) =
   match s with
   | Qword -> "q"
   | Dword -> "l"
@@ -142,7 +142,7 @@ let format_instr (instr : Instr.t) =
   | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
-  | Mov_abs { dst; src } -> [%string "movabsq $%{src#Int64}, %{op dst Size.Qword}"]
+  | Mov_abs { dst; src } -> [%string "movabsq $%{src#Int64}, %{op dst Ty.Qword}"]
   | Movzx { dst; dst_size; src; src_size } ->
     [%string
       "movzx%{suff src_size}%{suff dst_size} %{op src src_size}, %{op dst dst_size}"]

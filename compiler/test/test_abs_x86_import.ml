@@ -7,9 +7,9 @@ module Id_gen = Entity.Id_gen
 module Ident = Entity.Ident
 
 module Make_intern () = struct
-  module Vreg_intern = Entity.Intern.String_to_name.Make_global (Vreg_entity.Witness) ()
+  module Temp_intern = Entity.Intern.String_to_name.Make_global (Temp_entity.Witness) ()
   module Label_intern = Entity.Intern.String_to_name.Make_global (Label_entity.Witness) ()
 
-  let vreg = Vreg_intern.intern
+  let temp = Temp_intern.intern
   let lab = Label_intern.intern
 end

@@ -3,15 +3,15 @@ open Aether4
 module Bounded_heap = Ae_bounded_heap
 module Entity = Ae_entity_std
 module Id = Entity.Id
-module Vreg_entity = Ae_vreg_entity
-module Vreg_id = Vreg_entity.Id
+module Temp_entity = Ae_abs_asm_temp_entity
+module Temp_id = Temp_entity.Id
 module Table = Id.Table
 
 let%expect_test "smoke" =
   let heap = Bounded_heap.create ~weight_bound:100 () in
   let id = Id.unchecked_of_int in
   let check () =
-    print_s [%sexp (Bounded_heap.remove_max heap : (Vreg_id.t * int) option)]
+    print_s [%sexp (Bounded_heap.remove_max heap : (Temp_id.t * int) option)]
   in
   Bounded_heap.add_exn heap (id 0) 0;
   check ();
