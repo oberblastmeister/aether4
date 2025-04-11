@@ -68,9 +68,10 @@ let spill_block
     let next_uses_here = next_uses_at_point.@(instr'.index) in
     begin
       match instr'.i with
-      | Block_params { params } ->
+      | Block_params params ->
         let temps =
-          List.filter_map params ~f:(fun param -> Location.temp_val param.param)
+          List.filter_map params ~f:(fun param ->
+            Location.temp_val param.Block_param.param)
           |> sort_temps_by_ascending_next_use next_uses_here
         in
         let temps_in_reg, temps_spilled =
@@ -87,10 +88,7 @@ let spill_block
               Ident.Map.find temps_spilled temp
               |> Option.value_map ~f:Location.slot ~default:loc)
         in
-        Multi_edit.add_insert
-          edit
-          block.label
-          { instr' with i = Block_params { params = new_params } };
+        Multi_edit.add_insert edit block.label { instr' with i = Block_params new_params };
         let non_dead_temps_in_reg =
           List.filter temps_in_reg ~f:(fun temp -> Ident.Map.mem next_uses_here temp)
         in

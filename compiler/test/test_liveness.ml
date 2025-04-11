@@ -55,7 +55,7 @@ let%expect_test "smoke" =
        ((join@0
          ((label join@0)
           (body
-           (((i (Block_params (temps ((first@19 Int))))) (index 0)
+           (((i (Block_params (((param first@19) (ty Int))))) (index 0)
              (info ([9,7]-[13,8])))
             ((i (Unary (dst lhs@20) (op (Copy Int)) (src first@19))) (index 1)
              (info (3:11-16)))
@@ -68,7 +68,7 @@ let%expect_test "smoke" =
         (then@1
          ((label then@1)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([9,7]-[13,8])))
+           (((i (Block_params ())) (index 0) (info ([9,7]-[13,8])))
             ((i (Unary (dst lhs@16) (op (Copy Int)) (src first@1))) (index 1)
              (info (3:11-16)))
             ((i (Unary (dst rhs@17) (op (Copy Int)) (src third@9))) (index 2)
@@ -81,7 +81,7 @@ let%expect_test "smoke" =
         (else@2
          ((label else@2)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([9,7]-[13,8])))
+           (((i (Block_params ())) (index 0) (info ([9,7]-[13,8])))
             ((i (Unary (dst another@15) (op (Copy Bool)) (src bl@13))) (index 1)
              (info (8:12-14)))
             ((i (Jump ((label join@0) (args (first@1))))) (index 2)
@@ -90,7 +90,7 @@ let%expect_test "smoke" =
         (start@3
          ((label start@3)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([2,3]-[15,4])))
+           (((i (Block_params ())) (index 0) (info ([2,3]-[15,4])))
             ((i (Nullary (dst tmp@0) (op (Int_const 1342)))) (index 1)
              (info (3:19-23)))
             ((i (Unary (dst first@1) (op (Copy Int)) (src tmp@0))) (index 2)
@@ -146,7 +146,7 @@ let%expect_test "smoke2" =
        ((join@0
          ((label join@0)
           (body
-           (((i (Block_params (temps ((first@19 Int))))) (index 0)
+           (((i (Block_params (((param first@19) (ty Int))))) (index 0)
              (info ([9,7]-[13,8])))
             ((i (Unary (dst lhs@20) (op (Copy Int)) (src first@19))) (index 1)
              (info (3:11-16)))
@@ -159,7 +159,7 @@ let%expect_test "smoke2" =
         (then@1
          ((label then@1)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([9,7]-[13,8])))
+           (((i (Block_params ())) (index 0) (info ([9,7]-[13,8])))
             ((i (Unary (dst lhs@16) (op (Copy Int)) (src first@1))) (index 1)
              (info (3:11-16)))
             ((i (Unary (dst rhs@17) (op (Copy Int)) (src third@9))) (index 2)
@@ -172,7 +172,7 @@ let%expect_test "smoke2" =
         (else@2
          ((label else@2)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([9,7]-[13,8])))
+           (((i (Block_params ())) (index 0) (info ([9,7]-[13,8])))
             ((i (Unary (dst another@15) (op (Copy Bool)) (src bl@13))) (index 1)
              (info (8:12-14)))
             ((i (Jump ((label join@0) (args (first@1))))) (index 2)
@@ -181,7 +181,7 @@ let%expect_test "smoke2" =
         (start@3
          ((label start@3)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ([2,3]-[15,4])))
+           (((i (Block_params ())) (index 0) (info ([2,3]-[15,4])))
             ((i (Nullary (dst tmp@0) (op (Int_const 1342)))) (index 1)
              (info (3:19-23)))
             ((i (Unary (dst first@1) (op (Copy Int)) (src tmp@0))) (index 2)

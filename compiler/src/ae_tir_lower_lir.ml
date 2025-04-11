@@ -80,13 +80,16 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
     empty +> [ ins (Cond_jump { cond; b1; b2 }) ]
-  | Block_params { temps } ->
+  | Block_params temps ->
     empty
     +> [ ins
            (Lir.Instr.Block_params
-              { temps =
-                  List.map ~f:(fun (temp, ty) -> get_temp st temp, lower_ty ty) temps
-              })
+              (List.map
+                 ~f:(fun { param; ty } ->
+                   let param = get_temp st param in
+                   let ty = lower_ty ty in
+                   { Lir.Block_param.param; ty })
+                 temps))
        ]
   | Nullary { dst; op } ->
     let dst = get_temp st dst in

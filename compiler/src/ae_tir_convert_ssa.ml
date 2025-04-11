@@ -75,10 +75,14 @@ let convert (func : Func.t) =
         let@: instr = Instr'.map instr in
         let instr =
           match instr with
-          | Block_params { temps } ->
+          | Block_params params ->
             let phis = Table.find_multi block_to_phis block.label in
-            let temps = temps @ List.map phis ~f:(fun temp -> temp, def_to_ty.!(temp)) in
-            Instr.Block_params { temps }
+            let params =
+              params
+              @ List.map phis ~f:(fun param ->
+                { Block_param.param; ty = def_to_ty.!(param) })
+            in
+            Instr.Block_params params
           | _ -> instr
         in
         let instr =

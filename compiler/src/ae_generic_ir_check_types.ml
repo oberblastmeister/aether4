@@ -19,11 +19,12 @@ module Make (Ir : Ir) = struct
 
   let check_block_call ty_table func (block_call : Block_call.t) =
     let dst_block = Func.find_block_exn func (Block_call.label block_call) in
-    let block_param_tys =
+    let block_params =
       Block.find_block_params dst_block
       |> Instr'.instr
-      |> Instr.block_params_tys
-      |> Option.value_exn
+      |> Instr.block_params_val
+      |> Option.value_exn in
+    let block_param_tys = List.map block_params ~f:Block_param.ty
     in
     let temp_with_ty =
       (* TODO: fix this and use the Location *)

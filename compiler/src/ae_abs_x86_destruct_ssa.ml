@@ -23,9 +23,10 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
       Multi_edit.add_replace
         edit
         dst_block.label
-        { dst_block_params_instr with i = Instr.Block_params { params = [] } };
+        { dst_block_params_instr with i = Instr.Block_params [] };
       let (`params dst_block_params) =
-        Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
+        let params = Instr.block_params_val dst_block_params_instr.i |> Option.value_exn in
+        `params params
       in
       let module M = struct
         type ('d, 's) t =

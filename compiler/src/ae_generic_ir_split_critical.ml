@@ -26,7 +26,7 @@ module Make (Ir : Ir) = struct
             Multi_edit.add_insert
               edit
               new_label
-              (Instr'.create Instr.empty_block_params 0);
+              (Instr'.create (Instr.block_params []) 0);
             (* this block jumps to the original destination *)
             Multi_edit.add_insert edit new_label (Instr'.create (Instr.jump block_call) 0);
             (* override the original jump to the new label *)

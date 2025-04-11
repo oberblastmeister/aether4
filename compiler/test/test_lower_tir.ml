@@ -34,7 +34,7 @@ let%expect_test "smoke" =
       ((join@0
         ((label join@0)
          (body
-          (((i (Block_params (temps ((first@17 Int))))) (index 0)
+          (((i (Block_params (((param first@17) (ty Int))))) (index 0)
             (info ([8,15]-[12,16])))
            ((i (Unary (dst ret@18) (op (Copy Int)) (src first@17))) (index 1)
             (info (3:19-24)))
@@ -43,7 +43,7 @@ let%expect_test "smoke" =
        (then@1
         ((label then@1)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([8,15]-[12,16])))
+          (((i (Block_params ())) (index 0) (info ([8,15]-[12,16])))
            ((i (Unary (dst lhs@14) (op (Copy Int)) (src first@1))) (index 1)
             (info (3:19-24)))
            ((i (Unary (dst rhs@15) (op (Copy Int)) (src third@7))) (index 2)
@@ -56,7 +56,7 @@ let%expect_test "smoke" =
        (else@2
         ((label else@2)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([8,15]-[12,16])))
+          (((i (Block_params ())) (index 0) (info ([8,15]-[12,16])))
            ((i (Unary (dst another@13) (op (Copy Bool)) (src bl@11))) (index 1)
             (info (7:20-22)))
            ((i (Jump ((label join@0) (args (first@1))))) (index 2)
@@ -65,7 +65,7 @@ let%expect_test "smoke" =
        (start@3
         ((label start@3)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([2,7]-[14,12])))
+          (((i (Block_params ())) (index 0) (info ([2,7]-[14,12])))
            ((i (Nullary (dst tmp@0) (op (Int_const 1342)))) (index 1)
             (info (3:27-31)))
            ((i (Unary (dst first@1) (op (Copy Int)) (src tmp@0))) (index 2)
@@ -124,7 +124,7 @@ let%expect_test "while" =
       ((join@0
         ((label join@0)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([7,7]-[11,8])))
+          (((i (Block_params ())) (index 0) (info ([7,7]-[11,8])))
            ((i (Unary (dst ret@13) (op (Copy Int)) (src third@7))) (index 1)
             (info (5:11-16)))
            ((i (Ret (src ret@13) (ty Int))) (index 2) (info (12:7-19)))
@@ -132,7 +132,7 @@ let%expect_test "while" =
        (then@1
         ((label then@1)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([7,7]-[11,8])))
+          (((i (Block_params ())) (index 0) (info ([7,7]-[11,8])))
            ((i (Nullary (dst first@12) (op (Int_const 1)))) (index 1)
             (info (8:17)))
            ((i (Jump ((label join@0) (args ())))) (index 2)
@@ -141,7 +141,7 @@ let%expect_test "while" =
        (else@2
         ((label else@2)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([7,7]-[11,8])))
+          (((i (Block_params ())) (index 0) (info ([7,7]-[11,8])))
            ((i (Nullary (dst another@11) (op (Bool_const false)))) (index 1)
             (info (10:19-24)))
            ((i (Jump ((label join@0) (args ())))) (index 2)
@@ -150,7 +150,7 @@ let%expect_test "while" =
        (start@3
         ((label start@3)
          (body
-          (((i (Block_params (temps ()))) (index 0) (info ([2,5]-[13,6])))
+          (((i (Block_params ())) (index 0) (info ([2,5]-[13,6])))
            ((i (Nullary (dst tmp@0) (op (Int_const 1342)))) (index 1)
             (info (3:19-23)))
            ((i (Unary (dst first@1) (op (Copy Int)) (src tmp@0))) (index 2)

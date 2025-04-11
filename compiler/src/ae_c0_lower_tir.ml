@@ -57,7 +57,7 @@ let add_block ?info t label instrs =
       label
       (Bag.to_arrayp
          (empty
-          +> [ ins ?info (Block_params { temps = [] }) ]
+          +> [ ins ?info (Block_params []) ]
           ++ instrs
           +> [ ins ?info Unreachable ]))
   in

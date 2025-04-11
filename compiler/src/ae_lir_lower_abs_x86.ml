@@ -59,16 +59,15 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
   | Call _ -> todol [%here]
-  | Block_params { temps } ->
+  | Block_params params ->
     empty
     +> [ ins
            (Block_params
-              { params =
-                  List.map temps ~f:(fun (vreg, ty) ->
-                    let vreg = get_vreg st vreg in
-                    let ty = lower_ty ty in
-                    { Abs_x86.Block_param.param = Vreg vreg; ty })
-              })
+             (List.map params ~f:(fun param ->
+               let vreg = get_vreg st param.Lir.Block_param.param in
+               let ty = lower_ty param.Lir.Block_param.ty in
+               { Abs_x86.Block_param.param = Vreg vreg; ty }))
+           )
        ]
   | Nop -> empty +> [ ins Nop ]
   | Jump b ->

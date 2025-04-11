@@ -14,13 +14,13 @@ let check_temp_ty ty_table temp ty =
 
 let check_block_call ty_table func (block_call : Block_call.t) =
   let dst_block = Func.find_block_exn func block_call.label in
-  let (`temps block_params) =
+  let block_params =
     Block.find_block_params dst_block
     |> Instr'.instr
     |> Instr.block_params_val
     |> Option.value_exn
   in
-  let block_param_tys = List.map block_params ~f:snd in
+  let block_param_tys = List.map block_params ~f:Block_param.ty in
   let temp_with_ty =
     match List.zip block_call.args block_param_tys with
     | Ok t -> t

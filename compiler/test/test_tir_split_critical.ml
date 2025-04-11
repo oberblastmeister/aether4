@@ -17,7 +17,7 @@ let ins = Instr'.create_unindexed
 let%expect_test "smoke" =
   let blocks =
     [ ( lab "start"
-      , [ ins (Block_params { temps = [] })
+      , [ ins (Block_params [])
         ; ins (Nullary { dst = temp "const_bool"; op = Bool_const true })
         ; ins (Nullary { dst = temp "const_int"; op = Int_const 1234L })
         ; ins
@@ -29,11 +29,13 @@ let%expect_test "smoke" =
                })
         ] )
     ; ( lab "done"
-      , [ ins (Block_params { temps = [ temp "ret", Int ] })
+      , [ ins (Block_params [ { param = temp "ret"; ty = Int } ])
         ; ins (Ret { src = temp "ret"; ty = Int })
         ] )
     ; ( lab "loop"
-      , [ ins (Block_params { temps = [ temp "loop1", Int; temp "loop2", Bool ] })
+      , [ ins
+            (Block_params
+               [ { param = temp "loop1"; ty = Int }; { param = temp "loop2"; ty = Bool } ])
         ; ins (Jump (Block_call.create (lab "loop") [ temp "loop1"; temp "loop2" ]))
         ] )
     ]
@@ -66,19 +68,21 @@ let%expect_test "smoke" =
        ((loop@0
          ((label loop@0)
           (body
-           (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool))))) (index 0)
-             (info ()))
+           (((i
+              (Block_params
+               (((param loop1@1) (ty Int)) ((param loop2@0) (ty Bool)))))
+             (index 0) (info ()))
             ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
              (info ()))))))
         (done@1
          ((label done@1)
           (body
-           (((i (Block_params (temps ((ret@2 Int))))) (index 0) (info ()))
+           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ()))
             ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
         (start@2
          ((label start@2)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()))
             ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
              (info ()))
             ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
@@ -95,19 +99,21 @@ let%expect_test "smoke" =
        ((loop@0
          ((label loop@0)
           (body
-           (((i (Block_params (temps ((loop1@1 Int) (loop2@0 Bool))))) (index 0)
-             (info ()))
+           (((i
+              (Block_params
+               (((param loop1@1) (ty Int)) ((param loop2@0) (ty Bool)))))
+             (index 0) (info ()))
             ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
              (info ()))))))
         (done@1
          ((label done@1)
           (body
-           (((i (Block_params (temps ((ret@2 Int))))) (index 0) (info ()))
+           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ()))
             ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
         (start@2
          ((label start@2)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()))
             ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
              (info ()))
             ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
@@ -119,7 +125,7 @@ let%expect_test "smoke" =
         (loop@3
          ((label loop@3)
           (body
-           (((i (Block_params (temps ()))) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()))
             ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
              (index 1) (info ()))))))))
       (start start@2) (next_temp_id 5) (next_label_id 4) (data ())))

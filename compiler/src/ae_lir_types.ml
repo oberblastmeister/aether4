@@ -64,7 +64,7 @@ end
 
 module Instr = struct
   type t =
-    | Block_params of { temps : (Temp.t * Ty.t) list }
+    | Block_params of Block_param.t list
     | Nop
     | Nullary of
         { dst : Temp.t
@@ -99,10 +99,10 @@ module Instr = struct
     | Unreachable
   [@@deriving sexp_of, variants]
 
-  let empty_block_params = Block_params { temps = [] }
+  let empty_block_params = Block_params []
 
   let block_params_tys = function
-    | Block_params { temps } -> Some (List.map ~f:snd temps)
+    | Block_params params -> Some (List.map ~f:Block_param.ty params)
     | _ -> None
   ;;
 
@@ -115,7 +115,7 @@ module Instr = struct
 
   let iter_uses instr ~f =
     match instr with
-    | Block_params { temps = _ } | Nop -> ()
+    | Block_params _ | Nop -> ()
     | Call { dst = _; ty = _; args } -> List.iter args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
@@ -141,7 +141,7 @@ module Instr = struct
 
   let iter_uses_with_known_ty (instr : t) ~f =
     match instr with
-    | Unreachable | Block_params { temps = _ } | Nop -> ()
+    | Unreachable | Block_params _ | Nop -> ()
     | Call _ -> ()
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
@@ -168,7 +168,7 @@ module Instr = struct
 
   let iter_defs_with_ty (instr : t) ~f =
     match instr with
-    | Block_params { temps } -> List.iter temps ~f
+    | Block_params params -> List.iter params ~f:(fun param -> f (Block_param.param param, Block_param.ty param))
     | Nop -> ()
     | Call { dst; ty; args = _ } ->
       f (dst, ty);

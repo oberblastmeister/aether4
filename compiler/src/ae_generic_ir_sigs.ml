@@ -38,11 +38,10 @@ module type Arg = sig
   module Instr : sig
     type t [@@deriving sexp_of]
 
-    val nop : t
-    val is_nop : t -> bool
-    val block_params_tys : t -> Ty.t list option
+    val nop : t val is_nop : t -> bool
+    val block_params : Block_param.t list -> t
     val is_block_params : t -> bool
-    val empty_block_params : t
+    val block_params_val : t -> Block_param.t list option
     val jump : Block_call.t -> t
     val jump_val : t -> Block_call.t option
     val is_jump : t -> bool
@@ -201,6 +200,7 @@ module Make_std (Ir : Ir) = struct
   module Multi_edit = Multi_edit
   module Temp_entity = Temp_entity
   module Temp = Temp_entity.Ident
+  module Block_param = Block_param
   module Block_call = Block_call
 end
 

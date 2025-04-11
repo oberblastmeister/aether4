@@ -133,7 +133,7 @@ end
 
 module Instr = struct
   type t =
-    | Block_params of { params : Block_param.t list }
+    | Block_params of Block_param.t list
     | Nop
     | Mov of
         { dst : Operand.t
@@ -168,10 +168,10 @@ module Instr = struct
     | Unreachable
   [@@deriving sexp_of, variants]
 
-  let empty_block_params = Block_params { params = [] }
+  let empty_block_params = Block_params []
 
   let block_params_tys = function
-    | Block_params { params } -> Some (List.map ~f:Block_param.ty params)
+    | Block_params params -> Some (List.map ~f:Block_param.ty params)
     | _ -> None
   ;;
 
@@ -188,7 +188,7 @@ module Instr = struct
     | Call { dst; size = _; args } ->
       on_def (Operand.Reg dst);
       List.iter args ~f:(fun vreg -> on_use (Operand.Reg vreg))
-    | Block_params { params } ->
+    | Block_params params ->
       (List.iter @> Fold.of_fn Block_param.param @> Location.iter_vreg)
         params
         ~f:(fun temp -> on_def (Operand.Reg temp))
@@ -233,12 +233,12 @@ module Instr = struct
     | Call p ->
       let args = List.map p.args ~f:(map_temp ~f:on_def) in
       Call { p with args }
-    | Block_params { params } ->
+    | Block_params params ->
       let mapper =
         List.map & Traverse.of_field Block_param.Fields.param & Location.map_vreg
       in
       let params = mapper params ~f:(fun x -> map_temp ~f:on_def x) in
-      Block_params { params }
+      Block_params params
     | Jump bc ->
       let bc = (Block_call.map_uses & Location.map_vreg) bc ~f:(map_temp ~f:on_use) in
       Jump bc

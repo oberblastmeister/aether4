@@ -58,13 +58,15 @@ module Block_param = struct
     ; ty : Ty.t
     }
   [@@deriving sexp_of, fields]
+
+  let to_tuple2 { param; ty } = param, ty
 end
 
 module Block_call = Ae_block_call.Make (Temp)
 
 module Instr = struct
   type t =
-    | Block_params of { temps : (Temp.t * Ty.t) list }
+    | Block_params of Block_param.t list
     | Nop
     | Bin of
         { dst : Temp.t
@@ -99,10 +101,10 @@ module Instr = struct
     | Unreachable
   [@@deriving sexp_of, variants]
 
-  let empty_block_params = Block_params { temps = [] }
+  let empty_block_params = Block_params []
 
   let block_params_tys = function
-    | Block_params { temps } -> Some (List.map ~f:snd temps)
+    | Block_params params -> Some (List.map ~f:Block_param.ty params)
     | _ -> None
   ;;
 
@@ -115,7 +117,7 @@ module Instr = struct
 
   let iter_uses (instr : t) ~f =
     match instr with
-    | Unreachable | Block_params { temps = _ } | Nop -> ()
+    | Unreachable | Block_params _ | Nop -> ()
     | Call { dst = _; ty = _; args } -> List.iter args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
@@ -140,7 +142,7 @@ module Instr = struct
 
   let iter_uses_with_known_ty (instr : t) ~f =
     match instr with
-    | Unreachable | Block_params { temps = _ } | Nop -> ()
+    | Unreachable | Block_params _ | Nop -> ()
     | Call _ -> ()
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
@@ -180,7 +182,7 @@ module Instr = struct
 
   let iter_defs_with_ty t ~f =
     match t with
-    | Block_params { temps } -> List.iter temps ~f
+    | Block_params params -> (List.iter @> Fold.of_fn Block_param.to_tuple2) params ~f
     | Nop -> ()
     | Call { dst; ty; args = _ } ->
       f (dst, ty);
@@ -245,8 +247,8 @@ module Instr = struct
   let map_defs (instr : t) ~f =
     match instr with
     | Unreachable -> Unreachable
-    | Block_params p ->
-      Block_params { p with temps = (List.map & Tuple2.map_fst) p.temps ~f }
+    | Block_params params ->
+      Block_params ((List.map & Traverse.of_field Block_param.Fields.param) params ~f)
     | Nop -> Nop
     | Bin p -> Bin { p with dst = f p.dst }
     | Unary p -> Unary { p with dst = f p.dst }
