@@ -16,6 +16,7 @@ end
 include T
 
 let to_id t = t.id
+let to_int t = t.id
 let unchecked_coerce { name; id; info } = { name; id = Id.unchecked_coerce id; info }
 let create ?info name id = { name; id; info }
 

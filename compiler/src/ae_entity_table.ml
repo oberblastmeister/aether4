@@ -1,5 +1,4 @@
 open Std
-module Signatures = Ae_signatures
 module OA = Option_array
 open Ae_entity_sigs
 
@@ -12,6 +11,7 @@ module type S_phantom_without_make = sig
   val find : ('w, 'v) t -> 'w Key.t -> 'v option
   val find_int : ('w, 'v) t -> int -> 'v option
   val find_int_exn : ('w, 'v) t -> int -> 'v
+  val findi_int : ('w, 'v) t -> int -> ('w Key.t * 'v) option
   val remove : ('w, 'v) t -> 'w Key.t -> unit
   val find_exn : ('w, 'v) t -> 'w Key.t -> 'v
   val find_or_add : ('w, 'v) t -> 'w Key.t -> default:(unit -> 'v) -> 'v
@@ -118,6 +118,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
     ;;
 
     let find_int t i = if i >= size t then None else Option.map ~f:snd @@ OA.get t.a @@ i
+    let findi_int t i = if i >= size t then None else OA.get t.a @@ i
 
     let find_multi t k =
       match find t k with

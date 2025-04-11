@@ -26,7 +26,9 @@ let%expect_test "smoke" =
   [%expect
     {|
     (Ok
-     ((Func_decl (name main@0) (ty ((ty (Int -1:-1)) (params ()) (span -1:-1))))
+     ((Extern_func_defn (name _runtime_c0_panic@1)
+       (ty ((ty (Void -1:-1)) (params ()) (span -1:-1))))
+      (Func_decl (name main@0) (ty ((ty (Int -1:-1)) (params ()) (span -1:-1))))
       (Func_defn
        ((ty (Int 2:3-6)) (name main@0) (params ())
         (body

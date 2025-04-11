@@ -10,7 +10,10 @@ module Check_well_formed = Ae_generic_ir_check_well_formed
 module Check_types = Ae_generic_ir_check_types
 
 module Make_all (Arg : Sigs.Arg) = struct
-  module Ir = Make_ir (Arg)
+  module Ir = struct
+    include Make_ir (Arg)
+  end
+
   module Liveness = Liveness.Make (Ir)
   module Check_ssa = Check_ssa.Make (Ir)
   module Split_critical = Split_critical.Make (Ir)
@@ -26,5 +29,11 @@ module Make_all (Arg : Sigs.Arg) = struct
       let%bind () = Check_types.check func in
       Ok ()
     ;;
+  end
+end
+
+module Make_all_S (Arg : Sigs.Arg) = struct
+  module type S = module type of struct
+    include Make_all (Arg)
   end
 end

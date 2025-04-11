@@ -20,7 +20,7 @@ module Table = Ae_entity_table
 module Map = Ae_entity_map
 module Set = Ae_entity_set
 module Intern = Ae_entity_intern
-module Bitset = Ae_entity_bitset
+module Bitvec = Ae_entity_bitvec
 
 module type S = sig
   module Witness : Ae_entity_witness.S
@@ -31,7 +31,7 @@ module type S = sig
     module Table : module type of Id.Table.Make (Witness)
     module Map : module type of Id.Map.Make (Witness)
     module Set : module type of Id.Set.Make (Witness)
-    module Bitset : module type of Bitset.Make (Witness)
+    module Bitvec : module type of Bitvec.Make (Witness)
     include Base.Comparable.S with type t := t
   end
 
@@ -41,7 +41,7 @@ module type S = sig
     module Table : module type of Ident.Table.Make (Witness)
     module Map : module type of Ident.Map.Make (Witness)
     module Set : module type of Ident.Set.Make (Witness)
-    module Bitset : module type of Bitset.Make (Witness)
+    module Bitvec : module type of Bitvec.Make (Witness)
     include Base.Comparable.S with type t := t
   end
 end
@@ -67,7 +67,7 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     module Table = Id.Table.Make (Witness)
     module Map = Id.Map.Make (Witness)
     module Set = Id.Set.Make (Witness)
-    module Bitset = Bitset.Make (Witness)
+    module Bitvec = Bitvec.Make (Witness)
   end
 
   module Ident = struct
@@ -88,7 +88,7 @@ module Make_with_witness (Witness : Ae_entity_witness.S) : S = struct
     module Table = Ident.Table.Make (Witness)
     module Map = Ident.Map.Make (Witness)
     module Set = Ident.Set.Make (Witness)
-    module Bitset = Bitset.Make (Witness)
+    module Bitvec = Bitvec.Make (Witness)
   end
 end
 

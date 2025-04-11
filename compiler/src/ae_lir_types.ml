@@ -52,7 +52,15 @@ module Nullary_op = struct
   [@@deriving sexp_of]
 end
 
-module Block_call = Ae_block_call.Make (Temp_entity)
+module Block_call = Ae_block_call.Make (Temp)
+
+module Block_param = struct
+  type t =
+    { param : Temp.t
+    ; ty : Ty.t
+    }
+  [@@deriving sexp_of, fields]
+end
 
 module Instr = struct
   type t =
@@ -83,8 +91,20 @@ module Instr = struct
         { src : Temp.t
         ; ty : Ty.t
         }
+    | Call of
+        { dst : Temp.t
+        ; ty : Ty.t
+        ; args : Temp.t list
+        }
     | Unreachable
   [@@deriving sexp_of, variants]
+
+  let empty_block_params = Block_params { temps = [] }
+
+  let block_params_tys = function
+    | Block_params { temps } -> Some (List.map ~f:snd temps)
+    | _ -> None
+  ;;
 
   let nop = Nop
 
@@ -96,6 +116,7 @@ module Instr = struct
   let iter_uses instr ~f =
     match instr with
     | Block_params { temps = _ } | Nop -> ()
+    | Call { dst = _; ty = _; args } -> List.iter args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;
@@ -121,6 +142,7 @@ module Instr = struct
   let iter_uses_with_known_ty (instr : t) ~f =
     match instr with
     | Unreachable | Block_params { temps = _ } | Nop -> ()
+    | Call _ -> ()
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
         match op with
@@ -148,6 +170,9 @@ module Instr = struct
     match instr with
     | Block_params { temps } -> List.iter temps ~f
     | Nop -> ()
+    | Call { dst; ty; args = _ } ->
+      f (dst, ty);
+      ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
       let ty : Ty.t =
         match op with
@@ -190,15 +215,20 @@ module Instr = struct
   let map_block_calls _ = todol [%here]
 end
 
+module Location = struct
+  include Temp
+
+  let temp_val t = Some t
+  let of_temp t = t
+end
+
 include Generic_ir.Make_all (struct
+    module Block_param = Block_param
     module Block_call = Block_call
+    module Location = Location
     module Instr = Instr
     module Ty = Ty
-
-    module Func_data = struct
-      type t = unit [@@deriving sexp_of]
-    end
-
+    module Func_data = Unit
     module Temp_entity = Temp_entity
   end)
 

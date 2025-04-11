@@ -57,6 +57,7 @@ rule lex =
   | ')' { Token.RParen }
   | '{' { Token.LBrace }
   | '}' { Token.RBrace }
+  | "assert" { Token.Assert }
   | "extern" { Token.Extern }
   | "typedef" { Token.Typedef }
   | "return" { Token.Return }

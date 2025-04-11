@@ -1,6 +1,6 @@
 open Std
 open Ae_entity_sigs
-include Ae_data_bitset
+include Ae_data_bitvec
 
 type nonrec 'w t = t
 

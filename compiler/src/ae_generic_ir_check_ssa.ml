@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
-  open Ir.Std
+  open Make_std(Ir)
 
   let check_all_temps_unique func =
     let module Table = Ident.Table in

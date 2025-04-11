@@ -70,6 +70,7 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
+  | Call _ -> todol [%here]
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call st b in
@@ -133,7 +134,7 @@ let lower_func st (func : Tir.Func.t) : Lir.Func.t =
   let start = func.start in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
-  { name; blocks; start; next_temp_id; next_label_id }
+  { name; blocks; start; next_temp_id; next_label_id; data = () }
 ;;
 
 let lower func =

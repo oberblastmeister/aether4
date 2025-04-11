@@ -18,13 +18,19 @@ module T = struct
     | R13
     | R14
     | R15
-  [@@deriving enum, equal, compare, sexp, hash, variants]
+  [@@deriving enum, equal, compare, sexp, hash, variants, string]
 end
 
 include Base.Comparable.Make (T)
 include T
 
 let scratch = R11
+let num = max - min + 1
+
+let%expect_test _ =
+  print_s [%message (min : int) (max : int) (num : int)];
+  [%expect {| ((min 0) (max 15) (num 16)) |}]
+;;
 
 let%expect_test _ =
   let list =

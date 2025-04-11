@@ -5,6 +5,12 @@ module Fold = Functional.Fold
 module Iter = Functional.Iter
 module Traverse = Functional.Traverse
 
+module Fn = struct
+  include Fn
+
+  let on f bin x y = bin (f x) (f y)
+end
+
 module Vec = struct
   include Vec
 
@@ -22,6 +28,8 @@ module Vec = struct
     done;
     ()
   ;;
+
+  let iter_rev t ~f = iteri_rev t ~f:(fun _ x -> f x)
 end
 
 module Lstack = Std_lstack
@@ -30,14 +38,27 @@ module Arrayp = struct
   include Array.Permissioned
 
   let iteri_rev t ~f =
-    let i = ref (Array.Permissioned.length t - 1) in
+    let i = ref (length t - 1) in
     while !i >= 0 do
-      f !i (Array.Permissioned.get t !i);
+      f !i (get t !i);
       decr i;
       ()
     done;
     ()
   ;;
+
+  let mapi_rev t ~f =
+    let res = create ~len:(length t) (f (length t - 1) (get t (length t - 1))) in
+    let i = ref (length t - 2) in
+    while !i >= 0 do
+      set res !i (f !i (get t !i));
+      decr i
+    done;
+    (* TODO: make this faster *)
+    copy res
+  ;;
+
+  let map_rev t ~f = mapi_rev t ~f:(fun _ x -> f x)
 
   let findi_rev t ~f =
     let rec go i =

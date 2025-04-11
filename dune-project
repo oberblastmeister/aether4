@@ -35,7 +35,6 @@
    (= v0.17.0))
   ; needed by cmd
   stdio
-  threads
   spawn
   (containers
    (= 3.15))
@@ -45,18 +44,10 @@
    (= 6.0.3))
   (ppx_jane
    (= v0.17.0))
-  (alcotest
-   (= 1.7.0))
-  (algaeff
-   (= 2.0.0))
-  (asai
-   (= 0.3.1))
-  (bwd
-   (= 2.3.0))
+  (ppx_partial
+   (= 1.0))
   (zarith
    (= 1.14))
-  (cmdliner
-   (= 1.3.0))
   (eio
    (= 1.2))
   (eio_main

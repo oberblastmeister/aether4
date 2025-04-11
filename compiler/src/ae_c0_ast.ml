@@ -158,6 +158,7 @@ type program = global_decl list [@@deriving sexp_of]
 let func_defn_to_ty func = { ty = func.ty; params = func.params; span = func.span }
 let bool_ty = Bool Span.none
 let int_ty = Int Span.none
+let void_ty = Void Span.none
 
 let expr_ty_exn = function
   | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } | Call { ty; _ } ->

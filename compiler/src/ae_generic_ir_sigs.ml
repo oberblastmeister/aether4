@@ -3,6 +3,7 @@ open Std
 open struct
   module Entity = Ae_entity_std
   module Label_entity = Ae_label_entity
+  module Stack_slot_entity = Ae_stack_slot_entity
   module Label = Label_entity.Ident
   module Block_call = Ae_block_call
   module Dominators = Ae_dominators
@@ -13,20 +14,35 @@ module type Arg = sig
   module Temp_entity : Entity.S
   module Temp := Temp_entity.Ident
 
+  module Location : sig
+    type t [@@deriving sexp_of]
+
+    val temp_val : t -> Temp.t option
+    val of_temp : Temp.t -> t
+  end
+
   module Ty : sig
     type t [@@deriving sexp_of, equal, compare]
   end
 
-  module Block_call : Ae_block_call.Make_S(Temp_entity).S
+  module Block_param : sig
+    type t =
+      { param : Location.t
+      ; ty : Ty.t
+      }
+    [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+  end
+
+  module Block_call : Block_call.Make_S(Location).S
 
   module Instr : sig
     type t [@@deriving sexp_of]
 
     val nop : t
     val is_nop : t -> bool
-    val block_params_val : t -> [> `temps of (Temp.t * Ty.t) list ] option
+    val block_params_tys : t -> Ty.t list option
     val is_block_params : t -> bool
-    val block_params : temps:(Temp.t * Ty.t) list -> t
+    val empty_block_params : t
     val jump : Block_call.t -> t
     val jump_val : t -> Block_call.t option
     val is_jump : t -> bool
@@ -116,7 +132,8 @@ module type Ir = sig
       ; blocks : Block.t Label.Map.t
       ; start : Label.t
       ; next_temp_id : Temp_entity.Id.t
-      ; next_label_id : Label_entity.Id.t
+      ; next_label_id : Label_entity.Id.t (* ; next_slot_id : Stack_slot_entity.Id.t *)
+      ; data : Func_data.t
       }
     [@@deriving sexp_of]
 
@@ -129,9 +146,11 @@ module type Ir = sig
     val succ_table : t -> Label.t list Label.Table.t
     val bi_graph : t -> Label.t Graph.Bi.t
     val graph : t -> Label.t Graph.t
-    val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Immediate.t
+    val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.t
     val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
     val get_ty_table : t -> Ty.t Temp.Table.t
+    val labels_postorder : t -> Label.t Vec.t
+    val labels_reverse_postorder : t -> Label.t Vec.t
   end
 
   module Edit : sig
@@ -157,30 +176,32 @@ module type Ir = sig
   module Program : sig
     type t = { funcs : Func.t } [@@deriving sexp_of]
   end
+end
 
-  module Std : sig
-    module Instr : sig
-      include module type of struct
-        include Instr
-      end
+module Make_std (Ir : Ir) = struct
+  open Ir
+  open Arg
 
-      include module type of struct
-        include Instr_ext
-      end
-    end
-
-    module Ty = Ty
-    module Instr' = Instr'
-    module Block = Block
-    module Adj_map = Adj_map
-    module Adj_table = Adj_table
-    module Func = Func
-    module Edit = Edit
-    module Multi_edit = Multi_edit
-    module Temp_entity = Temp_entity
-    module Temp = Temp_entity.Ident
-    module Block_call = Block_call
+  module Instr = struct
+    include Instr
+    include Instr_ext
   end
+
+  module Ty = struct
+    include Ty
+  end
+
+  module Location = Location
+  module Instr' = Instr'
+  module Block = Block
+  module Adj_map = Adj_map
+  module Adj_table = Adj_table
+  module Func = Func
+  module Edit = Edit
+  module Multi_edit = Multi_edit
+  module Temp_entity = Temp_entity
+  module Temp = Temp_entity.Ident
+  module Block_call = Block_call
 end
 
 module Make_ir_S (Arg : Arg) = struct

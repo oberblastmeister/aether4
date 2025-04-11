@@ -49,19 +49,25 @@ let lower_ty (ty : Lir.Ty.t) : Abs_x86.Size.t =
 ;;
 
 let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
-  { label = b.label; args = List.map b.args ~f:(get_vreg st) }
+  { label = b.label
+  ; args = List.map b.args ~f:(fun temp -> Abs_x86.Location.Vreg (get_vreg st temp))
+  }
 ;;
 
 let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
+  | Call _ -> todol [%here]
   | Block_params { temps } ->
     empty
     +> [ ins
            (Block_params
-              { temps =
-                  List.map temps ~f:(fun (vreg, ty) -> get_vreg st vreg, lower_ty ty)
+              { params =
+                  List.map temps ~f:(fun (vreg, ty) ->
+                    let vreg = get_vreg st vreg in
+                    let ty = lower_ty ty in
+                    { Abs_x86.Block_param.param = Vreg vreg; ty })
               })
        ]
   | Nop -> empty +> [ ins Nop ]
@@ -137,7 +143,14 @@ let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
   let blocks = Ident.Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
   let next_temp_id = Id_gen.next st.temp_gen in
-  { name; blocks; start; next_temp_id; next_label_id = func.next_label_id }
+  let next_stack_slot_id = Id_gen.next (Id_gen.create ()) in
+  { name
+  ; blocks
+  ; start
+  ; next_temp_id
+  ; next_label_id = func.next_label_id
+  ; data = { next_stack_slot_id; stack_slots = [] }
+  }
 ;;
 
 let lower func =

@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    int bruh = 1234;
+    return bruh * -1;
+}
+----
+-1234

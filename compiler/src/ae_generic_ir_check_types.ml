@@ -5,7 +5,7 @@ open Ae_generic_ir_sigs
 
 (* TODO: check calls when we add those *)
 module Make (Ir : Ir) = struct
-  open Ir.Std
+  open Make_std (Ir)
 
   exception Exn of Error.t
 
@@ -18,27 +18,29 @@ module Make (Ir : Ir) = struct
   ;;
 
   let check_block_call ty_table func (block_call : Block_call.t) =
-    let dst_block = Func.find_block_exn func block_call.label in
-    let (`temps block_params) =
+    let dst_block = Func.find_block_exn func (Block_call.label block_call) in
+    let block_param_tys =
       Block.find_block_params dst_block
       |> Instr'.instr
-      |> Instr.block_params_val
+      |> Instr.block_params_tys
       |> Option.value_exn
     in
-    let block_param_tys = List.map block_params ~f:snd in
     let temp_with_ty =
-      match List.zip block_call.args block_param_tys with
+      (* TODO: fix this and use the Location *)
+      let args = Iter.to_list (Block_call.iter_uses block_call) in
+      match List.zip args block_param_tys with
       | Ok t -> t
       | Unequal_lengths ->
         throw_s
           [%message
             "Didn't provide the right number of block args"
               (dst_block.label : Label.t)
-              (block_call.args : Temp.t list)
+              (args : Location.t list)
               (block_param_tys : Ty.t list)]
     in
     begin
-      let@: temp, ty = List.iter temp_with_ty in
+      let@: location, ty = List.iter temp_with_ty in
+      let@: temp = Option.iter @@ Location.temp_val location in
       check_temp_ty ty_table temp ty
     end;
     ()

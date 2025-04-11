@@ -108,6 +108,7 @@ and parse_semi_stmt env : Cst.stmt =
     (parse_decl
      <|> ((fun d -> Cst.Assign d) <$> parse_assign)
      <|> parse_return
+     <|> parse_assert
      <|> parse_post
      <|> ((fun e -> Cst.Effect e) <$> parse_expr))
       env
@@ -177,6 +178,11 @@ and parse_for_paren env : Cst.for_paren =
   expect_eq_ Semi env;
   let incr = (Parser.optional parse_semi_stmt) env in
   { init; cond; incr }
+
+and parse_assert env : Cst.stmt =
+  let assert_tok = expect_eq Assert env in
+  let expr = parse_expr env in
+  Cst.Assert { expr; span = Span.Syntax.(assert_tok.span ++ Cst.expr_span expr) }
 
 and parse_return env : Cst.stmt =
   let open Span.Syntax in

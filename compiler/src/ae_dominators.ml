@@ -8,10 +8,16 @@ module Label = Label_entity.Ident
 module Graph = Ae_data_graph_std
 module Dfs = Label_entity.Dfs
 
-let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) =
+type node =
+  { idom : Label.t
+  ; rpo_number : int
+  }
+[@@deriving sexp_of]
+
+let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) : node Label.Table.t =
   let idoms = Table.create ?size:node_length () in
   let with_processed label f =
-    Table.set idoms ~key:label ~data:label;
+    Table.set idoms ~key:label ~data:{ idom = label; rpo_number = 0 };
     let res = f () in
     Table.remove idoms label;
     res
@@ -21,25 +27,23 @@ let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) =
   let@ () = with_processed start in
   let is_processed label = Table.mem idoms label in
   (* get the nodes *)
-  let nodes = Dfs.postorder ~start:[ start ] (Graph.Bi.to_t graph) in
+  let nodes = Dfs.reverse_postorder ~start:[ start ] (Graph.Bi.to_t graph) in
   let index_of_node = Table.create ~size:(Vec.length nodes) () in
-  (* since we iterate in postorder, things higher up the REVERSE POST ORDER tree will have a higher index *)
   Vec.iteri nodes ~f:(fun i node -> Table.set index_of_node ~key:node ~data:i);
   let intersect node1 node2 =
     let with_index node = node, Table.find_exn index_of_node node in
-    let go_up node = with_index (Table.find_exn idoms node) in
+    let go_up node = with_index (Table.find_exn idoms node).idom in
     let rec go (node1, i1) (node2, i2) =
-      (* the ones with higher indexes are closer to the top of the rpo tree *)
-      match Ordering.of_int ([%compare: int] i1 i2) with
-      | Less -> go (go_up node1) (node2, i2)
-      | Greater -> go (node1, i1) (go_up node2)
+      (* the ones with lower indexes are closer to the top of the rpo tree *)
+      match Ordering.of_int (compare i1 i2) with
+      | Less -> go (node1, i1) (go_up node2)
+      | Greater -> go (go_up node1) (node2, i2)
       | Equal -> node1
     in
     go (with_index node1) (with_index node2)
   in
   let compute () =
-    (* fold from the right for REVERSE POST ORDER *)
-    Vec.fold_right nodes ~init:false ~f:(fun node changed ->
+    Vec.foldi nodes ~init:false ~f:(fun rpo_number changed node ->
       if [%equal: Label.t] start node
       then changed
       else (
@@ -63,9 +67,12 @@ let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) =
             intersect pred current_idom)
         in
         let changed =
-          not @@ [%equal: Label.t option] (Table.find idoms node) (Some new_idom)
+          not
+          @@ [%equal: Label.t option]
+               (Option.map ~f:__.idom (Table.find idoms node))
+               (Some new_idom)
         in
-        Table.set idoms ~key:node ~data:new_idom;
+        Table.set idoms ~key:node ~data:{ idom = new_idom; rpo_number };
         changed))
   in
   let rec fixpoint () =
@@ -87,7 +94,7 @@ let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
       Table.update frontier_of_node runner ~f:(function
         | None -> Ident.Set.singleton node
         | Some fs -> Ident.Set.add fs node);
-      add_until node node_idom (Table.find_exn idoms runner)
+      add_until node node_idom (Table.find_exn idoms runner).idom
     end
   in
   begin
@@ -98,27 +105,45 @@ let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
         graph.preds node |> Iter.length |> is_join_point && Table.mem idoms node)
     in
     let@: pred = graph.preds node in
-    add_until node (Table.find_exn idoms node) pred;
+    add_until node (Table.find_exn idoms node).idom pred;
     ()
   end;
   frontier_of_node
 ;;
 
-module Immediate = struct
-  type t =
-    { start : Label.t
-    ; table : Label.t Label.Table.t
-    }
-  [@@deriving sexp_of]
+type t =
+  { start : Label.t
+  ; table : node Label.Table.t
+  }
+[@@deriving sexp_of]
 
-  let find t l = Table.find t.table l
-  let is_reachable t l = Label.equal t.start l || Table.mem t.table l
+let find t l = Option.map ~f:__.idom (Table.find t.table l)
 
-  let compute ?node_length ~start graph =
-    let table = compute_idoms ?node_length ~start graph in
-    { start; table }
-  ;;
-end
+let dominates t ~higher ~lower =
+  match Table.find t.table higher, Table.find t.table lower with
+  | None, _ | _, None -> false
+  | Some higher_node, Some _lower_node ->
+    let rec loop lower =
+      if higher_node.rpo_number < (Table.find_exn t.table lower).rpo_number
+      then begin
+        let idom = Table.find t.table lower in
+        match idom with
+        | Some idom -> loop idom.idom
+        | None ->
+          (* we climbed past the entry *)
+          false
+      end
+      else Label.equal higher lower
+    in
+    loop lower
+;;
+
+let is_reachable t l = Label.equal t.start l || Table.mem t.table l
+
+let compute ?node_length ~start graph =
+  let table = compute_idoms ?node_length ~start graph in
+  { start; table }
+;;
 
 module Tree = struct
   type t = Label.t list Label.Table.t [@@deriving sexp_of]
@@ -126,8 +151,8 @@ module Tree = struct
   let children idoms label = Table.find idoms label |> Option.value ~default:[]
 
   let of_immediate idoms =
-    Table.iteri idoms.Immediate.table
-    |> Iter.map ~f:(fun (label, idom) -> idom, label)
+    Table.iteri idoms.table
+    |> Iter.map ~f:(fun (label, node) -> node.idom, label)
     |> Table.of_iter_accum ~init:[] ~f:(fun acc label -> label :: acc)
   ;;
 end
@@ -135,7 +160,7 @@ end
 module Frontier = struct
   type t = Label.Set.t Label.Table.t [@@deriving sexp_of]
 
-  let compute idoms = compute_frontier idoms.Immediate.table
+  let compute idoms = compute_frontier idoms.table
 
   let find (t : t) label =
     Table.find t label |> Option.value_map ~f:Ident.Set.to_list ~default:[]

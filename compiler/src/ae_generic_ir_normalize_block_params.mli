@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) : sig
-  open Ir.Std
+  open Make_std(Ir)
 
   val normalize : Func.t -> Func.t
 end

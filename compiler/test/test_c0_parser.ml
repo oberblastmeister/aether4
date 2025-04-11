@@ -239,3 +239,27 @@ let%expect_test "typedef" =
         (span 17:10-27)))))
     |}]
 ;;
+
+let%expect_test _ =
+  check
+    {|
+    int main() {
+      int first = 0;
+      assert true;
+    }
+    |};
+  [%expect
+    {|
+    (Ok
+     ((Func
+       ((extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
+        (params ())
+        (body
+         (((block
+            ((Decl (ty (Int 3:7-10)) (name ((t first) (span 3:11-16)))
+              (expr ((Int_const ((t 0) (span 3:19))))) (span 3:7-20))
+             (Assert (expr (Bool_const ((t true) (span 4:14-18)))) (span 4:7-18))))
+           (span [2,16]-[5,6]))))
+        (span [2,5]-[5,6])))))
+    |}]
+;;

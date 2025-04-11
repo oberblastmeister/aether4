@@ -40,7 +40,9 @@ module Make (Set : Signatures.Mutable_set) = struct
 
   let reverse_postorder ~start graph =
     let vec = postorder ~start graph in
-    Vec.to_list vec |> List.rev |> Vec.of_list
+    let array = Vec.to_array vec in
+    Array.rev_inplace array;
+    Vec.of_array array
   ;;
 
   let preorder ~start graph =

@@ -9,9 +9,9 @@
  (preprocess
   (pps
    ppx_jane
-   ppx_inline_test
    ppx_deriving.enum
-   -log-source-position))
+   -log-source-position
+   ppx_partial))
  (libraries
   parsec
   std
@@ -21,7 +21,6 @@
   core_unix
   core_unix.filename_unix
   core_unix.command_unix
-  algaeff
   zarith
   int_repr
   cmdliner

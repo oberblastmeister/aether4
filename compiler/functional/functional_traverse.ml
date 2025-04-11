@@ -13,4 +13,4 @@ let compose
 
 let filtered ~f:pred a ~f = if pred a then f a else a
 let ( & ) = compose
-let of_field field ~f = Field.map field ~f
+let of_field field x ~f = Field.map field x ~f

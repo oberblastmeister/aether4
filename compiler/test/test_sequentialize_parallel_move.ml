@@ -8,14 +8,8 @@ module Generic_ir = Ae_generic_ir_std
 
 let temp = Temp_intern.intern
 
-module Destruct_ssa =
-  Generic_ir.Destruct_ssa.Make
-    (Tir.Ir)
-    (struct
-      let move ~dst ~src ~ty = Instr.Unary { dst; src; op = Copy ty }
-    end)
-
-module Move = Destruct_ssa.Move
+module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (Tir)
+module Move = Sequentialize_parallel_moves.Move
 
 let rsi = temp "rsi"
 let rdi = temp "rdi"
@@ -34,7 +28,7 @@ let d = temp "d"
 let scratch = temp "scratch"
 
 let sequentialize par_move =
-  Destruct_ssa.sequentialize_parallel_moves
+  Sequentialize_parallel_moves.sequentialize
     ~in_same_reg:Temp.equal
     ~get_scratch:(fun () -> scratch)
     par_move
@@ -65,6 +59,10 @@ let%expect_test "simple scratch" =
   check [ b; d; c; a ] [ a; a; b; c ];
   [%expect {| ((scratch a) (d a) (a c) (c b) (b scratch)) |}]
 ;;
+
+let%expect_test "repetition" =
+  check [ a; b; c; d ] [b; a; a; a];
+  [%expect {| ((scratch b) (b a) (c a) (d a) (a scratch)) |}]
 
 let%expect_test "multiple components" =
   check [ rdi; rsi; rdx; rcx; r8; r9 ] [ rsi; rdi; rsi; rsi; r9; r8 ];

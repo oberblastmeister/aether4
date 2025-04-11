@@ -5,16 +5,17 @@ module Id = Entity.Id
 module Ident = Entity.Ident
 module Frame = Ae_x86_frame
 module Int_table = Entity.Table.Int_table
-module Bitset = Ae_data_bitset
+module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
 module Mach_reg = Ae_x86_mach_reg
 module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
+module Destruct_ssa = Ae_abs_x86_destruct_ssa
 open Ae_trace
 
-let build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : Instr'.t) =
+let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : Instr'.t) =
   let iter_pairs xs ~f =
     let rec go xs =
       match xs with
@@ -117,7 +118,7 @@ let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 
 let get_spilled_colors ~precolored_colors ~max_color ~num_regs =
   let chaos_options = Chaos_mode.get_options () in
-  let spilled_colors = Bitset.create ~size:(max_color + 1) () in
+  let spilled_colors = Bitvec.create ~size:(max_color + 1) () in
   begin
     match chaos_options.spill_mode with
     | None ->
@@ -126,9 +127,9 @@ let get_spilled_colors ~precolored_colors ~max_color ~num_regs =
         let amount_to_spill = ref amount_to_spill in
         let color = ref max_color in
         while !amount_to_spill > 0 do
-          if not (Bitset.mem precolored_colors !color)
+          if not (Bitvec.mem precolored_colors !color)
           then begin
-            Bitset.add spilled_colors !color;
+            Bitvec.add spilled_colors !color;
             decr amount_to_spill
           end;
           decr color
@@ -137,9 +138,9 @@ let get_spilled_colors ~precolored_colors ~max_color ~num_regs =
     | Some All ->
       let color = ref max_color in
       while !color >= 0 do
-        if not (Bitset.mem precolored_colors !color)
+        if not (Bitvec.mem precolored_colors !color)
         then begin
-          Bitset.add spilled_colors !color
+          Bitvec.add spilled_colors !color
         end;
         decr color
       done
@@ -306,7 +307,7 @@ let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : F
   let spilled_temp_to_slot =
     let spilled_color_to_slot = Int_table.create () in
     begin
-      let@: spilled_color = Bitset.iter spilled_colors in
+      let@: spilled_color = Bitvec.iter spilled_colors in
       Int_table.set
         spilled_color_to_slot
         ~key:spilled_color
@@ -359,10 +360,10 @@ let get_precolored_colors
       ~coloring
       ~max_color
   =
-  let precolored_colors = Bitset.create ~size:(max_color + 1) () in
+  let precolored_colors = Bitvec.create ~size:(max_color + 1) () in
   for precolored_id = Id.to_int precolored_id_start to Id.to_int precolored_id_end - 1 do
     let color = Ident.Table.find_int_exn coloring precolored_id in
-    Bitset.add precolored_colors color
+    Bitvec.add precolored_colors color
   done;
   precolored_colors
 ;;
@@ -450,7 +451,7 @@ let alloc_func frame_builder (func : Func.t) =
       (* skip the precolored colors *)
       |> Iter.filter ~f:(fun color -> not @@ Int_table.mem color_to_mach_reg color)
       (* skip the spilled colors *)
-      |> Iter.filter ~f:(fun color -> not @@ Bitset.mem spilled_colors color)
+      |> Iter.filter ~f:(fun color -> not @@ Bitvec.mem spilled_colors color)
     in
     let mach_reg = find_usable_mach_reg_and_use_up () in
     Int_table.set color_to_mach_reg ~key:color ~data:mach_reg
@@ -460,7 +461,7 @@ let alloc_func frame_builder (func : Func.t) =
   begin
     let@: temp, color = Ident.Table.iteri coloring in
     match Int_table.find color_to_mach_reg color with
-    | None -> assert (Bitset.mem spilled_colors color)
+    | None -> assert (Bitvec.mem spilled_colors color)
     | Some mach_reg -> allocation.!(temp) <- mach_reg
   end;
   let `func func, `evicted_mach_reg_temps evicted_mach_reg_temps =

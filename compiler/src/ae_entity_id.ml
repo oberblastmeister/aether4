@@ -10,6 +10,12 @@ let unchecked_of_int i = i
 let unchecked_coerce i = i
 let to_string = Int.to_string
 let succ = succ
+
+let offset t n =
+  assert (n >= 0);
+  t + n
+;;
+
 let pred = pred
 let ( > ) = ( > )
 let ( < ) = ( < )

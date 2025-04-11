@@ -11,6 +11,7 @@ module Id : sig
   val unchecked_coerce : 'a t -> 'b t
   val to_int : 'k t -> int
   val succ : 'a t -> 'a t
+  val offset : 'a t -> int -> 'a t
   val pred : 'a t -> 'a t
   val to_string : 'a t -> string
 
@@ -26,7 +27,7 @@ module Id : sig
   val add_table : 'a -> ('w, 'a) Table.t -> 'w t
 end
 
-module Bitset : sig
+module Bitvec : sig
   type 'w t [@@deriving sexp]
 
   val create : ?size:int -> ?default:bool -> unit -> 'w t
@@ -59,6 +60,7 @@ module Ident : sig
 
   val create : ?info:Info.t -> string -> 'k Id.t -> 'k t
   val to_id : 'k t -> 'k Id.t
+  val to_int : 'k t -> int
   val fresh : ?name:string -> ?info:Info.t -> 'k Id_gen.t -> 'k t
   val freshen : 'k Id_gen.t -> 'k t -> 'k t
   val unchecked_coerce : 'a t -> 'b t
@@ -104,7 +106,7 @@ module type S = sig
     module Table : module type of Id.Table.Make (Witness)
     module Map : module type of Id.Map.Make (Witness)
     module Set : module type of Id.Set.Make (Witness)
-    module Bitset : module type of Bitset.Make (Witness)
+    module Bitvec : module type of Bitvec.Make (Witness)
     include Base.Comparable.S with type t := t
   end
 
@@ -114,7 +116,7 @@ module type S = sig
     module Table : module type of Ident.Table.Make (Witness)
     module Map : module type of Ident.Map.Make (Witness)
     module Set : module type of Ident.Set.Make (Witness)
-    module Bitset : module type of Bitset.Make (Witness)
+    module Bitvec : module type of Bitvec.Make (Witness)
     include Base.Comparable.S with type t := t
   end
 end

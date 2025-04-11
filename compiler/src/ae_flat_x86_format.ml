@@ -161,6 +161,7 @@ let format_instr (instr : Instr.t) =
     [%string "test%{suff size} %{op src2 size}, %{op src1 size}"]
   | Set { cc; dst } -> [%string "set%{string_of_cond cc} %{op dst Byte}"]
   | Cqo -> "cqo"
+  | Call label -> [%string "callq %{label}"]
 ;;
 
 let format_line (line : Line.t) =

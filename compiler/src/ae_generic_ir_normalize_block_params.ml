@@ -3,7 +3,7 @@
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
-  open Ir.Std
+  open Make_std(Ir)
 
   let normalize func =
     let edit = Multi_edit.create () in

@@ -24,10 +24,8 @@ let%expect_test "smoke" =
             (Cond_jump
                { cond = temp "const_bool"
                ; b1 =
-                   Block_call.create
-                     (lab "loop")
-                     ~args:[ temp "const_int"; temp "const_bool" ]
-               ; b2 = Block_call.create (lab "done") ~args:[ temp "const_int" ]
+                   Block_call.create (lab "loop") [ temp "const_int"; temp "const_bool" ]
+               ; b2 = Block_call.create (lab "done") [ temp "const_int" ]
                })
         ] )
     ; ( lab "done"
@@ -36,7 +34,7 @@ let%expect_test "smoke" =
         ] )
     ; ( lab "loop"
       , [ ins (Block_params { temps = [ temp "loop1", Int; temp "loop2", Bool ] })
-        ; ins (Jump (Block_call.create (lab "loop") ~args:[ temp "loop1"; temp "loop2" ]))
+        ; ins (Jump (Block_call.create (lab "loop") [ temp "loop1"; temp "loop2" ]))
         ] )
     ]
   in
@@ -51,6 +49,7 @@ let%expect_test "smoke" =
     ; start = lab "start"
     ; next_temp_id = Temp_intern.next_id ()
     ; next_label_id = Label_intern.next_id ()
+    ; data = ()
     }
   in
   Check.check func |> Or_error.ok_exn;
@@ -89,7 +88,7 @@ let%expect_test "smoke" =
                (b1 ((label loop@0) (args (const_int@3 const_bool@4))))
                (b2 ((label done@1) (args (const_int@3))))))
              (index 3) (info ()))))))))
-      (start start@2) (next_temp_id 5) (next_label_id 3)))
+      (start start@2) (next_temp_id 5) (next_label_id 3) (data ())))
     (func
      ((name main)
       (blocks
@@ -123,6 +122,6 @@ let%expect_test "smoke" =
            (((i (Block_params (temps ()))) (index 0) (info ()))
             ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
              (index 1) (info ()))))))))
-      (start start@2) (next_temp_id 5) (next_label_id 4)))
+      (start start@2) (next_temp_id 5) (next_label_id 4) (data ())))
     |}]
 ;;

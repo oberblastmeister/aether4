@@ -54,7 +54,7 @@ let simplicial_elimination_order (graph : Graph.t) (precolored : Vreg.Set.t) ~f 
 ;;
 
 (* precondition: colors should be sorted *)
-let find_gaps (colors : int Array.t) : int =
+let find_gap (colors : int Array.t) : int =
   Array.iteri colors
   |> Iter.uncurry
   |> Iter.map ~f:(fun (i, c) -> if i = 0 then -1, c else colors.(i - 1), c)
@@ -67,7 +67,7 @@ let find_gaps (colors : int Array.t) : int =
 ;;
 
 let%expect_test _ =
-  let check cs = print_s [%sexp (find_gaps cs : int)] in
+  let check cs = print_s [%sexp (find_gap cs : int)] in
   check [| 0; 1; 1; 2; 4; 5 |];
   [%expect {| 3 |}];
   check [| 1; 3; 4 |];
@@ -98,7 +98,7 @@ let color_graph_with_ordering ordering (graph : Graph.t) (precolored : Vreg.Set.
       |> Iter.to_array
     in
     Array.sort neighbor_colors ~compare;
-    let lowest_not_in_neighbors = find_gaps neighbor_colors in
+    let lowest_not_in_neighbors = find_gap neighbor_colors in
     vreg_to_color.!(vreg) <- lowest_not_in_neighbors;
     max_color := max !max_color lowest_not_in_neighbors;
     ());

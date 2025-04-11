@@ -6,7 +6,7 @@ module Ident = Entity.Ident
 module Entity_graph_utils = Ae_entity_graph_utils
 module Dominators = Ae_dominators
 module Id_gen = Entity.Id_gen
-module Bitset = Entity.Bitset
+module Bitvec = Entity.Bitvec
 
 open struct
   let is_on_top table ~equal ~key ~data =
@@ -54,7 +54,7 @@ let convert (func : Func.t) =
   let dom_tree = Dominators.Tree.of_immediate idoms in
   let def_to_ty = Func.get_ty_table func in
   let block_to_phis = compute_phi_placements func in
-  let temp_gen = Id_gen.of_id func.next_temp_id in
+  let temp_gen = Id_gen.create () in
   let multi_edit = Multi_edit.create () in
   let rec rename_block rename_temp_map (block : Block.t) =
     let rename_temp_map = ref rename_temp_map in
@@ -117,8 +117,7 @@ let convert (func : Func.t) =
          The unreachable blocks were not in the dominator tree, so were not converted at all.
         Just remove them here.
       *)
-      |> Ident.Map.filteri ~f:(fun ~key ~data:_ ->
-        Dominators.Immediate.is_reachable idoms key)
+      |> Ident.Map.filteri ~f:(fun ~key ~data:_ -> Dominators.is_reachable idoms key)
       |> Multi_edit.apply_blocks ~no_sort:() multi_edit
   ; next_temp_id = Id_gen.next temp_gen
   }

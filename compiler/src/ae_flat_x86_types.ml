@@ -112,6 +112,7 @@ module Instr = struct
         ; label : string
         }
     | Ret
+    | Call of string
   [@@deriving sexp_of, variants]
 end
 

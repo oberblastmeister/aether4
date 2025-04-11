@@ -20,14 +20,14 @@ let graph xs =
 ;;
 
 type test =
-  { idoms : Dominators.Immediate.t
+  { idoms : Dominators.t
   ; frontier : Dominators.Frontier.t
   ; domtree : Dominators.Tree.t
   }
 [@@deriving sexp_of]
 
 let run_test g =
-  let idoms = Dominators.Immediate.compute ~start:(lab "start") g in
+  let idoms = Dominators.compute ~start:(lab "start") g in
   let frontier = Dominators.Frontier.compute idoms g in
   let domtree = Dominators.Tree.of_immediate idoms in
   let test = { idoms; frontier; domtree } in
@@ -45,7 +45,11 @@ let%expect_test _ =
     {|
     ((idoms
       ((start start@2)
-       (table ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2)))))
+       (table
+        ((4@0 ((idom start@2) (rpo_number 2)))
+         (3@1 ((idom start@2) (rpo_number 1)))
+         (1@3 ((idom start@2) (rpo_number 3)))
+         (2@4 ((idom start@2) (rpo_number 4)))))))
      (frontier ((4@0 (1@3)) (3@1 (2@4)) (1@3 (2@4)) (2@4 (1@3))))
      (domtree ((start@2 (2@4 1@3 3@1 4@0)))))
     |}]
@@ -69,7 +73,11 @@ let%expect_test _ =
     ((idoms
       ((start start@2)
        (table
-        ((4@0 start@2) (3@1 start@2) (1@3 start@2) (2@4 start@2) (5@5 start@2)))))
+        ((4@0 ((idom start@2) (rpo_number 1)))
+         (3@1 ((idom start@2) (rpo_number 5)))
+         (1@3 ((idom start@2) (rpo_number 3)))
+         (2@4 ((idom start@2) (rpo_number 4)))
+         (5@5 ((idom start@2) (rpo_number 2)))))))
      (frontier
       ((4@0 (3@1 2@4)) (3@1 (2@4)) (1@3 (2@4)) (2@4 (3@1 1@3)) (5@5 (1@3))))
      (domtree ((start@2 (5@5 2@4 1@3 3@1 4@0)))))

@@ -1,5 +1,6 @@
 open Std
 open Ae_generic_ir_sigs
+module Graph = Ae_data_graph_std
 
 open struct
   module Entity = Ae_entity_std
@@ -8,6 +9,7 @@ open struct
   module Label = Label_entity.Ident
   module Entity_graph_utils = Ae_entity_graph_utils
   module Dominators = Ae_dominators
+  module Stack_slot_entity = Ae_stack_slot_entity
 end
 
 module Make_ir (Arg : Arg) = struct
@@ -19,7 +21,7 @@ module Make_ir (Arg : Arg) = struct
   module Temp = Temp_entity.Ident
 
   module Instr_ext = struct
-    let iter_labels i = Instr.iter_block_calls i |> Iter.map ~f:(fun bc -> bc.label)
+    let iter_labels i = Instr.iter_block_calls i |> Iter.map ~f:Block_call.label
     let labels_list i = iter_labels i |> Iter.to_list
   end
 
@@ -104,6 +106,7 @@ module Make_ir (Arg : Arg) = struct
       ; start : Label.t
       ; next_temp_id : Temp_entity.Id.t
       ; next_label_id : Label_entity.Id.t
+      ; data : Func_data.t
       }
     [@@deriving sexp_of]
 
@@ -138,11 +141,11 @@ module Make_ir (Arg : Arg) = struct
     ;;
 
     let pred_table func = pred_table_of_succ (succ_table func)
-    let graph func = Entity_graph_utils.graph_of_adj_map (succ_map func)
+    let graph func = Entity_graph_utils.graph_of_adj_table (succ_table func)
     let bi_graph func = graph func |> Entity_graph_utils.to_bi
 
     let compute_idoms ?graph t =
-      Dominators.Immediate.compute
+      Dominators.compute
         ~start:t.start
         (Option.value_or_thunk graph ~default:(fun () -> bi_graph t))
     ;;
@@ -171,6 +174,14 @@ module Make_ir (Arg : Arg) = struct
         end
       end;
       table
+    ;;
+
+    let labels_reverse_postorder func =
+      Label_entity.Dfs.reverse_postorder ~start:[ func.start ] (graph func)
+    ;;
+
+    let labels_postorder func =
+      Label_entity.Dfs.postorder ~start:[ func.start ] (graph func)
     ;;
   end
 
@@ -263,24 +274,5 @@ module Make_ir (Arg : Arg) = struct
 
   module Program = struct
     type t = { funcs : Func.t } [@@deriving sexp_of]
-  end
-
-  module Std = struct
-    module Instr = struct
-      include Instr
-      include Instr_ext
-    end
-
-    module Ty = Ty
-    module Instr' = Instr'
-    module Block = Block
-    module Adj_map = Adj_map
-    module Adj_table = Adj_table
-    module Func = Func
-    module Edit = Edit
-    module Multi_edit = Multi_edit
-    module Temp_entity = Arg.Temp_entity
-    module Temp = Temp_entity.Ident
-    module Block_call = Block_call
   end
 end

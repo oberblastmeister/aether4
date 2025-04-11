@@ -24,10 +24,15 @@ module type S_phantom_without_make = sig
   val set : ('w, 'a) t -> key:'w Key.t -> data:'a -> ('w, 'a) t
   val mem : ('w, 'a) t -> 'w Key.t -> bool
   val map : ('w, 'a) t -> f:('a -> 'b) -> ('w, 'b) t
+  val fold : ('w, 'a) t -> init:'b -> f:(key:'w Key.t -> data:'a -> 'b -> 'b) -> 'b
+  val mapi : ('w, 'a) t -> f:(key:'w Key.t -> data:'a -> 'b) -> ('w, 'b) t
+  val iteri : ('w, 'a) t -> f:(key:'w Key.t -> data:'a -> unit) -> unit
   val iter : ('w, 'a) t -> 'a Iter.t
   val iter_keys : ('w, 'a) t -> 'w Key.t Iter.t
   val to_alist : ('w, 'a) t -> ('w Key.t * 'a) list
   val of_alist_exn : ('w Key.t * 'a) list -> ('w, 'a) t
+  val update : ('w, 'a) t -> 'w Key.t -> f:('a option -> 'a) -> ('w, 'a) t
+  val remove : ('w, 'a) t -> 'w Key.t -> ('w, 'a) t
 
   module Syntax : sig
     val ( .%() ) : ('w, 'a) t -> 'w Key.t -> 'a
@@ -65,12 +70,35 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let find t k = Map.find t (Key.to_int k) |> Option.map ~f:(fun e -> e.Entry.data)
   let find_exn t k = (Map.find_exn t (Key.to_int k)).Entry.data
   let map t ~f = Map.map t ~f:(fun e -> { e with Entry.data = f e.Entry.data })
+
+  let mapi t ~f =
+    Map.mapi t ~f:(fun ~key:_ ~data ->
+      { data with Entry.data = f ~key:data.Entry.key ~data:data.Entry.data })
+  ;;
+
   let set t ~key ~data = Map.set t ~key:(Key.to_int key) ~data:{ Entry.key; data }
   let to_alist t = Map.to_alist t |> List.map ~f:(fun (_, e) -> e.Entry.key, e.data)
   let mem t k = Map.mem t (Key.to_int k)
   let add_exn t ~key ~data = Map.add_exn t ~key:(Key.to_int key) ~data:{ Entry.key; data }
+
+  let iteri t ~f =
+    Map.iteri t ~f:(fun ~key:_ ~data -> f ~key:data.Entry.key ~data:data.Entry.data)
+  ;;
+
+  let fold t ~init ~f =
+    Map.fold t ~init ~f:(fun ~key:_ ~data acc ->
+      f ~key:data.Entry.key ~data:data.Entry.data acc)
+  ;;
+
   let iter t ~f = Map.iter t ~f:(fun e -> f e.Entry.data)
   let iter_keys t ~f = Map.iter t ~f:(fun e -> f e.Entry.key)
+  let remove t k = Map.remove t (Key.to_int k)
+
+  let update t key ~f =
+    Map.update t (Key.to_int key) ~f:(function
+      | None -> { Entry.key; data = f None }
+      | Some x -> { Entry.key; data = f (Some x.data) })
+  ;;
 
   let of_alist_exn l =
     List.map l ~f:(fun (key, data) -> Key.to_int key, Entry.{ key; data })

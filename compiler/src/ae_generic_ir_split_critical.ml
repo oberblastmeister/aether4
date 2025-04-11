@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
-  open Ir.Std
+  open Make_std(Ir)
 
   let split (func : Func.t) =
     let module Table = Ident.Table in
@@ -19,28 +19,26 @@ module Make (Ir : Ir) = struct
         let jump_instr_ref = ref jump_instr in
         begin
           let@: block_call = List.iter block_calls in
-          let preds = pred_table.!(block_call.label) in
+          let preds = pred_table.!(Block_call.label block_call) in
           if List.length preds > 1
           then begin
-            let new_label = Ident.freshen label_gen block_call.label in
+            let new_label = Ident.freshen label_gen (Block_call.label block_call) in
             Multi_edit.add_insert
               edit
               new_label
-              (Instr'.create (Instr.block_params ~temps:[]) 0);
+              (Instr'.create Instr.empty_block_params 0);
             (* this block jumps to the original destination *)
-            Multi_edit.add_insert
-              edit
-              new_label
-              (Instr'.create
-                 (Instr.jump (Block_call.create block_call.label ~args:block_call.args))
-                 0);
+            Multi_edit.add_insert edit new_label (Instr'.create (Instr.jump block_call) 0);
             (* override the original jump to the new label *)
             jump_instr_ref
             := begin
                  let@: instr = Instr'.map !jump_instr_ref in
                  Instr.map_block_calls instr ~f:(fun block_call' ->
-                   if Label.equal block_call'.label block_call.label
-                   then { block_call' with label = new_label; args = [] }
+                   if
+                     Label.equal
+                       (Block_call.label block_call')
+                       (Block_call.label block_call)
+                   then Block_call.create new_label []
                    else block_call')
                end
           end;

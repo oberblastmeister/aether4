@@ -42,6 +42,7 @@ let check_block_call ty_table func (block_call : Block_call.t) =
 let check_instr ty_table func (instr : Instr.t) =
   match instr with
   | Nop | Block_params _ -> ()
+  | Call _ -> todol [%here]
   | Bin { dst = _; op; src1; src2 } ->
     (match op with
      | Add | Sub | Mul | Div | Mod | Lt | Gt | Le | Ge | And | Or | Xor | Lshift | Rshift

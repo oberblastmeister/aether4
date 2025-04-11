@@ -12,7 +12,7 @@ open Bag.Syntax
 
 let empty = Bag.empty
 let ins = Tir.Instr'.create_unindexed
-let bc = Tir.Block_call.create
+let bc ?(args = []) label = Tir.Block_call.create label args
 
 type st =
   { temp_gen : Tir.Temp_entity.Witness.t Id_gen.t
@@ -257,6 +257,7 @@ let lower_program st (program : Ast.program) : Tir.Func.t =
     ; start = start_label
     ; next_temp_id
     ; next_label_id
+    ; data = ()
     }
   in
   func

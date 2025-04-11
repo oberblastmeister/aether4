@@ -43,6 +43,7 @@ val repeat : 'a -> 'a t
 val scan : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
 val product : 'a t -> 'b t -> ('a * 'b) t
 val ensure_ephemeral : 'a t -> 'a t
+val max_elt : 'a t -> compare:('a -> 'a -> int) -> 'a option
 
 module Infix : sig
   val ( -- ) : int -> int -> int t

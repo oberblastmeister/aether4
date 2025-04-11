@@ -58,5 +58,6 @@ type t =
   | For
   | Void
   | Unknown of string
+  | Assert
   | Eof
 [@@deriving sexp_of, equal, compare, variants]

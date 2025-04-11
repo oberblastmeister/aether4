@@ -36,6 +36,10 @@ and stmt =
       { expr : expr
       ; span : Span.t
       }
+  | Assert of
+      { expr : expr
+      ; span : Span.t
+      }
   | If of
       { cond : expr
       ; body1 : stmt
@@ -192,6 +196,7 @@ let stmt_span (stmt : stmt) =
   | While { span; _ }
   | Return { span; _ }
   | For { span; _ } -> span
+  | Assert { span; _ } -> span
   | Effect expr -> expr_span expr
 ;;
 

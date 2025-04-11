@@ -345,3 +345,12 @@ let[@inline] for_all ~f:p seq =
   with
   | ExitForall -> false
 ;;
+
+let max_elt t ~compare =
+  let m = ref None in
+  t ~f:(fun x ->
+    match !m with
+    | None -> m := Some x
+    | Some x' -> if compare x x' > 0 then m := Some x);
+  !m
+;;

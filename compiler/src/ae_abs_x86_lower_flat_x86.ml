@@ -195,6 +195,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       ++ epilogue_without_base
            ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue"))
            (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame)))
+  | Call _ -> todol [%here]
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Line.t Bag.t =
