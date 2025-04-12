@@ -109,7 +109,7 @@ let build_graph (func : Func.t) =
       ~live_out:(Liveness.Live_set.find live_out block.label)
       ~block
   end;
-  let func = { func with next_temp_id = Id_gen.next temp_gen } in
+  let func = Func.apply_temp_gen temp_gen func in
   graph, mach_reg_to_precolored_name, precolored_id_start, func.next_temp_id, func
 ;;
 
@@ -411,7 +411,7 @@ let alloc_func frame_builder (func : Func.t) =
     coloring.!(scratch_temp) <- max_color + 1;
     Hashtbl.set precolored_name_to_mach_reg ~key:scratch_temp ~data:R11;
     Hashtbl.set mach_reg_to_precolored_name ~key:R11 ~data:scratch_temp;
-    scratch_temp, { func with next_temp_id = Id_gen.next temp_gen }, max_color + 1
+    scratch_temp, Func.apply_temp_gen temp_gen func, max_color + 1
   in
   let func =
     Destruct_ssa.destruct

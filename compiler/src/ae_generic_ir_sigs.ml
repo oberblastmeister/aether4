@@ -5,7 +5,6 @@ open struct
   module Label_entity = Ae_label_entity
   module Stack_slot_entity = Ae_stack_slot_entity
   module Label = Label_entity.Ident
-  module Block_call = Ae_block_call
   module Dominators = Ae_dominators
   module Graph = Ae_data_graph_std
 end
@@ -132,33 +131,6 @@ module type Ir = sig
     type t = Label.t list Label.Table.t
   end
 
-  module Func : sig
-    type t =
-      { name : string
-      ; blocks : Block.t Label.Map.t
-      ; start : Label.t
-      ; next_temp_id : Temp_entity.Id.t
-      ; next_label_id : Label_entity.Id.t (* ; next_slot_id : Stack_slot_entity.Id.t *)
-      ; data : Func_data.t
-      }
-    [@@deriving sexp_of]
-
-    val start_block : t -> Block.t
-    val succ_map : t -> Adj_map.t
-    val iter_blocks : t -> Block.t Iter.t
-    val find_block_exn : t -> Label.t -> Block.t
-    val pred_table : t -> Adj_table.t
-    val pred_table_of_succ : Adj_table.t -> Adj_table.t
-    val succ_table : t -> Label.t list Label.Table.t
-    val bi_graph : t -> Label.t Graph.Bi.t
-    val graph : t -> Label.t Graph.t
-    val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.t
-    val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
-    val get_ty_table : t -> Ty.t Temp.Table.t
-    val labels_postorder : t -> Label.t Vec.t
-    val labels_reverse_postorder : t -> Label.t Vec.t
-  end
-
   module Edit : sig
     type t [@@deriving sexp_of]
 
@@ -177,6 +149,35 @@ module type Ir = sig
     val add_replace : t -> Label.t -> Instr'.t -> unit
     val add_edits : t -> Label.t -> Edit.t list -> unit
     val apply_blocks : ?no_sort:unit -> t -> Block.t Label.Map.t -> Block.t Label.Map.t
+  end
+
+  module Func : sig
+    type t =
+      { name : string
+      ; blocks : Block.t Label.Map.t
+      ; start : Label.t
+      ; next_temp_id : Temp_entity.Id.t
+      ; next_label_id : Label_entity.Id.t (* ; next_slot_id : Stack_slot_entity.Id.t *)
+      ; data : Func_data.t
+      }
+    [@@deriving sexp_of]
+
+    val apply_multi_edit : ?no_sort:unit -> Multi_edit.t -> t -> t
+    val apply_temp_gen : Temp_entity.Witness.t Entity.Id_gen.t -> t -> t
+    val start_block : t -> Block.t
+    val succ_map : t -> Adj_map.t
+    val iter_blocks : t -> Block.t Iter.t
+    val find_block_exn : t -> Label.t -> Block.t
+    val pred_table : t -> Adj_table.t
+    val pred_table_of_succ : Adj_table.t -> Adj_table.t
+    val succ_table : t -> Label.t list Label.Table.t
+    val bi_graph : t -> Label.t Graph.Bi.t
+    val graph : t -> Label.t Graph.t
+    val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.t
+    val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
+    val get_ty_table : t -> Ty.t Temp.Table.t
+    val labels_postorder : t -> Label.t Vec.t
+    val labels_reverse_postorder : t -> Label.t Vec.t
   end
 
   module Program : sig

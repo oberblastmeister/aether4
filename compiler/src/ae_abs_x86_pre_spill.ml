@@ -231,7 +231,7 @@ let insert_spills ~spilled func =
     in
     Multi_edit.add_insert edit block.label (Instr'.create new_instr (instr.index + 1))
   end;
-  { func with blocks = Multi_edit.apply_blocks edit func.blocks }
+  Func.apply_multi_edit ~no_sort:() edit func
 ;;
 
 (* critical edges MUST be split before calling this function, because we have to insert fixup code on the edges *)
@@ -243,15 +243,10 @@ let spill_func ~num_regs (func : Func.t) =
       Liveness.compute_next_use_distance ~pred_table func
     in
     let labels_order = Func.labels_reverse_postorder func in
-    let stack_slot_gen = Id_gen.of_id func.data.next_stack_slot_id in
-    let stack_slots = Lstack.of_list_rev func.data.stack_slots in
+    let stack_builder = Func.create_stack_builder func in
     let spill_temp temp =
       Hashtbl.find_or_add spilled temp ~default:(fun () ->
-        let stack_slot =
-          Ident.fresh stack_slot_gen ~name:("pre_spilled" ^ temp.name) ?info:temp.info
-        in
-        Lstack.push stack_slots (stack_slot, Qword);
-        stack_slot)
+        Stack_builder.alloc stack_builder ~name:("pre_spilled" ^ temp.name) Qword)
     in
     let active_in_table = Table.create () in
     let active_out_table = Table.create () in
@@ -268,14 +263,7 @@ let spill_func ~num_regs (func : Func.t) =
       active_out_table.!(label) <- active_out
     end;
     fixup_func ~edit ~active_in_table ~active_out_table ~spill_temp func;
-    { func with
-      blocks = Multi_edit.apply_blocks edit func.blocks
-    ; data =
-        { func.data with
-          next_stack_slot_id = Id_gen.next stack_slot_gen
-        ; stack_slots = Lstack.to_list_rev stack_slots
-        }
-    }
+    Func.apply_multi_edit edit func |> Func.apply_stack_builder stack_builder
   in
   let func = insert_spills ~spilled func in
   let func = Convert_ssa.convert func in

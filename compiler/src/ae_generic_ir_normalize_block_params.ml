@@ -18,6 +18,6 @@ module Make (Ir : Ir) = struct
           [ Edit.remove block_params; Edit.insert { block_params with index = 0 } ]
       end
     end;
-    { func with blocks = Multi_edit.apply_blocks ~no_sort:() edit func.blocks }
+    Func.apply_multi_edit ~no_sort:() edit func
   ;;
 end

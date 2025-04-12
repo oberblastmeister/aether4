@@ -420,6 +420,20 @@ module Func_data = struct
   [@@deriving sexp_of]
 end
 
+module Stack_builder = struct
+  type t =
+    { mutable stack_slot_gen : Stack_slot_entity.Id.t
+    ; mutable stack_slots : (Stack_slot.t * Ty.t) list
+    }
+
+  let alloc ?(name = "stack_slot") ?info t ty =
+    let ident = Entity.Ident.create ?info name t.stack_slot_gen in
+    t.stack_slot_gen <- Entity.Id.succ t.stack_slot_gen;
+    t.stack_slots <- (ident, ty) :: t.stack_slots;
+    ident
+  ;;
+end
+
 include Generic_ir.Make_all (struct
     module Block_param = Block_param
     module Block_call = Block_call
@@ -431,3 +445,20 @@ include Generic_ir.Make_all (struct
   end)
 
 include Ir
+
+module Func = struct
+  include Func
+
+  let create_stack_builder func =
+    { Stack_builder.stack_slot_gen = func.data.next_stack_slot_id
+    ; stack_slots = func.data.stack_slots
+    }
+  ;;
+
+  let apply_stack_builder (stack_builder : Stack_builder.t) func =
+    let next_stack_slot_id = stack_builder.stack_slot_gen in
+    let stack_slots = stack_builder.stack_slots in
+    let data = { func.data with next_stack_slot_id; stack_slots } in
+    { func with data }
+  ;;
+end

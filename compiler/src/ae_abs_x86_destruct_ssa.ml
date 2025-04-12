@@ -90,5 +90,5 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
     in
     Multi_edit.add_replace edit block.label jump_instr
   end;
-  { func with blocks = Multi_edit.apply_blocks ~no_sort:() edit func.blocks }
+  Func.apply_multi_edit ~no_sort:() edit func
 ;;
