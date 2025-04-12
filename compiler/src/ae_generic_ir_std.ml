@@ -8,6 +8,7 @@ module Normalize_block_params = Ae_generic_ir_normalize_block_params
 module Destruct_ssa = Ae_generic_ir_destruct_ssa
 module Check_well_formed = Ae_generic_ir_check_well_formed
 module Check_types = Ae_generic_ir_check_types
+module Convert_ssa = Ae_generic_ir_convert_ssa
 
 module Make_all (Arg : Sigs.Arg) = struct
   module Ir = struct
@@ -20,6 +21,7 @@ module Make_all (Arg : Sigs.Arg) = struct
   module Normalize_block_params = Normalize_block_params.Make (Ir)
   module Check_well_formed = Check_well_formed.Make (Ir)
   module Check_types = Check_types.Make (Ir)
+  module Convert_ssa = Convert_ssa.Make (Ir)
 
   module Check = struct
     let check func =

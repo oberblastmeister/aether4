@@ -1,3 +1,4 @@
+(* TODO: we need to declare the types of the stack slots *)
 open Std
 open Ae_abs_x86_types
 module Temp_entity = Ae_abs_asm_temp_entity
@@ -243,9 +244,14 @@ let spill_func ~num_regs (func : Func.t) =
     in
     let labels_order = Func.labels_reverse_postorder func in
     let stack_slot_gen = Id_gen.of_id func.data.next_stack_slot_id in
+    let stack_slots = Lstack.of_list_rev func.data.stack_slots in
     let spill_temp temp =
       Hashtbl.find_or_add spilled temp ~default:(fun () ->
-        Ident.fresh stack_slot_gen ~name:("pre_spilled" ^ temp.name) ?info:temp.info)
+        let stack_slot =
+          Ident.fresh stack_slot_gen ~name:("pre_spilled" ^ temp.name) ?info:temp.info
+        in
+        Lstack.push stack_slots (stack_slot, Qword);
+        stack_slot)
     in
     let active_in_table = Table.create () in
     let active_out_table = Table.create () in
@@ -264,9 +270,14 @@ let spill_func ~num_regs (func : Func.t) =
     fixup_func ~edit ~active_in_table ~active_out_table ~spill_temp func;
     { func with
       blocks = Multi_edit.apply_blocks edit func.blocks
-    ; data = { func.data with next_stack_slot_id = Id_gen.next stack_slot_gen }
+    ; data =
+        { func.data with
+          next_stack_slot_id = Id_gen.next stack_slot_gen
+        ; stack_slots = Lstack.to_list_rev stack_slots
+        }
     }
   in
   let func = insert_spills ~spilled func in
+  let func = Convert_ssa.convert func in
   func
 ;;

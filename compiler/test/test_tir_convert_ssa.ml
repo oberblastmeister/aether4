@@ -5,8 +5,18 @@ module Driver = Ae_driver
 module C0 = Ae_c0_std
 module Entity_graph_utils = Ae_entity_graph_utils
 module Tir = Ae_tir_std
+open Tir
 module Dominators = Ae_dominators
 module Label = Ae_label_entity.Ident
+module Entity = Ae_entity_std
+module Ident = Entity.Ident
+module Label_entity = Ae_label_entity
+module Label_intern = Entity.Intern.String_to_name.Make_global (Label_entity.Witness) ()
+module Temp_intern = Entity.Intern.String_to_name.Make_global (Temp_entity.Witness) ()
+
+let lab = Label_intern.intern
+let temp = Temp_intern.intern
+let ins = Instr'.create_unindexed
 
 let check s =
   let func = Driver.compile_source_to_tir s |> Or_error.ok_exn in
@@ -23,6 +33,93 @@ let check s =
   ()
 ;;
 
+let%expect_test "" =
+  let blocks =
+    [ ( lab "start"
+      , [ ins (Block_params [])
+        ; ins (Nullary { dst = temp "b1"; op = Bool_const true })
+        ; ins
+            (Cond_jump
+               { cond = temp "b1"
+               ; b1 = { label = lab "then"; args = [] }
+               ; b2 = { label = lab "else"; args = [] }
+               })
+        ] )
+    ; ( lab "then"
+      , [ ins (Block_params [])
+        ; ins (Nullary { dst = temp "i1"; op = Int_const 1L })
+        ; ins (Nullary { dst = temp "i4"; op = Int_const 4L })
+        ; ins (Jump { label = lab "join"; args = [ temp "i1" ] })
+        ] )
+    ; ( lab "else"
+      , [ ins (Block_params [])
+        ; ins (Nullary { dst = temp "i2"; op = Int_const 2L })
+        ; ins (Nullary { dst = temp "i4"; op = Int_const 5L })
+        ; ins (Jump { label = lab "join"; args = [ temp "i2" ] })
+        ] )
+    ; ( lab "join"
+      , [ ins (Block_params [ { param = temp "i3"; ty = Int } ])
+        ; ins (Bin { dst = temp "ret"; src1 = temp "i3"; src2 = temp "i4"; op = Add })
+        ; ins (Ret { src = temp "ret"; ty = Int })
+        ] )
+    ]
+  in
+  let blocks =
+    blocks
+    |> List.map ~f:(fun (lab, block) -> lab, Block.create lab (Arrayp.of_list block))
+    |> Ident.Map.of_alist_exn
+  in
+  let func =
+    { Func.name = "main"
+    ; Func.blocks
+    ; start = lab "start"
+    ; next_temp_id = Temp_intern.next_id ()
+    ; next_label_id = Label_intern.next_id ()
+    ; data = ()
+    }
+  in
+  let func = Tir.Convert_ssa.convert func in
+  print_s [%message (func : Func.t)];
+  ();
+  [%expect
+    {|
+    (func
+     ((name main)
+      (blocks
+       ((join@0
+         ((label join@0)
+          (body
+           (((i (Block_params (((param i3@5) (ty Int)) ((param i4@6) (ty Int)))))
+             (index 0) (info ()))
+            ((i (Bin (dst ret@7) (op Add) (src1 i3@5) (src2 i4@6))) (index 1)
+             (info ()))
+            ((i (Ret (src ret@7) (ty Int))) (index 2) (info ()))))))
+        (else@1
+         ((label else@1)
+          (body
+           (((i (Block_params ())) (index 0) (info ()))
+            ((i (Nullary (dst i2@3) (op (Int_const 2)))) (index 1) (info ()))
+            ((i (Nullary (dst i4@4) (op (Int_const 5)))) (index 2) (info ()))
+            ((i (Jump ((label join@0) (args (i2@3 i4@4))))) (index 3) (info ()))))))
+        (then@2
+         ((label then@2)
+          (body
+           (((i (Block_params ())) (index 0) (info ()))
+            ((i (Nullary (dst i1@1) (op (Int_const 1)))) (index 1) (info ()))
+            ((i (Nullary (dst i4@2) (op (Int_const 4)))) (index 2) (info ()))
+            ((i (Jump ((label join@0) (args (i1@1 i4@2))))) (index 3) (info ()))))))
+        (start@3
+         ((label start@3)
+          (body
+           (((i (Block_params ())) (index 0) (info ()))
+            ((i (Nullary (dst b1@0) (op (Bool_const true)))) (index 1) (info ()))
+            ((i
+              (Cond_jump (cond b1@0) (b1 ((label then@2) (args ())))
+               (b2 ((label else@1) (args ())))))
+             (index 2) (info ()))))))))
+      (start start@3) (next_temp_id 8) (next_label_id 4) (data ())))
+    |}]
+;;
 (* let%expect_test "nothing" =
   check
     {|
