@@ -19,7 +19,17 @@ module Make (Ir : Ir) = struct
   module Live_set = struct
     type t = Temp.Set.t Label.Table.t [@@deriving sexp_of]
 
+    (*
+       we need to protect against None, because the block may not have been traversed.
+      If an entire block has dead code, then it will never be traversed because its variables were never used anywhere.
+    *)
     let find t label = Ident.Table.find t label |> Option.value ~default:Ident.Set.empty
+  end
+
+  module Next_use_table = struct
+    type t = int Temp.Map.t Label.Table.t [@@deriving sexp_of]
+
+    let find t label = Ident.Table.find t label |> Option.value ~default:Ident.Map.empty
   end
 
   let compute_defs_and_upward_exposed func =

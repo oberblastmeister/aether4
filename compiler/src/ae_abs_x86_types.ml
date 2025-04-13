@@ -191,13 +191,13 @@ module Instr = struct
   let iter_operand_use_defs (instr : t) ~on_def ~on_use =
     match instr with
     | Nop -> ()
-    | Call { dst; size = _; args } ->
-      on_def (Operand.Reg dst);
+    | Call { dst; size; args } ->
+      on_def (Operand.Reg dst, size);
       List.iter args ~f:(fun temp -> on_use (Operand.Reg temp))
     | Block_params params ->
-      (List.iter @> Fold.of_fn Block_param.param @> Location.iter_temp)
-        params
-        ~f:(fun temp -> on_def (Operand.Reg temp))
+      List.iter params ~f:(fun param ->
+        Location.iter_temp param.param ~f:(fun temp ->
+          on_def (Operand.Reg temp, param.ty)))
     | Jump b ->
       (List.iter @> Location.iter_temp) b.args ~f:(fun r -> on_use (Operand.Reg r));
       ()
@@ -210,17 +210,23 @@ module Instr = struct
       (List.iter @> Location.iter_temp) b1.args ~f:(fun r -> on_use (Reg r));
       (List.iter @> Location.iter_temp) b2.args ~f:(fun r -> on_use (Reg r));
       ()
-    | Mov { dst; src; size = _ } ->
+    | Mov { dst; src; size } ->
       on_use src;
-      on_def dst;
+      on_def (dst, size);
       ()
     | Mov_abs { dst; src = _ } ->
-      on_def dst;
+      on_def (dst, Qword);
       ()
-    | Bin { dst; src1; op = _; src2 } ->
+    | Bin { dst; src1; op; src2 } ->
       on_use src1;
       on_use src2;
-      on_def dst;
+      let ty : Ty.t =
+        match op with
+        | And ty | Or ty | Xor ty -> ty
+        | Add | Sub | Imul | Idiv | Imod | Lshift | Rshift -> Qword
+        | Eq _ | Lt | Gt | Le | Ge -> Byte
+      in
+      on_def (dst, ty);
       ()
     | Ret { src; size = _ } ->
       on_use src;
@@ -295,7 +301,7 @@ module Instr = struct
   let iter_uses instr ~f =
     iter_operand_use_defs
       instr
-      ~on_def:(fun o -> Operand.iter_mem_regs o ~f)
+      ~on_def:(fun (o, _ty) -> Operand.iter_mem_regs o ~f)
       ~on_use:(fun o -> Operand.iter_any_regs o ~f)
   ;;
 
@@ -333,7 +339,14 @@ module Instr = struct
   let iter_defs instr ~f =
     iter_operand_use_defs
       instr
-      ~on_def:(fun o -> Operand.iter_reg_val o ~f)
+      ~on_def:(fun (o, _ty) -> Operand.iter_reg_val o ~f)
+      ~on_use:(Fn.const ())
+  ;;
+
+  let iter_defs_with_ty t ~f =
+    iter_operand_use_defs
+      t
+      ~on_def:(fun (o, ty) -> Operand.iter_reg_val o ~f:(fun temp -> f (temp, ty)))
       ~on_use:(Fn.const ())
   ;;
 
@@ -357,7 +370,6 @@ module Instr = struct
     | Unreachable -> ()
   ;;
 
-  let iter_defs_with_ty _ = todol [%here]
   let get_jumps _ = todol [%here]
 
   let map_uses instr ~f =

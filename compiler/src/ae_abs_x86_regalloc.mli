@@ -1,5 +1,4 @@
 open Ae_abs_x86_types
-module Frame := Ae_x86_frame
 module Mach_reg := Ae_x86_mach_reg
 module Entity := Ae_entity_std
 module Int_table := Entity.Table.Int_table
@@ -17,4 +16,4 @@ end
   -> instr:Instr.t
   -> Instr.t list * Instr.t * Instr.t list *)
 
-val alloc_func : Frame.Builder.t -> Func.t -> Allocation.t * Func.t
+val alloc_func : Func.t -> Allocation.t * Func.t

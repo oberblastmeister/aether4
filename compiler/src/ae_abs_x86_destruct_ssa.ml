@@ -24,11 +24,8 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         edit
         dst_block.label
         { dst_block_params_instr with i = Instr.Block_params [] };
-      let (`params dst_block_params) =
-        let params =
-          Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
-        in
-        `params params
+      let dst_block_params =
+        Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
       in
       let module M = struct
         type ('d, 's) t =

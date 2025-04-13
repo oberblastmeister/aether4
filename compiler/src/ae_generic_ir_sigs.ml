@@ -54,7 +54,7 @@ module type Arg = sig
     val is_control : t -> bool
 
     (*
-       Sometimes the type of the use is not directly known just by inspecting the instruction alone.
+      Sometimes the type of the use is not directly known just by inspecting the instruction alone.
       This function only needs to iterate over the *known* types alone with the associated temporary.
       This is as opposed to definitions which always have a known type by inspecting the instruction alone.
       For example, for block calls we have to inspect the block parameters of the destination label.

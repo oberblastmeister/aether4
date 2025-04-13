@@ -3,7 +3,6 @@ open Ae_abs_x86_types
 module Entity = Ae_entity_std
 module Id = Entity.Id
 module Ident = Entity.Ident
-module Frame = Ae_x86_frame
 module Int_table = Entity.Table.Int_table
 module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc
@@ -210,6 +209,7 @@ let spill_instr
          not (Table.mem allocation temp)))
         instr
     in
+    trace_s [%message "spilling" (temp : Temp.t)];
     did_spill := true;
     let evicted_temp, evicted_temp_slot, evicted_mach_reg = evict_some_mach_reg () in
     let temp_slot = spilled_temp_to_slot temp in
@@ -301,20 +301,21 @@ let spill_instr
    
    every thing that is not spilled must be present in allocation.
 *)
-let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : Func.t) =
+let spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~(func : Func.t) =
   let module Table = Ident.Table in
   let open Table.Syntax in
   let spilled_temp_to_slot =
     let spilled_color_to_slot = Int_table.create () in
     begin
       let@: spilled_color = Bitvec.iter spilled_colors in
+      trace_s [%message (spilled_color : int)];
       Int_table.set
         spilled_color_to_slot
         ~key:spilled_color
         ~data:
-          (Frame.Builder.alloc
+          (Stack_builder.alloc
              ~name:("spill" ^ Int.to_string spilled_color)
-             frame_builder
+             stack_builder
              Qword)
     end;
     fun temp -> Int_table.find_exn spilled_color_to_slot coloring.!(temp)
@@ -332,7 +333,7 @@ let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : F
       let get_evicted_temp_and_slot_for_mach_reg mach_reg =
         Hashtbl.find_or_add mach_reg_to_evicted_temp mach_reg ~default:(fun () ->
           let temp = Ident.fresh ~name:"evicted" temp_gen in
-          let stack_slot = Frame.Builder.alloc ~name:"evicted_slot" frame_builder Qword in
+          let stack_slot = Stack_builder.alloc ~name:"evicted_slot" stack_builder Qword in
           Lstack.push evicted_mach_reg_temps (temp, mach_reg);
           temp, stack_slot)
       in
@@ -347,12 +348,11 @@ let spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~(func : F
     Multi_edit.add_inserts edit block.label instrs_after;
     ()
   end;
-  ( `func
-      { func with
-        next_temp_id = Id_gen.next temp_gen
-      ; blocks = Multi_edit.apply_blocks edit func.blocks
-      }
-  , `evicted_mach_reg_temps (Lstack.to_list_rev evicted_mach_reg_temps) )
+  ( { func with
+      next_temp_id = Id_gen.next temp_gen
+    ; blocks = Multi_edit.apply_blocks edit func.blocks
+    }
+  , Lstack.to_list_rev evicted_mach_reg_temps )
 ;;
 
 let get_precolored_colors
@@ -374,7 +374,7 @@ module Allocation = struct
   let find_exn = Ident.Table.find_exn
 end
 
-let alloc_func frame_builder (func : Func.t) =
+let alloc_func (func : Func.t) =
   let open Ident.Table.Syntax in
   let graph, mach_reg_to_precolored_name, precolored_id_start, precolored_id_end, func =
     build_graph func
@@ -404,7 +404,6 @@ let alloc_func frame_builder (func : Func.t) =
       ~max_color
       ~num_regs:(List.length usable_mach_regs)
   in
-  let func = Split_critical.split func in
   let scratch_temp, func, max_color =
     let temp_gen = Id_gen.of_id func.next_temp_id in
     let scratch_temp = Ident.fresh ~name:"par_move_scratch" temp_gen in
@@ -464,8 +463,14 @@ let alloc_func frame_builder (func : Func.t) =
     | None -> assert (Bitvec.mem spilled_colors color)
     | Some mach_reg -> allocation.!(temp) <- mach_reg
   end;
-  let `func func, `evicted_mach_reg_temps evicted_mach_reg_temps =
-    spill_colors ~frame_builder ~allocation ~spilled_colors ~coloring ~func
+  let func, evicted_mach_reg_temps =
+    let stack_builder = Func.create_stack_builder func in
+    trace_s [%message (spilled_colors : Bitvec.t)];
+    let func, evicted_mach_reg_temps =
+      spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~func
+    in
+    let func = Func.apply_stack_builder stack_builder func in
+    func, evicted_mach_reg_temps
   in
   (* now set the evicted temps *)
   begin

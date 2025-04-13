@@ -23,7 +23,8 @@ let check_next_use s =
   let live_in, live_out = Liveness.compute_next_use_distance ~pred_table tir in
   print_s
     [%message
-      (live_in : int Temp.Map.t Label.Table.t) (live_out : int Temp.Map.t Label.Table.t)]
+      (live_in : Liveness.Next_use_table.t) (live_out : Liveness.Next_use_table.t)];
+  ()
 ;;
 
 let simple_source =
@@ -43,6 +44,16 @@ let simple_source =
       return first + second;
   }
 |}
+;;
+
+let source2 =
+  {|
+  int main() {
+      int res;
+      if (1 > 1) res = 1; else res = -1;
+      return res;
+  }
+  |}
 ;;
 
 let%expect_test "smoke" =
@@ -226,3 +237,58 @@ let%expect_test "smoke2" =
        (start@3 ((first@1 1) (second@5 6) (third@9 2) (bl@13 1))))))
     |}]
 ;;
+
+let%expect_test "smoke2" = check source2;
+  [%expect {|
+    (tir
+     ((name main)
+      (blocks
+       ((join@0
+         ((label join@0)
+          (body
+           (((i (Block_params (((param res@7) (ty Int))))) (index 0)
+             (info (4:7-40)))
+            ((i (Unary (dst ret@8) (op (Copy Int)) (src res@7))) (index 1)
+             (info (3:11-14)))
+            ((i (Ret (src ret@8) (ty Int))) (index 2) (info (5:7-17)))
+            ((i Unreachable) (index 3) (info (4:7-40)))))))
+        (then@1
+         ((label then@1)
+          (body
+           (((i (Block_params ())) (index 0) (info (4:7-40)))
+            ((i (Nullary (dst res@6) (op (Int_const 1)))) (index 1)
+             (info (4:24)))
+            ((i (Jump ((label join@0) (args (res@6))))) (index 2)
+             (info (4:7-40)))
+            ((i Unreachable) (index 3) (info (4:7-40)))))))
+        (else@2
+         ((label else@2)
+          (body
+           (((i (Block_params ())) (index 0) (info (4:7-40)))
+            ((i (Nullary (dst lhs@3) (op (Int_const 0)))) (index 1)
+             (info (4:38-40)))
+            ((i (Nullary (dst rhs@4) (op (Int_const 1)))) (index 2)
+             (info (4:39)))
+            ((i (Bin (dst res@5) (op Sub) (src1 lhs@3) (src2 rhs@4))) (index 3)
+             (info (4:38-40)))
+            ((i (Jump ((label join@0) (args (res@5))))) (index 4)
+             (info (4:7-40)))
+            ((i Unreachable) (index 5) (info (4:7-40)))))))
+        (start@3
+         ((label start@3)
+          (body
+           (((i (Block_params ())) (index 0) (info ([2,3]-[6,4])))
+            ((i (Nullary (dst lhs@0) (op (Int_const 1)))) (index 1)
+             (info (4:11)))
+            ((i (Nullary (dst rhs@1) (op (Int_const 1)))) (index 2)
+             (info (4:15)))
+            ((i (Bin (dst cond@2) (op Gt) (src1 lhs@0) (src2 rhs@1))) (index 3)
+             (info (4:11-16)))
+            ((i
+              (Cond_jump (cond cond@2) (b1 ((label then@1) (args ())))
+               (b2 ((label else@2) (args ())))))
+             (index 4) (info (4:7-40)))
+            ((i Unreachable) (index 5) (info ([2,3]-[6,4])))))))))
+      (start start@3) (next_temp_id 9) (next_label_id 4) (data ())))
+    ((live_in ()) (live_out ()))
+    |}]

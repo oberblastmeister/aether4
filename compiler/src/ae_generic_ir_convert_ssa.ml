@@ -30,7 +30,10 @@ module Make (Ir : Ir) = struct
       let@: def_frontier =
         Dominators.Frontier.find_iter dom_front def_in_label
         |> Iter.filter ~f:(fun l ->
-          (* we only want to insert phis where the variable is actually *live* *)
+          (*
+             we only want to insert phis where the variable is actually *live*,
+            this is pruned SSA
+          *)
           Liveness.Live_set.find live_in l |> Fn.flip Ident.Set.mem def)
       in
       if not (is_on_top label_to_phis ~equal:Temp.equal ~key:def_frontier ~data:def)

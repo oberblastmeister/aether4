@@ -10,6 +10,12 @@ module Make (Ir : Ir) : sig
     val find : t -> Label.t -> Temp.Set.t
   end
 
+  module Next_use_table : sig
+    type t [@@deriving sexp_of]
+
+    val find : t -> Label.t -> int Temp.Map.t
+  end
+
   val backwards_transfer : Instr.t -> Temp.Set.t -> Temp.Set.t
   val next_use_backwards_transfer : Instr.t -> int Temp.Map.t -> int Temp.Map.t
   val compute_def_blocks_non_ssa : Func.t -> Label.t list Temp.Table.t
@@ -21,7 +27,7 @@ module Make (Ir : Ir) : sig
   val compute_next_use_distance
     :  pred_table:Adj_table.t
     -> Func.t
-    -> int Temp.Map.t Label.Table.t * int Temp.Map.t Label.Table.t
+    -> Next_use_table.t * Next_use_table.t
 
   val compute_def_use_labels
     :  Func.t

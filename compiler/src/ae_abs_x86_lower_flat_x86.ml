@@ -9,7 +9,7 @@ module Mach_reg = Ae_x86_mach_reg
 module Label_entity = Ae_label_entity
 module Label = Ae_label_entity.Ident
 module Condition_code = Ae_x86_condition_code
-module Frame = Ae_x86_frame
+module Frame_layout = Ae_abs_x86_frame_layout
 module Address = Ae_x86_address
 
 let ins ?info i = Flat_x86.Line.Instr { i; info }
@@ -18,7 +18,7 @@ let empty = Bag.empty
 open Bag.Syntax
 
 type st =
-  { stack_frame : Frame.Layout.t
+  { stack_frame : Frame_layout.t
   ; allocation : Regalloc.Allocation.t
   }
 
@@ -29,7 +29,7 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
   | Stack_slot slot ->
-    let offset = Frame.Layout.resolve_frame_offset st.stack_frame slot in
+    let offset = Frame_layout.resolve_frame_offset st.stack_frame slot in
     Mem (Address.create Mach_reg.RSP offset)
   | Reg temp -> Reg (get_temp st temp)
   | Mem _ -> todol [%here]
@@ -110,7 +110,11 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
-    Flat_x86.Instr.(empty +> [ ins (Mov { src; dst; size }) ])
+    Flat_x86.Instr.(
+      empty
+      +> [ ins (Mov { dst = Reg R11; src; size })
+         ; ins (Mov { dst; src = Reg R11; size })
+         ])
   | Mov_abs { dst; src } ->
     let dst = lower_operand st dst in
     Flat_x86.Instr.(empty +> [ ins (Mov_abs { dst; src }) ])
@@ -194,7 +198,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
       ++ epilogue_without_base
            ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue"))
-           (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame)))
+           (Int32.of_int_exn (Frame_layout.frame_size st.stack_frame)))
   | Call _ -> todol [%here]
 ;;
 
@@ -225,13 +229,13 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
     +> Flat_x86.Line.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
     ++ prologue_without_base
          ~info:(Info.create_s [%message "prologue"])
-         (Int32.of_int_exn (Frame.Layout.frame_size st.stack_frame))
+         (Int32.of_int_exn (Frame_layout.frame_size st.stack_frame))
     ++ instrs
   in
   Bag.to_list instrs
 ;;
 
-let lower stack_frame allocation func =
-  let st = create_state stack_frame allocation in
+let lower frame_layout allocation func =
+  let st = create_state frame_layout allocation in
   lower_func st func
 ;;
