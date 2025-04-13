@@ -123,341 +123,32 @@ int main() {
         ((i Unreachable) (index 12) (info ([10,1]-[21,2])))))))))
   (start start@3) (next_temp_id 28) (next_label_id 4)
   (data ((next_stack_slot_id 0) (stack_slots ())))))
-(before_spill
- (func
-  ((name main)
-   (blocks
-    ((done@0
-      ((label done@0)
-       (body
-        (((i (Block_params ())) (index 0) (info ([16,46]-[18,4])))
-         ((i (Mov (dst (Reg lhs@0)) (src (Reg n@1)) (size Qword))) (index 1)
-          (info (13:7)))
-         ((i (Mov (dst (Reg rhs@2)) (src (Imm 1)) (size Qword))) (index 2)
-          (info (20:14)))
-         ((i
-           (Bin (dst (Reg ret@3)) (op Add) (src1 (Reg lhs@0))
-            (src2 (Reg rhs@2))))
-          (index 3) (info (20:10-15)))
-         ((i (Ret (src (Reg ret@3)) (size Qword))) (index 4)
-          (info (20:3-15)))
-         ((i Unreachable) (index 5) (info ([16,46]-[18,4])))))))
-     (loop@1
-      ((label loop@1)
-       (body
-        (((i
-           (Block_params
-            (((param (Temp k@4)) (ty Qword)) ((param (Temp n@1)) (ty Qword)))))
-          (index 0) (info ([16,46]-[18,4])))
-         ((i (Mov (dst (Reg lhs@5)) (src (Reg k@4)) (size Qword))) (index 1)
-          (info (16:12)))
-         ((i (Mov (dst (Reg lhs@6)) (src (Reg bitspace@7)) (size Qword)))
-          (index 2) (info (14:7-15)))
-         ((i (Mov (dst (Reg rhs@8)) (src (Imm 2)) (size Qword))) (index 3)
-          (info (16:35)))
-         ((i
-           (Bin (dst (Reg rhs@9)) (op Idiv) (src1 (Reg lhs@6))
-            (src2 (Reg rhs@8))))
-          (index 4) (info (16:24-36)))
-         ((i
-           (Bin (dst (Reg cond@10)) (op Le) (src1 (Reg lhs@5))
-            (src2 (Reg rhs@9))))
-          (index 5) (info (16:19-36)))
-         ((i
-           (Cond_jump (cond (Op (Reg cond@10)))
-            (b1 ((label body@2) (args ()))) (b2 ((label done@0) (args ())))))
-          (index 6) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 7) (info ([16,46]-[18,4])))))))
-     (body@2
-      ((label body@2)
-       (body
-        (((i (Block_params ())) (index 0) (info ([16,46]-[18,4])))
-         ((i (Mov (dst (Reg lhs@11)) (src (Reg n@1)) (size Qword))) (index 1)
-          (info (13:7)))
-         ((i (Mov (dst (Reg lhs@12)) (src (Reg n@1)) (size Qword))) (index 2)
-          (info (13:7)))
-         ((i (Mov (dst (Reg rhs@13)) (src (Reg k@4)) (size Qword))) (index 3)
-          (info (16:12)))
-         ((i
-           (Bin (dst (Reg rhs@14)) (op Rshift) (src1 (Reg lhs@12))
-            (src2 (Reg rhs@13))))
-          (index 4) (info (17:10-16)))
-         ((i
-           (Bin (dst (Reg n@15)) (op (Or Qword)) (src1 (Reg lhs@11))
-            (src2 (Reg rhs@14))))
-          (index 5) (info (17:5-16)))
-         ((i (Mov (dst (Reg lhs@16)) (src (Reg k@4)) (size Qword))) (index 6)
-          (info (16:12)))
-         ((i (Mov (dst (Reg rhs@17)) (src (Imm 2)) (size Qword))) (index 7)
-          (info (16:43)))
-         ((i
-           (Bin (dst (Reg k@18)) (op Imul) (src1 (Reg lhs@16))
-            (src2 (Reg rhs@17))))
-          (index 8) (info (16:38-44)))
-         ((i (Jump ((label loop@1) (args ((Temp k@18) (Temp n@15))))))
-          (index 9) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 10) (info ([16,46]-[18,4])))))))
-     (start@3
-      ((label start@3)
-       (body
-        (((i (Block_params ())) (index 0) (info ([10,1]-[21,2])))
-         ((i (Mov (dst (Reg tmp@19)) (src (Imm 3333)) (size Qword)))
-          (index 1) (info (11:11-15)))
-         ((i (Mov (dst (Reg N@20)) (src (Reg tmp@19)) (size Qword)))
-          (index 2) (info (11:7)))
-         ((i (Mov (dst (Reg lhs@21)) (src (Reg N@20)) (size Qword)))
-          (index 3) (info (11:7)))
-         ((i (Mov (dst (Reg rhs@22)) (src (Imm 1)) (size Qword))) (index 4)
-          (info (13:15)))
-         ((i
-           (Bin (dst (Reg tmp@23)) (op Sub) (src1 (Reg lhs@21))
-            (src2 (Reg rhs@22))))
-          (index 5) (info (13:11-16)))
-         ((i (Mov (dst (Reg n@24)) (src (Reg tmp@23)) (size Qword)))
-          (index 6) (info (13:7)))
-         ((i (Mov (dst (Reg tmp@25)) (src (Imm 32)) (size Qword))) (index 7)
-          (info (14:18-20)))
-         ((i (Mov (dst (Reg bitspace@7)) (src (Reg tmp@25)) (size Qword)))
-          (index 8) (info (14:7-15)))
-         ((i (Mov (dst (Reg tmp@26)) (src (Imm 1)) (size Qword))) (index 9)
-          (info (16:16)))
-         ((i (Mov (dst (Reg k@27)) (src (Reg tmp@26)) (size Qword)))
-          (index 10) (info (16:12)))
-         ((i (Jump ((label loop@1) (args ((Temp k@27) (Temp n@24))))))
-          (index 11) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 12) (info ([10,1]-[21,2])))))))))
-   (start start@3) (next_temp_id 28) (next_label_id 4)
-   (data ((next_stack_slot_id 0) (stack_slots ()))))))
-(after_spill
- (func
-  ((name main)
-   (blocks
-    ((done@0
-      ((label done@0)
-       (body
-        (((i (Block_params ())) (index 0) (info ([16,46]-[18,4])))
-         ((i
-           (Mov (dst (Reg n@29)) (src (Stack_slot pre_spilled_n@1))
-            (size Qword)))
-          (index 1) (info ((reload 13:7))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_n@1)) (src (Reg n@29))
-            (size Qword)))
-          (index 2) (info ()))
-         ((i (Mov (dst (Reg lhs@30)) (src (Reg n@29)) (size Qword)))
-          (index 3) (info (13:7)))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_lhs@2)) (src (Reg lhs@30))
-            (size Qword)))
-          (index 4) (info ()))
-         ((i (Mov (dst (Reg rhs@31)) (src (Imm 1)) (size Qword))) (index 5)
-          (info (20:14)))
-         ((i
-           (Mov (dst (Reg lhs@32)) (src (Stack_slot pre_spilled_lhs@2))
-            (size Qword)))
-          (index 6) (info ((reload 20:10-15))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_lhs@2)) (src (Reg lhs@32))
-            (size Qword)))
-          (index 7) (info ()))
-         ((i
-           (Bin (dst (Reg ret@33)) (op Add) (src1 (Reg lhs@32))
-            (src2 (Reg rhs@31))))
-          (index 8) (info (20:10-15)))
-         ((i (Ret (src (Reg ret@33)) (size Qword))) (index 9)
-          (info (20:3-15)))
-         ((i Unreachable) (index 10) (info ([16,46]-[18,4])))))))
-     (loop@1
-      ((label loop@1)
-       (body
-        (((i
-           (Block_params
-            (((param (Temp k@10)) (ty Qword))
-             ((param (Temp n@11)) (ty Qword)))))
-          (index 0) (info ([16,46]-[18,4])))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_k@3)) (src (Reg k@10))
-            (size Qword)))
-          (index 1) (info ()))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_n@1)) (src (Reg n@11))
-            (size Qword)))
-          (index 2) (info ()))
-         ((i (Mov (dst (Reg lhs@12)) (src (Reg k@10)) (size Qword)))
-          (index 3) (info (16:12)))
-         ((i
-           (Mov (dst (Reg bitspace@13))
-            (src (Stack_slot pre_spilled_bitspace@0)) (size Qword)))
-          (index 4) (info ((reload 14:7-15))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_bitspace@0))
-            (src (Reg bitspace@13)) (size Qword)))
-          (index 5) (info ()))
-         ((i (Mov (dst (Reg lhs@14)) (src (Reg bitspace@13)) (size Qword)))
-          (index 6) (info (14:7-15)))
-         ((i (Mov (dst (Reg rhs@15)) (src (Imm 2)) (size Qword))) (index 7)
-          (info (16:35)))
-         ((i
-           (Bin (dst (Reg rhs@16)) (op Idiv) (src1 (Reg lhs@14))
-            (src2 (Reg rhs@15))))
-          (index 8) (info (16:24-36)))
-         ((i
-           (Bin (dst (Reg cond@17)) (op Le) (src1 (Reg lhs@12))
-            (src2 (Reg rhs@16))))
-          (index 9) (info (16:19-36)))
-         ((i
-           (Cond_jump (cond (Op (Reg cond@17)))
-            (b1 ((label body@2) (args ()))) (b2 ((label done@0) (args ())))))
-          (index 10) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 11) (info ([16,46]-[18,4])))))))
-     (body@2
-      ((label body@2)
-       (body
-        (((i (Block_params ())) (index 0) (info ([16,46]-[18,4])))
-         ((i
-           (Mov (dst (Reg n@18)) (src (Stack_slot pre_spilled_n@1))
-            (size Qword)))
-          (index 1) (info ((reload 13:7))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_n@1)) (src (Reg n@18))
-            (size Qword)))
-          (index 2) (info ()))
-         ((i (Mov (dst (Reg lhs@19)) (src (Reg n@18)) (size Qword)))
-          (index 3) (info (13:7)))
-         ((i (Mov (dst (Reg lhs@20)) (src (Reg n@18)) (size Qword)))
-          (index 4) (info (13:7)))
-         ((i
-           (Mov (dst (Reg k@21)) (src (Stack_slot pre_spilled_k@3))
-            (size Qword)))
-          (index 5) (info ((reload 16:12))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_k@3)) (src (Reg k@21))
-            (size Qword)))
-          (index 6) (info ()))
-         ((i (Mov (dst (Reg rhs@22)) (src (Reg k@21)) (size Qword)))
-          (index 7) (info (16:12)))
-         ((i
-           (Bin (dst (Reg rhs@23)) (op Rshift) (src1 (Reg lhs@20))
-            (src2 (Reg rhs@22))))
-          (index 8) (info (17:10-16)))
-         ((i
-           (Bin (dst (Reg n@24)) (op (Or Qword)) (src1 (Reg lhs@19))
-            (src2 (Reg rhs@23))))
-          (index 9) (info (17:5-16)))
-         ((i
-           (Mov (dst (Reg k@25)) (src (Stack_slot pre_spilled_k@3))
-            (size Qword)))
-          (index 10) (info ((reload 16:12))))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_k@3)) (src (Reg k@25))
-            (size Qword)))
-          (index 11) (info ()))
-         ((i (Mov (dst (Reg lhs@26)) (src (Reg k@25)) (size Qword)))
-          (index 12) (info (16:12)))
-         ((i (Mov (dst (Reg rhs@27)) (src (Imm 2)) (size Qword))) (index 13)
-          (info (16:43)))
-         ((i
-           (Bin (dst (Reg k@28)) (op Imul) (src1 (Reg lhs@26))
-            (src2 (Reg rhs@27))))
-          (index 14) (info (16:38-44)))
-         ((i (Jump ((label loop@1) (args ((Temp k@28) (Temp n@24))))))
-          (index 15) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 16) (info ([16,46]-[18,4])))))))
-     (start@3
-      ((label start@3)
-       (body
-        (((i (Block_params ())) (index 0) (info ([10,1]-[21,2])))
-         ((i (Mov (dst (Reg tmp@0)) (src (Imm 3333)) (size Qword))) (index 1)
-          (info (11:11-15)))
-         ((i (Mov (dst (Reg N@1)) (src (Reg tmp@0)) (size Qword))) (index 2)
-          (info (11:7)))
-         ((i (Mov (dst (Reg lhs@2)) (src (Reg N@1)) (size Qword))) (index 3)
-          (info (11:7)))
-         ((i (Mov (dst (Reg rhs@3)) (src (Imm 1)) (size Qword))) (index 4)
-          (info (13:15)))
-         ((i
-           (Bin (dst (Reg tmp@4)) (op Sub) (src1 (Reg lhs@2))
-            (src2 (Reg rhs@3))))
-          (index 5) (info (13:11-16)))
-         ((i (Mov (dst (Reg n@5)) (src (Reg tmp@4)) (size Qword))) (index 6)
-          (info (13:7)))
-         ((i (Mov (dst (Reg tmp@6)) (src (Imm 32)) (size Qword))) (index 7)
-          (info (14:18-20)))
-         ((i (Mov (dst (Reg bitspace@7)) (src (Reg tmp@6)) (size Qword)))
-          (index 8) (info (14:7-15)))
-         ((i
-           (Mov (dst (Stack_slot pre_spilled_bitspace@0))
-            (src (Reg bitspace@7)) (size Qword)))
-          (index 9) (info ()))
-         ((i (Mov (dst (Reg tmp@8)) (src (Imm 1)) (size Qword))) (index 10)
-          (info (16:16)))
-         ((i (Mov (dst (Reg k@9)) (src (Reg tmp@8)) (size Qword))) (index 11)
-          (info (16:12)))
-         ((i (Jump ((label loop@1) (args ((Temp k@9) (Temp n@5))))))
-          (index 12) (info ([16,46]-[18,4])))
-         ((i Unreachable) (index 13) (info ([10,1]-[21,2])))))))))
-   (start start@3) (next_temp_id 34) (next_label_id 4)
-   (data
-    ((next_stack_slot_id 4)
-     (stack_slots
-      ((pre_spilled_k@3 Qword) (pre_spilled_lhs@2 Qword)
-       (pre_spilled_n@1 Qword) (pre_spilled_bitspace@0 Qword))))))))
 (spilled_colors ())
-(stack_slot (slot pre_spilled_bitspace@0) (size Qword))
-(stack_slot (slot pre_spilled_n@1) (size Qword))
-(stack_slot (slot pre_spilled_lhs@2) (size Qword))
-(stack_slot (slot pre_spilled_k@3) (size Qword))
 asm
 .text
 .globl _c0_main
 _c0_main:
-    subq $40, %rsp # prologue
+    subq $8, %rsp # prologue
 .Lstart_3:
-    movq $3333, %r11 # 11:11-15
-    movq %r11, %rax # 11:11-15
-    movq %rax, %r11 # 11:7
-    movq %r11, %rax # 11:7
-    movq %rax, %r11 # 11:7
-    movq %r11, %rdx # 11:7
-    movq $1, %r11 # 13:15
-    movq %r11, %rax # 13:15
+    movq $3333, %rax # 11:11-15
+    movq %rax, %rax # 11:7
+    movq %rax, %rdx # 11:7
+    movq $1, %rax # 13:15
     movq %rdx, %r11 # 13:11-16
     subq %rax, %r11 # 13:11-16
     movq %r11, %rax # 13:11-16
-    movq %rax, %r11 # 13:7
-    movq %r11, %rdx # 13:7
-    movq $32, %r11 # 14:18-20
-    movq %r11, %rax # 14:18-20
-    movq %rax, %r11 # 14:7-15
-    movq %r11, %rax # 14:7-15
-    movq %rax, %r11
-    movq %r11, 0(%rsp)
-    movq $1, %r11 # 16:16
-    movq %r11, %rax # 16:16
-    movq %rax, %r11 # 16:12
-    movq %r11, %rax # 16:12
-    movq %rax, %r11
-    movq %r11, %r11
-    movq %rdx, %r11
-    movq %r11, %rax
-    movq %r11, %r11
-    movq %r11, %rdx
+    movq %rax, %rdx # 13:7
+    movq $32, %rax # 14:18-20
+    movq %rax, %r9 # 14:7-15
+    movq $1, %rax # 16:16
+    movq %rax, %rax # 16:12
+    movq %rax, %r8
+    movq %rdx, %rsi
     jmp .Lloop_1 # [16,46]-[18,4]
 .Lloop_1:
-    movq %rdx, %r11
-    movq %r11, 24(%rsp)
-    movq %rax, %r11
-    movq %r11, 8(%rsp)
-    movq %rdx, %r11 # 16:12
-    movq %r11, %rcx # 16:12
-    movq 0(%rsp), %r11 # (reload 14:7-15)
-    movq %r11, %rax # (reload 14:7-15)
-    movq %rax, %r11
-    movq %r11, 0(%rsp)
-    movq %rax, %r11 # 14:7-15
-    movq %r11, %rdx # 14:7-15
-    movq $2, %r11 # 16:35
-    movq %r11, %rax # 16:35
+    movq %r8, %rcx # 16:12
+    movq %r9, %rdx # 14:7-15
+    movq $2, %rax # 16:35
     movq %rax, %r11 # 16:24-36
     movq %rdx, %rax # 16:24-36
     cqo # 16:24-36
@@ -470,41 +161,18 @@ _c0_main:
     jne .Lbody_2 # [16,46]-[18,4]
     jmp .Ldone_0 # [16,46]-[18,4]
 .Ldone_0:
-    movq 8(%rsp), %r11 # (reload 13:7)
-    movq %r11, %rax # (reload 13:7)
-    movq %rax, %r11
-    movq %r11, 8(%rsp)
-    movq %rax, %r11 # 13:7
-    movq %r11, %rax # 13:7
-    movq %rax, %r11
-    movq %r11, 16(%rsp)
-    movq $1, %r11 # 20:14
-    movq %r11, %rdx # 20:14
-    movq 16(%rsp), %r11 # (reload 20:10-15)
-    movq %r11, %rax # (reload 20:10-15)
-    movq %rax, %r11
-    movq %r11, 16(%rsp)
-    movq %rax, %r11 # 20:10-15
-    addq %rdx, %r11 # 20:10-15
+    movq %rsi, %rdx # 13:7
+    movq $1, %rax # 20:14
+    movq %rdx, %r11 # 20:10-15
+    addq %rax, %r11 # 20:10-15
     movq %r11, %rax # 20:10-15
     movq %rax, %rax # 20:3-15
-    addq $40, %rsp # (epilogue 20:3-15)
+    addq $8, %rsp # (epilogue 20:3-15)
     ret # (epilogue 20:3-15)
 .Lbody_2:
-    movq 8(%rsp), %r11 # (reload 13:7)
-    movq %r11, %rax # (reload 13:7)
-    movq %rax, %r11
-    movq %r11, 8(%rsp)
-    movq %rax, %r11 # 13:7
-    movq %r11, %rdi # 13:7
-    movq %rax, %r11 # 13:7
-    movq %r11, %rdx # 13:7
-    movq 24(%rsp), %r11 # (reload 16:12)
-    movq %r11, %rax # (reload 16:12)
-    movq %rax, %r11
-    movq %r11, 24(%rsp)
-    movq %rax, %r11 # 16:12
-    movq %r11, %rax # 16:12
+    movq %rsi, %rdi # 13:7
+    movq %rsi, %rdx # 13:7
+    movq %r8, %rax # 16:12
     movq %rdx, %r11 # 17:10-16
     movl %eax, %ecx # 17:10-16
     sarq %cl, %r11 # 17:10-16
@@ -512,22 +180,14 @@ _c0_main:
     movq %rdi, %r11 # 17:5-16
     orq %rax, %r11 # 17:5-16
     movq %r11, %rcx # 17:5-16
-    movq 24(%rsp), %r11 # (reload 16:12)
-    movq %r11, %rax # (reload 16:12)
-    movq %rax, %r11
-    movq %r11, 24(%rsp)
-    movq %rax, %r11 # 16:12
-    movq %r11, %rdx # 16:12
-    movq $2, %r11 # 16:43
-    movq %r11, %rax # 16:43
+    movq %r8, %rdx # 16:12
+    movq $2, %rax # 16:43
     movq %rdx, %r11 # 16:38-44
     movq %rax, %rax # 16:38-44
     imulq %r11 # 16:38-44
     movq %rax, %rax # 16:38-44
-    movq %rax, %r11
-    movq %r11, %rdx
-    movq %rcx, %r11
-    movq %r11, %rax
+    movq %rax, %r8
+    movq %rcx, %rsi
     jmp .Lloop_1 # [16,46]-[18,4]
 
-3333
+4096

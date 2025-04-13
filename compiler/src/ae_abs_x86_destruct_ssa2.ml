@@ -1,8 +1,8 @@
-open Std
+(* open Std
 open Ae_abs_x86_types
 
 module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
-    module Temp = Temp
+    module Temp = Location
     module Ty = Ty
   end)
 
@@ -10,7 +10,6 @@ open Sequentialize_parallel_moves
 
 let move_to_instr { Move.dst; src; ty } = Instr.move ~dst ~src ~ty
 
-(* TODO: this is wrong, the sequentialization needs to take into account of locations  *)
 let destruct ~in_same_reg ~get_scratch (func : Func.t) =
   let edit = Multi_edit.create () in
   begin
@@ -41,22 +40,32 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         |> List.map ~f:(fun (param, src) ->
           ({ dst = param.param; src; size = param.ty } : _ M.t))
       in
-      let moves_slot_loc, moves_temp_temp, moves_loc_slot =
+      (* let moves_slot_loc, moves_temp_temp, moves_loc_slot =
         List.partition3_map parallel_moves ~f:(fun move ->
           match move.dst, move.src with
           | Slot _, _ -> `Fst move
           | Temp dst, Temp src -> `Snd { move with dst; src }
           | _, Slot _ -> `Trd move)
-      in
-      let sequential_moves =
+      in *)
+      let sequential_moves, did_use_scratch =
         Sequentialize_parallel_moves.sequentialize
           ~in_same_reg
           ~get_scratch
-          (List.map moves_temp_temp ~f:(fun { dst; src; size } ->
+          (List.map parallel_moves ~f:(fun { dst; src; size } ->
              { Move.dst; src; ty = size }))
       in
       let sequential_moves =
-        let into (t : _ M.t) =
+        List.map sequential_moves ~f:(fun move ->
+          match move.dst, move.src with
+          | Slot _, Slot _ when did_use_scratch -> 
+            todo ()
+          | _ ->
+            Instr.Mov
+              { dst = Location.to_operand move.dst
+              ; src = Location.to_operand move.src
+              ; size = move.ty
+              })
+        (* let into (t : _ M.t) =
           Instr.Mov
             { dst = Location.to_operand t.dst
             ; src = Location.to_operand t.src
@@ -67,7 +76,7 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         List.map moves_slot_loc ~f:into
         @ List.map sequential_moves ~f:move_to_instr
         (* These go after so we don't clobber the loc which may be temp *)
-        @ List.map moves_loc_slot ~f:into
+        @ List.map moves_loc_slot ~f:into *)
       in
       (* TODO: test both of these cases *)
       if num_block_calls = 1
@@ -89,4 +98,4 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
     Multi_edit.add_replace edit block.label jump_instr
   end;
   Func.apply_multi_edit ~no_sort:() edit func
-;;
+;; *)
