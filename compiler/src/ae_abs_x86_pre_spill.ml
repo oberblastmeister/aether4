@@ -1,4 +1,3 @@
-(* TODO: we need to declare the types of the stack slots *)
 open Std
 open Ae_abs_x86_types
 module Temp_entity = Ae_abs_asm_temp_entity
@@ -153,6 +152,8 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
         let new_active =
           Ident.Set.to_list !active
           |> sort_temps_by_ascending_next_use next_uses_here_out
+          (* this is somehow makes all tests pass *)
+          (* |> List.rev *)
           |> List.append __ non_active_uses
           |> List.append __ defs
         in
@@ -178,6 +179,7 @@ let fixup_edge
   in
   if not (List.is_empty need_to_reload)
   then begin
+    trace_s [%message "fixup_edge" (need_to_reload : Temp.t list)]
   end;
   let reload_instrs =
     List.map need_to_reload ~f:(fun temp ->
@@ -279,7 +281,6 @@ let spill_func ~num_regs (func : Func.t) =
     begin
       let@: label = Vec.iter labels_order in
       let block = Func.find_block_exn func label in
-      (* TODO: for active_in we need to remove variables that were dead *)
       let active_in =
         init_usual
           ~num_regs
@@ -291,6 +292,8 @@ let spill_func ~num_regs (func : Func.t) =
       let active_out =
         spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit block
       in
+      trace_s
+        [%message (label : Label.t) (active_in : Temp.Set.t) (active_out : Temp.Set.t)];
       active_in_table.!(label) <- active_in;
       active_out_table.!(label) <- active_out
     end;
@@ -299,7 +302,6 @@ let spill_func ~num_regs (func : Func.t) =
   let func = fixup_func ~active_in_table ~active_out_table ~spill_temp func in
   let func = Func.apply_stack_builder stack_builder func in
   let func = insert_spills ~spilled func in
-  (* TODO: we should do this after we apply the multi edit, or else we are inserting multiple spills *)
-  let func = Convert_ssa.convert func in
+  let func = Convert_ssa.convert ~continue:() func in
   func
 ;;

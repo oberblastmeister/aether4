@@ -4,6 +4,7 @@
 )
 */
 
+// TODO: this breaks on pre_spill
 int main() {
 	int r00 = 17;
 	int r01 = 16;

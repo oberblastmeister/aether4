@@ -49,14 +49,16 @@ module Make (Ir : Ir) = struct
     label_to_phis
   ;;
 
-  let convert (func : Func.t) =
+  let convert ?continue (func : Func.t) =
     let module Table = Entity.Ident.Table in
     let open Table.Syntax in
     let idoms = Func.compute_idoms func in
     let dom_tree = Dominators.Tree.of_immediate idoms in
     let def_to_ty = Func.get_ty_table func in
     let block_to_phis = compute_phi_placements func in
-    let temp_gen = Id_gen.create () in
+    let temp_gen =
+      if Option.is_some continue then Id_gen.of_id func.next_temp_id else Id_gen.create ()
+    in
     let multi_edit = Multi_edit.create () in
     let rec rename_block rename_temp_map (block : Block.t) =
       let rename_temp_map = ref rename_temp_map in

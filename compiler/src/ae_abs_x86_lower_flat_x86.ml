@@ -113,17 +113,12 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     in
     instrs
   (*
-     TODO: this is very wrong.
+     TODO: account for memory to memory moves
   *)
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
     empty +> [ ins (Mov { dst; src; size }) ]
-    (* (
-      empty
-      +> [ ins (Mov { dst = Reg R11; src; size })
-         ; ins (Mov { dst; src = Reg R11; size })
-         ]) *)
   | Mov_abs { dst; src } ->
     let dst = lower_operand st dst in
     Flat_x86.Instr.(empty +> [ ins (Mov_abs { dst; src }) ])

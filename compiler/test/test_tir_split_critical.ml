@@ -71,27 +71,28 @@ let%expect_test "smoke" =
            (((i
               (Block_params
                (((param loop1@1) (ty Int)) ((param loop2@0) (ty Bool)))))
-             (index 0) (info ()))
+             (index 0) (info ()) (ann ()))
             ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
-             (info ()))))))
+             (info ()) (ann ()))))))
         (done@1
          ((label done@1)
           (body
-           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ()))
-            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
+           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ())
+             (ann ()))
+            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()) (ann ()))))))
         (start@2
          ((label start@2)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
             ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
-             (info ()))
+             (info ()) (ann ()))
             ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
-             (info ()))
+             (info ()) (ann ()))
             ((i
               (Cond_jump (cond const_bool@4)
                (b1 ((label loop@0) (args (const_int@3 const_bool@4))))
                (b2 ((label done@1) (args (const_int@3))))))
-             (index 3) (info ()))))))))
+             (index 3) (info ()) (ann ()))))))))
       (start start@2) (next_temp_id 5) (next_label_id 3) (data ())))
     (func
      ((name main)
@@ -102,32 +103,33 @@ let%expect_test "smoke" =
            (((i
               (Block_params
                (((param loop1@1) (ty Int)) ((param loop2@0) (ty Bool)))))
-             (index 0) (info ()))
+             (index 0) (info ()) (ann ()))
             ((i (Jump ((label loop@0) (args (loop1@1 loop2@0))))) (index 1)
-             (info ()))))))
+             (info ()) (ann ()))))))
         (done@1
          ((label done@1)
           (body
-           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ()))
-            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()))))))
+           (((i (Block_params (((param ret@2) (ty Int))))) (index 0) (info ())
+             (ann ()))
+            ((i (Ret (src ret@2) (ty Int))) (index 1) (info ()) (ann ()))))))
         (start@2
          ((label start@2)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
             ((i (Nullary (dst const_bool@4) (op (Bool_const true)))) (index 1)
-             (info ()))
+             (info ()) (ann ()))
             ((i (Nullary (dst const_int@3) (op (Int_const 1234)))) (index 2)
-             (info ()))
+             (info ()) (ann ()))
             ((i
               (Cond_jump (cond const_bool@4) (b1 ((label loop@3) (args ())))
                (b2 ((label done@1) (args (const_int@3))))))
-             (index 3) (info ()))))))
+             (index 3) (info ()) (ann ()))))))
         (loop@3
          ((label loop@3)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
             ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
-             (index 1) (info ()))))))))
+             (index 1) (info ()) (ann ()))))))))
       (start start@2) (next_temp_id 5) (next_label_id 4) (data ())))
     |}]
 ;;

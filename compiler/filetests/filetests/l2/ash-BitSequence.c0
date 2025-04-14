@@ -1,7 +1,10 @@
 /*
-( (kind (CompileAndRun)) )
+(
+ (kind (CompileAndRun))
+)
 */
 
+// this breaks on pre_spill
 // find the longest sequence of 1s in the binary representation of S
 int main() {
   int S = 2870200;

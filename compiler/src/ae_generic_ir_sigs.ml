@@ -40,6 +40,12 @@ module type Arg = sig
     [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
   end
 
+  module Ann : sig
+    type t [@@deriving sexp_of]
+    
+    val default : t
+  end
+
   module Instr : sig
     type t [@@deriving sexp_of]
 
@@ -91,13 +97,14 @@ module type Ir = sig
       { i : Instr.t
       ; index : int
       ; info : Info.t option
+      ; ann : Ann.t
       }
     [@@deriving sexp_of]
 
     val instr : t -> Instr.t
     val map : t -> f:(Instr.t -> Instr.t) -> t
-    val create : ?info:Info.t -> Instr.t -> int -> t
-    val create_unindexed : ?info:Info.t -> Instr.t -> t
+    val create : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> int -> t
+    val create_unindexed : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> t
 
     module Table : Entity.Table.S with type 'w Key.t = t
     module Map : Entity.Map.S with type 'w Key.t = t

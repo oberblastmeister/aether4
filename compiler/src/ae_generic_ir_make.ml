@@ -33,6 +33,7 @@ module Make_ir (Arg : Arg) = struct
         { i : Instr.t
         ; index : int
         ; info : Info.t option
+        ; ann : Ann.t
         }
       [@@deriving sexp_of]
 
@@ -43,9 +44,9 @@ module Make_ir (Arg : Arg) = struct
 
     let instr t = t.i
     let map t ~f = { t with i = f t.i }
-    let create ?info i index = { i; index; info }
-    let create_unindexed ?info i = { i; index = -1; info }
-    let invalid_nop = { i = Instr.nop; index = -1; info = None }
+    let create ?(ann = Ann.default) ?info i index = { i; index; info; ann }
+    let create_unindexed ?(ann = Ann.default) ?info i = { i; index = -1; info; ann }
+    let invalid_nop = { i = Instr.nop; index = -1; info = None; ann = Ann.default }
 
     module Table = Entity.Table.Make (T)
     module Map = Entity.Map.Make (T)
@@ -281,7 +282,7 @@ module Make_ir (Arg : Arg) = struct
     ;;
 
     let apply_multi_edit ?no_sort edit func =
-       { func with blocks = Multi_edit.apply_blocks ?no_sort edit func.blocks }
+      { func with blocks = Multi_edit.apply_blocks ?no_sort edit func.blocks }
     ;;
 
     let apply_temp_gen temp_gen func = { func with next_temp_id = Id_gen.next temp_gen }

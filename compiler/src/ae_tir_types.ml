@@ -293,7 +293,14 @@ module Location = struct
   let of_temp t = t
 end
 
+module Ann = struct
+  type t = unit [@@deriving sexp_of]
+
+  let default = ()
+end
+
 include Generic_ir.Make_all (struct
+    module Ann = Ann
     module Block_param = Block_param
     module Block_call = Block_call
     module Location = Location

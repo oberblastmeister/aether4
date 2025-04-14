@@ -12,6 +12,7 @@ module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
 module Destruct_ssa = Ae_abs_x86_destruct_ssa
+open Ae_trace
 
 let mach_reg_id off mach_reg = Id.offset off (Mach_reg.to_enum mach_reg)
 
@@ -366,6 +367,7 @@ let alloc_func ~mach_reg_id (func : Func.t) =
   in
   let allocation = { Allocation.table = allocation; mach_reg_id } in
   let spilled_colors = Set.diff used_colors available_colors in
+  trace_s [%message "spilled_colors" (spilled_colors : Int.Set.t)];
   let func =
     Destruct_ssa.destruct
       ~mach_reg_id

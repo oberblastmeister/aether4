@@ -90,33 +90,40 @@ let%expect_test "" =
          ((label join@0)
           (body
            (((i (Block_params (((param i3@5) (ty Int)) ((param i4@6) (ty Int)))))
-             (index 0) (info ()))
+             (index 0) (info ()) (ann ()))
             ((i (Bin (dst ret@7) (op Add) (src1 i3@5) (src2 i4@6))) (index 1)
-             (info ()))
-            ((i (Ret (src ret@7) (ty Int))) (index 2) (info ()))))))
+             (info ()) (ann ()))
+            ((i (Ret (src ret@7) (ty Int))) (index 2) (info ()) (ann ()))))))
         (else@1
          ((label else@1)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
-            ((i (Nullary (dst i2@3) (op (Int_const 2)))) (index 1) (info ()))
-            ((i (Nullary (dst i4@4) (op (Int_const 5)))) (index 2) (info ()))
-            ((i (Jump ((label join@0) (args (i2@3 i4@4))))) (index 3) (info ()))))))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
+            ((i (Nullary (dst i2@3) (op (Int_const 2)))) (index 1) (info ())
+             (ann ()))
+            ((i (Nullary (dst i4@4) (op (Int_const 5)))) (index 2) (info ())
+             (ann ()))
+            ((i (Jump ((label join@0) (args (i2@3 i4@4))))) (index 3) (info ())
+             (ann ()))))))
         (then@2
          ((label then@2)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
-            ((i (Nullary (dst i1@1) (op (Int_const 1)))) (index 1) (info ()))
-            ((i (Nullary (dst i4@2) (op (Int_const 4)))) (index 2) (info ()))
-            ((i (Jump ((label join@0) (args (i1@1 i4@2))))) (index 3) (info ()))))))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
+            ((i (Nullary (dst i1@1) (op (Int_const 1)))) (index 1) (info ())
+             (ann ()))
+            ((i (Nullary (dst i4@2) (op (Int_const 4)))) (index 2) (info ())
+             (ann ()))
+            ((i (Jump ((label join@0) (args (i1@1 i4@2))))) (index 3) (info ())
+             (ann ()))))))
         (start@3
          ((label start@3)
           (body
-           (((i (Block_params ())) (index 0) (info ()))
-            ((i (Nullary (dst b1@0) (op (Bool_const true)))) (index 1) (info ()))
+           (((i (Block_params ())) (index 0) (info ()) (ann ()))
+            ((i (Nullary (dst b1@0) (op (Bool_const true)))) (index 1) (info ())
+             (ann ()))
             ((i
               (Cond_jump (cond b1@0) (b1 ((label then@2) (args ())))
                (b2 ((label else@1) (args ())))))
-             (index 2) (info ()))))))))
+             (index 2) (info ()) (ann ()))))))))
       (start start@3) (next_temp_id 8) (next_label_id 4) (data ())))
     |}]
 ;;

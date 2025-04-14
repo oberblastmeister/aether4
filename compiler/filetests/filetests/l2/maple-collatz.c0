@@ -4,6 +4,7 @@
 )
 */
 
+// TODO: this breaks on pre_spill
 // Compute the stopping time of the collatz function on some input x
 int main() {
   int x = 27;

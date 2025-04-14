@@ -1,6 +1,5 @@
 open Test_abs_x86_import
 open Make_intern ()
-module Frame = Ae_x86_frame
 module Int_table = Entity.Table.Int_table
 
 (* let check coloring instr =

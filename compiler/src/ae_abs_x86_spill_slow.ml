@@ -3,7 +3,6 @@ open Ae_abs_x86_types
 module Entity = Ae_entity_std
 module Id = Entity.Id
 module Ident = Entity.Ident
-module Frame = Ae_x86_frame
 module Int_table = Entity.Table.Int_table
 module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc

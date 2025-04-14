@@ -473,7 +473,14 @@ module Stack_builder = struct
   ;;
 end
 
+module Ann = struct
+  type t = None [@@deriving sexp_of]
+
+  let default = None
+end
+
 include Generic_ir.Make_all (struct
+    module Ann = Ann
     module Block_param = Block_param
     module Block_call = Block_call
     module Location = Location

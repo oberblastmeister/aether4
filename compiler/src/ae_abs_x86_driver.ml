@@ -11,7 +11,7 @@ open Ae_trace
 let convert func =
   let func = Split_critical.split func in
   (* trace_s [%message "before_spill" (func : Func.t)];
-  let func = Pre_spill.spill_func ~num_regs:6 func in
+  let func = Pre_spill.spill_func ~num_regs:3 func in
   trace_s [%message "after_spill" (func : Func.t)]; *)
   let mach_reg_id, func =
     ( func.next_temp_id
