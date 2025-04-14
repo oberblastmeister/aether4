@@ -39,7 +39,7 @@ let pmov dsts srcs =
 ;;
 
 let check dsts srcs =
-  let res = sequentialize (pmov dsts srcs) in
+  let res, _ = sequentialize (pmov dsts srcs) in
   let res = List.map res ~f:(fun move -> move.dst.name, move.src.name) in
   print_s [%sexp (res : (string * string) list)]
 ;;

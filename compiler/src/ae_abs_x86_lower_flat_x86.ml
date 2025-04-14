@@ -87,6 +87,12 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     (* TODO: lower this to a panic in debug mode *)
     empty
   | Block_params _ -> empty
+  | Push { src; size } ->
+    let src = get_temp st src in
+    empty +> [ ins (Push { src = Reg src; size }) ]
+  | Pop { dst; size } ->
+    let dst = get_temp st dst in
+    empty +> [ ins (Pop { dst = Reg dst; size }) ]
   | Nop -> empty
   | Jump bc -> empty +> [ ins (Jmp (label_to_string st bc.label)) ]
   | Cond_jump { cond; b1; b2 } ->

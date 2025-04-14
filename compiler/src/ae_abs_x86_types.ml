@@ -85,6 +85,12 @@ module Location = struct
     | Slot of Stack_slot.t
   [@@deriving sexp_of, variants]
 
+  let to_either t =
+    match t with
+    | Temp temp -> Either.First temp
+    | Slot slot -> Either.Second slot
+  ;;
+
   let temp_val = function
     | Temp temp -> Some temp
     | Slot _ -> None
@@ -146,6 +152,14 @@ module Instr = struct
         ; src : Operand.t
         ; size : Ty.t
         }
+    | Push of
+        { src : Temp.t
+        ; size : Ty.t
+        }
+    | Pop of
+        { dst : Temp.t
+        ; size : Ty.t
+        }
     | Mov_abs of
         { dst : Operand.t
         ; src : int64
@@ -191,6 +205,12 @@ module Instr = struct
   let iter_operand_use_defs (instr : t) ~on_def ~on_use =
     match instr with
     | Nop -> ()
+    | Push { src; size = _ } ->
+      on_use (Operand.Reg src);
+      ()
+    | Pop { dst; size } ->
+      on_def (Operand.Reg dst, size);
+      ()
     | Call { dst; size; args } ->
       on_def (Operand.Reg dst, size);
       List.iter args ~f:(fun temp -> on_use (Operand.Reg temp))
@@ -242,6 +262,12 @@ module Instr = struct
     in
     match instr with
     | Nop -> instr
+    | Push { src; size } ->
+      let src = map_temp src ~f:on_use in
+      Push { src; size }
+    | Pop { dst; size } ->
+      let dst = map_temp dst ~f:on_def in
+      Pop { dst; size }
     | Call p ->
       let args = List.map p.args ~f:(map_temp ~f:on_def) in
       Call { p with args }
@@ -365,7 +391,8 @@ module Instr = struct
     | Call _ ->
       List.iter Call_conv.caller_saved_without_r11 ~f;
       ()
-    | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ -> ()
+    | Push _ | Pop _ | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ ->
+      ()
     | Ret _ -> f Mach_reg.RAX
     | Unreachable -> ()
   ;;

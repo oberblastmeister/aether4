@@ -22,5 +22,5 @@ module Make (Arg : sig
     :  in_same_reg:(Temp.t -> Temp.t -> bool)
     -> get_scratch:(unit -> Temp.t)
     -> Move.t list
-    -> Move.t list
+    -> Move.t list * bool
 end

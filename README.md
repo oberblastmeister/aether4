@@ -3,7 +3,7 @@
 See the [documentation](./docs)
 
 TODO:
-- [ ] first fix the destruct ssa to account for locations
+- [x] first fix the destruct ssa to account for locations
 - [ ] add the base pointer back to the frame layout, so pushing and popping registers is easier
 - [ ] fix the mem to mem move issue in ae_abs_x86_lower_flat_x86.ml
 - [ ] fix the pre spilling code

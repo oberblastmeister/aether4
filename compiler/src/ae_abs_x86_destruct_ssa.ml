@@ -1,17 +1,23 @@
 open Std
+module Entity = Ae_entity_std
+module Ident = Entity.Ident
 open Ae_abs_x86_types
 
 module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
-    module Temp = Temp
+    module Temp = Location
     module Ty = Ty
   end)
 
 open Sequentialize_parallel_moves
 
-let move_to_instr { Move.dst; src; ty } = Instr.move ~dst ~src ~ty
+let mach_reg_id off mach_reg = Entity.Id.offset off (Mach_reg.to_enum mach_reg)
 
-(* TODO: this is wrong, the sequentialization needs to take into account of locations  *)
-let destruct ~in_same_reg ~get_scratch (func : Func.t) =
+let mach_reg_ident ?info off mach_reg =
+  let id = mach_reg_id off mach_reg in
+  Ident.create ?info (Mach_reg.to_string mach_reg) id
+;;
+
+let destruct ~mach_reg_id ~in_same_reg ~get_scratch (func : Func.t) =
   let edit = Multi_edit.create () in
   begin
     let@: block = Func.iter_blocks func in
@@ -41,33 +47,35 @@ let destruct ~in_same_reg ~get_scratch (func : Func.t) =
         |> List.map ~f:(fun (param, src) ->
           ({ dst = param.param; src; size = param.ty } : _ M.t))
       in
-      let moves_slot_loc, moves_temp_temp, moves_loc_slot =
-        List.partition3_map parallel_moves ~f:(fun move ->
-          match move.dst, move.src with
-          | Slot _, _ -> `Fst move
-          | Temp dst, Temp src -> `Snd { move with dst; src }
-          | _, Slot _ -> `Trd move)
-      in
-      let sequential_moves =
+      let sequential_moves, did_use_scratch =
         Sequentialize_parallel_moves.sequentialize
           ~in_same_reg
           ~get_scratch
-          (List.map moves_temp_temp ~f:(fun { dst; src; size } ->
+          (List.map parallel_moves ~f:(fun { dst; src; size } ->
              { Move.dst; src; ty = size }))
       in
       let sequential_moves =
-        let into (t : _ M.t) =
-          Instr.Mov
-            { dst = Location.to_operand t.dst
-            ; src = Location.to_operand t.src
-            ; size = t.size
-            }
-        in
-        (* these go before so the loc which may be temp does not get clobbered *)
-        List.map moves_slot_loc ~f:into
-        @ List.map sequential_moves ~f:move_to_instr
-        (* These go after so we don't clobber the loc which may be temp *)
-        @ List.map moves_loc_slot ~f:into
+        List.concat_map sequential_moves ~f:(fun move ->
+          match move.dst, move.src with
+          | Slot slot1, Slot slot2 when did_use_scratch ->
+            let r10 = mach_reg_ident mach_reg_id R10 in
+            [ Instr.Push { src = r10; size = Qword }
+            ; Instr.Mov { dst = Reg r10; src = Stack_slot slot2; size = move.ty }
+            ; Instr.Mov { dst = Stack_slot slot1; src = Reg r10; size = move.ty }
+            ; Instr.Pop { dst = r10; size = Qword }
+            ]
+          | Slot slot1, Slot slot2 ->
+            let r11 = mach_reg_ident mach_reg_id R11 in
+            [ Instr.Mov { dst = Reg r11; src = Stack_slot slot2; size = move.ty }
+            ; Instr.Mov { dst = Stack_slot slot1; src = Reg r11; size = move.ty }
+            ]
+          | _ ->
+            [ Instr.Mov
+                { dst = Location.to_operand move.dst
+                ; src = Location.to_operand move.src
+                ; size = move.ty
+                }
+            ])
       in
       (* TODO: test both of these cases *)
       if num_block_calls = 1

@@ -368,9 +368,14 @@ let alloc_func ~mach_reg_id (func : Func.t) =
   let spilled_colors = Set.diff used_colors available_colors in
   let func =
     Destruct_ssa.destruct
+      ~mach_reg_id
       ~in_same_reg:(fun t1 t2 ->
-        Allocation.find_color_exn allocation t1 = Allocation.find_color_exn allocation t2)
-      ~get_scratch:(fun () -> mach_reg_ident mach_reg_id R11)
+        let conv t =
+          Location.to_either t
+          |> Either.map ~first:(Allocation.find_color_exn allocation) ~second:Fn.id
+        in
+        [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
+      ~get_scratch:(fun () -> Temp (mach_reg_ident mach_reg_id R11))
       func
   in
   let func =

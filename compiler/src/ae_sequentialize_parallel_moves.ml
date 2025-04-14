@@ -29,6 +29,7 @@ struct
         | Moved
       [@@deriving equal]
     end in
+    let did_use_scratch = ref false in
     let par_move = Array.of_list moves in
     let n = Array.length par_move in
     let status = Array.init n ~f:(Fn.const To_move) in
@@ -49,6 +50,7 @@ struct
             | To_move -> move_one j
             | Being_moved ->
               (* unique cycle! *)
+              did_use_scratch := true;
               let scratch = get_scratch () in
               Lstack.push
                 sequential
@@ -67,6 +69,6 @@ struct
     for i = 0 to n - 1 do
       if equal_status status.(i) To_move then move_one i
     done;
-    Lstack.to_list sequential
+    Lstack.to_list sequential, !did_use_scratch
   ;;
 end
