@@ -178,7 +178,6 @@ let fixup_edge
   in
   if not (List.is_empty need_to_reload)
   then begin
-    trace_s [%message "fixup_edge" (need_to_reload : Temp.t list)]
   end;
   let reload_instrs =
     List.map need_to_reload ~f:(fun temp ->

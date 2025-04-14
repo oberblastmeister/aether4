@@ -16,4 +16,4 @@ end
   -> instr:Instr.t
   -> Instr.t list * Instr.t * Instr.t list *)
 
-val alloc_func : Func.t -> Allocation.t * Func.t
+val alloc_func : mach_reg_id:Temp_entity.Id.t -> Func.t -> Allocation.t * Func.t

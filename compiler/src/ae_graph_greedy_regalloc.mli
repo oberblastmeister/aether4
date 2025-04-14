@@ -18,4 +18,9 @@ module Graph : sig
   val add_edge : t -> Temp.t -> Temp.t -> unit
 end
 
-val color_graph : Graph.t -> Temp.Set.t -> int Temp.Table.t * int
+val color_graph
+  :  spilled_color:int
+  -> available_colors:Int.Set.t
+  -> graph:Graph.t
+  -> precolored:int Temp.Map.t
+  -> int Temp.Table.t * Int.Set.t

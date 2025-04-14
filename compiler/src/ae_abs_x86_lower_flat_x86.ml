@@ -18,18 +18,17 @@ let empty = Bag.empty
 open Bag.Syntax
 
 type st =
-  { stack_frame : Frame_layout.t
+  { frame_layout : Frame_layout.t
   ; allocation : Regalloc.Allocation.t
   }
 
-let create_state stack_frame allocation = { stack_frame; allocation }
-let get_temp t temp = Regalloc.Allocation.find_exn t.allocation temp
+let get_temp t (temp : Abs_x86.Temp.t) = Regalloc.Allocation.find_exn t.allocation temp
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
   | Stack_slot slot ->
-    let offset = Frame_layout.resolve_frame_offset st.stack_frame slot in
+    let offset = Frame_layout.resolve_frame_offset st.frame_layout slot in
     Mem (Address.create Mach_reg.RSP offset)
   | Reg temp -> Reg (get_temp st temp)
   | Mem _ -> todol [%here]
@@ -202,7 +201,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
       ++ epilogue_without_base
            ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue"))
-           (Int32.of_int_exn (Frame_layout.frame_size st.stack_frame)))
+           (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout)))
   | Call _ -> todol [%here]
 ;;
 
@@ -233,13 +232,13 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
     +> Flat_x86.Line.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
     ++ prologue_without_base
          ~info:(Info.create_s [%message "prologue"])
-         (Int32.of_int_exn (Frame_layout.frame_size st.stack_frame))
+         (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout))
     ++ instrs
   in
   Bag.to_list instrs
 ;;
 
-let lower frame_layout allocation func =
-  let st = create_state frame_layout allocation in
+let lower ~frame_layout ~allocation func =
+  let st = { frame_layout; allocation } in
   lower_func st func
 ;;

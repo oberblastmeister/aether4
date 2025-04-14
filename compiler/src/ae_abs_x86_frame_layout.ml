@@ -27,7 +27,6 @@ let compute (func : Func.t) =
   let layout_table = Table.create () in
   begin
     let@: slot, size = List.iter (List.rev func.data.stack_slots) in
-    trace_s [%message "stack_slot" (slot : Stack_slot.t) (size : Ty.t)];
     layout_table.!(slot) <- !offset;
     offset := !offset + Int.round_up ~to_multiple_of:8 (Ty.to_bytes size)
   end;

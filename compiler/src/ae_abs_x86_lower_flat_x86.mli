@@ -4,7 +4,7 @@ module Regalloc = Ae_abs_x86_regalloc
 module Frame_layout = Ae_abs_x86_frame_layout
 
 val lower
-  :  Frame_layout.t
-  -> Regalloc.Allocation.t
+  :  frame_layout:Frame_layout.t
+  -> allocation:Regalloc.Allocation.t
   -> Abs_x86.Func.t
   -> Flat_x86.Program.t

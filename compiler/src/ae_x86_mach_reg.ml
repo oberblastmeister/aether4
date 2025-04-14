@@ -24,6 +24,7 @@ end
 include Base.Comparable.Make (T)
 include T
 
+let of_enum_exn i = of_enum i |> Option.value_exn
 let scratch = R11
 let num = max - min + 1
 

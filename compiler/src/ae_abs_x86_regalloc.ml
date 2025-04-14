@@ -1,4 +1,3 @@
-(* TODO: *)
 open Std
 open Ae_abs_x86_types
 module Entity = Ae_entity_std
@@ -13,9 +12,15 @@ module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
 module Destruct_ssa = Ae_abs_x86_destruct_ssa
-open Ae_trace
 
-let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : Instr'.t) =
+let mach_reg_id off mach_reg = Id.offset off (Mach_reg.to_enum mach_reg)
+
+let mach_reg_ident ?info off mach_reg =
+  let id = mach_reg_id off mach_reg in
+  Ident.create ?info (Mach_reg.to_string mach_reg) id
+;;
+
+let[@inline] build_graph_instr ~mach_reg_id ~graph ~live_out ~(instr : Instr'.t) =
   let iter_pairs xs ~f =
     let rec go xs =
       match xs with
@@ -44,7 +49,7 @@ let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : I
     List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
     begin
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-      let precolored_name = get_precolored_name mach_reg in
+      let precolored_name = mach_reg_ident mach_reg_id mach_reg in
       Graph.add_edge graph precolored_name live
     end
   end;
@@ -60,7 +65,7 @@ let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : I
     match instr.i with
     | Instr.Bin { dst = Mem addr; _ } -> begin
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-      let precolored_name = get_precolored_name mach_reg in
+      let precolored_name = mach_reg_ident mach_reg_id mach_reg in
       begin
         let@: temp = Ae_x86_address.iter_regs addr in
         Graph.add_edge graph precolored_name temp
@@ -71,86 +76,56 @@ let[@inline] build_graph_instr ~get_precolored_name ~graph ~live_out ~(instr : I
   Liveness.backwards_transfer instr.i live_out
 ;;
 
-let build_graph_block ~get_precolored_name ~graph ~live_out ~(block : Block.t) =
+let build_graph_block ~mach_reg_id ~graph ~live_out ~(block : Block.t) =
   let live_out = ref live_out in
   begin
     let@: instr = Block.iter_bwd block in
-    live_out := build_graph_instr ~get_precolored_name ~graph ~live_out:!live_out ~instr
-    (* trace_s [%message (live_out : Temp.Set.t ref)] *)
+    live_out := build_graph_instr ~mach_reg_id ~graph ~live_out:!live_out ~instr
   end
 ;;
 
-let build_graph (func : Func.t) =
-  (* trace_s [%message "build_graph" (func : Func.t)]; *)
+let build_graph ~mach_reg_id (func : Func.t) =
   let open Ident.Table.Syntax in
   let graph = Graph.create () in
-  let mach_reg_to_precolored_name = Hashtbl.create (module Mach_reg) in
-  assert (not (Graph.mem graph (Ident.create "next_temp_id" func.next_temp_id)));
-  let precolored_id_start = func.next_temp_id in
-  let temp_gen = Id_gen.of_id func.next_temp_id in
-  let find_precolored_name_or_add mach_reg =
-    Hashtbl.find_or_add mach_reg_to_precolored_name mach_reg ~default:(fun () ->
-      let precolored_name =
-        Ident.fresh ~name:(Sexp.to_string (Mach_reg.sexp_of_t mach_reg)) temp_gen
-      in
-      Graph.add graph precolored_name;
-      precolored_name)
-  in
-  (* TODO: do ssa conversion here *)
-  let _live_in, live_out =
-    Liveness.compute_non_ssa ~pred_table:(Func.pred_table func) func
-  in
-  (* trace_s [%message (live_in : Liveness.Live_set.t) (live_out : Liveness.Live_set.t)]; *)
+  let _live_in, live_out = Liveness.compute ~pred_table:(Func.pred_table func) func in
   begin
     let@: block = Func.iter_blocks func in
     build_graph_block
-      ~get_precolored_name:find_precolored_name_or_add
+      ~mach_reg_id
       ~graph
       ~live_out:(Liveness.Live_set.find live_out block.label)
       ~block
   end;
-  let func = Func.apply_temp_gen temp_gen func in
-  graph, mach_reg_to_precolored_name, precolored_id_start, func.next_temp_id, func
+  graph, func
 ;;
 
 (* TODO: add in callee saved later *)
 let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
 
-let get_spilled_colors ~precolored_colors ~max_color ~num_regs =
-  let chaos_options = Chaos_mode.get_options () in
-  let spilled_colors = Bitvec.create ~size:(max_color + 1) () in
-  begin
-    match chaos_options.spill_mode with
-    | None ->
-      let amount_to_spill = max_color + 1 - num_regs in
-      begin
-        let amount_to_spill = ref amount_to_spill in
-        let color = ref max_color in
-        while !amount_to_spill > 0 do
-          if not (Bitvec.mem precolored_colors !color)
-          then begin
-            Bitvec.add spilled_colors !color;
-            decr amount_to_spill
-          end;
-          decr color
-        done
-      end
-    | Some All ->
-      let color = ref max_color in
-      while !color >= 0 do
-        if not (Bitvec.mem precolored_colors !color)
-        then begin
-          Bitvec.add spilled_colors !color
-        end;
-        decr color
-      done
-    | Some Random -> todol [%here]
-  end;
-  spilled_colors
-;;
+module Allocation = struct
+  type t =
+    { table : int Temp.Table.t
+    ; mach_reg_id : Temp_entity.Id.t
+    }
+  [@@deriving sexp_of]
+
+  let find_color_exn t (temp : Temp.t) =
+    let mach_reg_id = (t.mach_reg_id :> int) in
+    let temp_id = (temp.id :> int) in
+    if temp_id >= mach_reg_id && temp_id < mach_reg_id + Mach_reg.num
+    then temp_id - mach_reg_id
+    else begin
+      let color = Ident.Table.find_exn t.table temp in
+      color
+    end
+  ;;
+
+  let find_exn t (temp : Temp.t) = Mach_reg.of_enum_exn (find_color_exn t temp)
+end
 
 let spill_instr
       ~spilled_temp_to_slot
+      ~spilled_colors
       ~allocation
       ~get_evicted_temp_and_slot_for_mach_reg
       ~(instr : Instr'.t)
@@ -158,13 +133,14 @@ let spill_instr
   let module Table = Ident.Table in
   let open Table.Syntax in
   let evicted_temps = ref [] in
-  let used_mach_regs =
+  let used_non_spilled_colors =
     Instr.iter_defs instr.i
     |> Iter.append (Instr.iter_uses instr.i)
-    |> Iter.filter_map ~f:(Table.find allocation)
-    |> Iter.append (Instr.iter_mach_reg_defs instr.i)
+    |> Iter.map ~f:(fun temp -> Allocation.find_color_exn allocation temp)
+    |> Iter.filter ~f:(fun color -> not (Set.mem spilled_colors color))
+    |> Iter.append (Instr.iter_mach_reg_defs instr.i |> Iter.map ~f:Mach_reg.to_enum)
     |> Iter.to_list
-    |> Set.of_list (module Mach_reg)
+    |> Int.Set.of_list
   in
   let ins ?info = Instr'.create_unindexed ?info:(Option.first_some info instr.info) in
   let evict_some_mach_reg =
@@ -175,14 +151,15 @@ let spill_instr
       Then each spilled temp is one temp that wasn't used.
       We also have to add two due to the precolored registers.
     *)
-    let evictable_mach_regs =
+    let evictable_colors =
       usable_mach_regs
-      |> List.filter ~f:(fun reg -> not (Set.mem used_mach_regs reg))
+      |> List.map ~f:Mach_reg.to_enum
+      |> List.filter ~f:(fun reg -> not (Set.mem used_non_spilled_colors reg))
       |> Lstack.of_list_rev
     in
     fun () ->
       let evicted_mach_reg =
-        Lstack.pop evictable_mach_regs
+        Lstack.pop evictable_colors
         |> Option.value_exn
              ~error:
                (Error.create "There were no evictable colors left" instr Instr'.sexp_of_t)
@@ -206,17 +183,20 @@ let spill_instr
       (Instr'.map
        & Instr.map_uses
        & Traverse.filtered ~f:(fun temp ->
-         (* not in allocation means spilled *)
-         not (Table.mem allocation temp)))
+         Set.mem spilled_colors (Allocation.find_color_exn allocation temp)))
         instr
     in
-    trace_s [%message "spilling" (temp : Temp.t)];
     did_spill := true;
     let evicted_temp, evicted_temp_slot, evicted_mach_reg = evict_some_mach_reg () in
     let temp_slot = spilled_temp_to_slot temp in
     begin
       let info =
-        Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
+        Info.tag_s
+          spill_info
+          ~tag:
+            [%message
+              "evict"
+                ~evicted_mach_reg:(Mach_reg.of_enum_exn evicted_mach_reg : Mach_reg.t)]
       in
       let ins = ins ~info in
       Lstack.append_list
@@ -237,8 +217,7 @@ let spill_instr
       (Instr'.map
        & Instr.map_defs
        & Traverse.filtered ~f:(fun temp ->
-         (* not in allocation means spilled *)
-         not (Table.mem allocation temp)))
+         Set.mem spilled_colors (Allocation.find_color_exn allocation temp)))
         instr
     in
     did_spill := true;
@@ -246,7 +225,12 @@ let spill_instr
     let temp_slot = spilled_temp_to_slot temp in
     begin
       let info =
-        Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
+        Info.tag_s
+          spill_info
+          ~tag:
+            [%message
+              "evict"
+                ~evicted_mach_reg:(Mach_reg.of_enum_exn evicted_mach_reg : Mach_reg.t)]
       in
       let ins = ins ~info in
       Lstack.append_list
@@ -277,7 +261,11 @@ let spill_instr
   begin
     let@: evicted_temp, evicted_temp_slot, evicted_mach_reg = List.iter !evicted_temps in
     let info =
-      Info.tag_s spill_info ~tag:[%message "evict" (evicted_mach_reg : Mach_reg.t)]
+      Info.tag_s
+        spill_info
+        ~tag:
+          [%message
+            "evict" ~evicted_mach_reg:(Mach_reg.of_enum_exn evicted_mach_reg : Mach_reg.t)]
     in
     let ins = ins ~info in
     Lstack.append_list
@@ -302,14 +290,13 @@ let spill_instr
    
    every thing that is not spilled must be present in allocation.
 *)
-let spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~(func : Func.t) =
+let spill_colors ~mach_reg_id ~stack_builder ~allocation ~spilled_colors ~(func : Func.t) =
   let module Table = Ident.Table in
   let open Table.Syntax in
   let spilled_temp_to_slot =
     let spilled_color_to_slot = Int_table.create () in
     begin
-      let@: spilled_color = Bitvec.iter spilled_colors in
-      trace_s [%message (spilled_color : int)];
+      let@: spilled_color = Set.iter spilled_colors in
       Int_table.set
         spilled_color_to_slot
         ~key:spilled_color
@@ -319,27 +306,25 @@ let spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~(func : F
              stack_builder
              Qword)
     end;
-    fun temp -> Int_table.find_exn spilled_color_to_slot coloring.!(temp)
+    fun temp ->
+      Int_table.find_exn spilled_color_to_slot (Allocation.find_color_exn allocation temp)
   in
-  let temp_gen = Id_gen.of_id func.next_temp_id in
-  let mach_reg_to_evicted_temp = Hashtbl.create (module Mach_reg) in
+  let mach_reg_to_evicted_temp = Hashtbl.create (module Int) in
   let edit = Multi_edit.create () in
-  let evicted_mach_reg_temps = Lstack.create () in
   begin
     let@: block = Func.iter_blocks func in
     let@: instr = Block.iter_fwd block in
     let open Ident.Table.Syntax in
     let instrs_before, new_instr, instrs_after =
-      (* just to make sure we don't create too many temporaries *)
       let get_evicted_temp_and_slot_for_mach_reg mach_reg =
         Hashtbl.find_or_add mach_reg_to_evicted_temp mach_reg ~default:(fun () ->
-          let temp = Ident.fresh ~name:"evicted" temp_gen in
           let stack_slot = Stack_builder.alloc ~name:"evicted_slot" stack_builder Qword in
-          Lstack.push evicted_mach_reg_temps (temp, mach_reg);
+          let temp = mach_reg_ident mach_reg_id (Mach_reg.of_enum_exn mach_reg) in
           temp, stack_slot)
       in
       spill_instr
         ~spilled_temp_to_slot
+        ~spilled_colors
         ~allocation
         ~get_evicted_temp_and_slot_for_mach_reg
         ~instr
@@ -349,11 +334,7 @@ let spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~(func : F
     Multi_edit.add_inserts edit block.label instrs_after;
     ()
   end;
-  ( { func with
-      next_temp_id = Id_gen.next temp_gen
-    ; blocks = Multi_edit.apply_blocks edit func.blocks
-    }
-  , Lstack.to_list_rev evicted_mach_reg_temps )
+  { func with blocks = Multi_edit.apply_blocks edit func.blocks }
 ;;
 
 let get_precolored_colors
@@ -369,114 +350,36 @@ let get_precolored_colors
   precolored_colors
 ;;
 
-module Allocation = struct
-  type t = Mach_reg.t Temp.Table.t [@@deriving sexp_of]
-
-  let find_exn = Ident.Table.find_exn
-end
-
-let alloc_func (func : Func.t) =
+let alloc_func ~mach_reg_id (func : Func.t) =
+  let precolored =
+    List.map usable_mach_regs ~f:(fun mach_reg ->
+      mach_reg_ident mach_reg_id mach_reg, Mach_reg.to_enum mach_reg)
+    |> Ident.Map.of_alist_exn
+  in
+  let available_colors =
+    List.map usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
+  in
   let open Ident.Table.Syntax in
-  let graph, mach_reg_to_precolored_name, precolored_id_start, precolored_id_end, func =
-    build_graph func
+  let graph, func = build_graph ~mach_reg_id func in
+  let allocation, used_colors =
+    Regalloc.color_graph ~spilled_color:Mach_reg.num ~available_colors ~graph ~precolored
   in
-  let precolored_name_to_mach_reg =
-    Hashtbl.to_alist mach_reg_to_precolored_name
-    |> List.map ~f:(fun (mach_reg, precolored_name) -> precolored_name, mach_reg)
-    |> Hashtbl.of_alist_exn (module Temp)
-  in
-  let coloring, max_color =
-    let precolored =
-      Hashtbl.to_alist mach_reg_to_precolored_name
-      |> List.map ~f:(fun (_, temp) -> temp)
-      |> Ident.Set.of_list_exn
-    in
-    Regalloc.color_graph graph precolored
-  in
-  let precolored_colors =
-    get_precolored_colors
-      ~precolored_range:(precolored_id_start, precolored_id_end)
-      ~coloring
-      ~max_color
-  in
-  let spilled_colors =
-    get_spilled_colors
-      ~precolored_colors
-      ~max_color
-      ~num_regs:(List.length usable_mach_regs)
-  in
-  let scratch_temp, func, max_color =
-    let temp_gen = Id_gen.of_id func.next_temp_id in
-    let scratch_temp = Ident.fresh ~name:"par_move_scratch" temp_gen in
-    coloring.!(scratch_temp) <- max_color + 1;
-    Hashtbl.set precolored_name_to_mach_reg ~key:scratch_temp ~data:R11;
-    Hashtbl.set mach_reg_to_precolored_name ~key:R11 ~data:scratch_temp;
-    scratch_temp, Func.apply_temp_gen temp_gen func, max_color + 1
-  in
+  let allocation = { Allocation.table = allocation; mach_reg_id } in
+  let spilled_colors = Set.diff used_colors available_colors in
   let func =
     Destruct_ssa.destruct
-      ~in_same_reg:(fun t1 t2 -> coloring.!(t1) = coloring.!(t2))
-      ~get_scratch:(fun () -> scratch_temp)
+      ~in_same_reg:(fun t1 t2 ->
+        Allocation.find_color_exn allocation t1 = Allocation.find_color_exn allocation t2)
+      ~get_scratch:(fun () -> mach_reg_ident mach_reg_id R11)
       func
   in
-  let color_to_mach_reg : Mach_reg.t Int_table.t = Int_table.create () in
-  (* assign registers to the colors of precolored *)
-  let find_usable_mach_reg_and_use_up =
-    let used_mach_regs = Hash_set.create (module Mach_reg) in
-    (* first color all the precolored ones *)
-    begin
-      let@: precolored = Hashtbl.iter_keys precolored_name_to_mach_reg in
-      let color = coloring.!(precolored) in
-      let mach_reg = Hashtbl.find_exn precolored_name_to_mach_reg precolored in
-      Hash_set.add used_mach_regs mach_reg;
-      Int_table.set color_to_mach_reg ~key:color ~data:mach_reg
-    end;
-    fun () ->
-      let mach_reg =
-        List.find usable_mach_regs ~f:(fun usable_mach_reg ->
-          not (Hash_set.mem used_mach_regs usable_mach_reg))
-        |> Option.value_exn
-             ~message:
-               "Should have spilled registers so that we will always have enough machine \
-                registers"
-      in
-      Hash_set.add used_mach_regs mach_reg;
-      mach_reg
-  in
-  assert (max_color >= -1);
-  begin
-    let@: color =
-      (* assign registers to colors *)
-      Iter.Infix.(0 -- max_color)
-      (* skip the precolored colors *)
-      |> Iter.filter ~f:(fun color -> not @@ Int_table.mem color_to_mach_reg color)
-      (* skip the spilled colors *)
-      |> Iter.filter ~f:(fun color -> not @@ Bitvec.mem spilled_colors color)
-    in
-    let mach_reg = find_usable_mach_reg_and_use_up () in
-    Int_table.set color_to_mach_reg ~key:color ~data:mach_reg
-  end;
-  let allocation = Ident.Table.create () in
-  (* set the colored ones *)
-  begin
-    let@: temp, color = Ident.Table.iteri coloring in
-    match Int_table.find color_to_mach_reg color with
-    | None -> assert (Bitvec.mem spilled_colors color)
-    | Some mach_reg -> allocation.!(temp) <- mach_reg
-  end;
-  let func, evicted_mach_reg_temps =
+  let func =
     let stack_builder = Func.create_stack_builder func in
-    trace_s [%message (spilled_colors : Bitvec.t)];
-    let func, evicted_mach_reg_temps =
-      spill_colors ~stack_builder ~allocation ~spilled_colors ~coloring ~func
+    let func =
+      spill_colors ~mach_reg_id ~stack_builder ~allocation ~spilled_colors ~func
     in
     let func = Func.apply_stack_builder stack_builder func in
-    func, evicted_mach_reg_temps
+    func
   in
-  (* now set the evicted temps *)
-  begin
-    let@: evicted_mach_reg_temp, evicted_mach_reg = List.iter evicted_mach_reg_temps in
-    allocation.!(evicted_mach_reg_temp) <- evicted_mach_reg
-  end;
   allocation, func
 ;;
