@@ -28,24 +28,10 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
   | Stack_slot slot ->
-    let offset = Frame_layout.resolve_frame_offset st.frame_layout slot in
-    Mem (Address.create Mach_reg.RSP offset)
+    let offset = Frame_layout.resolve_frame_base_offset st.frame_layout slot in
+    Mem (Address.create Mach_reg.RBP offset)
   | Reg temp -> Reg (get_temp st temp)
   | Mem _ -> todol [%here]
-;;
-
-let epilogue ?info () =
-  let ins = ins ?info in
-  empty
-  +> [ ins (Mov { dst = Reg RSP; src = Reg RBP; size = Qword })
-     ; ins (Pop { dst = Reg RBP; size = Qword })
-     ; ins Ret
-     ]
-;;
-
-let epilogue_without_base ?info stack_size =
-  let ins = ins ?info in
-  empty +> [ ins (Add { dst = Reg RSP; src = Imm stack_size; size = Qword }); ins Ret ]
 ;;
 
 let prologue ?info stack_size =
@@ -60,6 +46,20 @@ let prologue ?info stack_size =
 let prologue_without_base ?info stack_size =
   let ins = ins ?info in
   empty +> [ ins (Sub { dst = Reg RSP; src = Imm stack_size; size = Qword }) ]
+;;
+
+let epilogue ?info () =
+  let ins = ins ?info in
+  empty
+  +> [ ins (Mov { dst = Reg RSP; src = Reg RBP; size = Qword })
+     ; ins (Pop { dst = Reg RBP; size = Qword })
+     ; ins Ret
+     ]
+;;
+
+let epilogue_without_base ?info stack_size =
+  let ins = ins ?info in
+  empty +> [ ins (Add { dst = Reg RSP; src = Imm stack_size; size = Qword }); ins Ret ]
 ;;
 
 let label_to_string _st (label : Label.t) =
@@ -199,9 +199,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     Flat_x86.Instr.(
       empty
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
-      ++ epilogue_without_base
-           ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue"))
-           (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout)))
+      ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ())
   | Call _ -> todol [%here]
 ;;
 
@@ -230,7 +228,7 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   let instrs =
     empty
     +> Flat_x86.Line.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
-    ++ prologue_without_base
+    ++ prologue
          ~info:(Info.create_s [%message "prologue"])
          (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout))
     ++ instrs
