@@ -8,11 +8,19 @@ module Pre_spill = Ae_abs_x86_pre_spill
 open Ae_abs_x86_types
 open Ae_trace
 
+(* 
+(label ir
+  (block_params n_23 n_24 n_25)
+  (n_23 <- var n_24)
+  (rhs_6 <- eq.q lhs_4 rhs_5)
+  (rhs_7 <- add.q lhs_4 rhs_5)
+  (jump (first rhs_6 rhs_7) (second rhs_6 rhs_7))
+  (ret)
+)
+*)
 let convert func =
   let func = Split_critical.split func in
-  (* trace_s [%message "before_spill" (func : Func.t)];
-  let func = Pre_spill.spill_func ~num_regs:3 func in
-  trace_s [%message "after_spill" (func : Func.t)]; *)
+  let func = Pre_spill.spill_func ~num_regs:8 func in
   let mach_reg_id, func =
     ( func.next_temp_id
     , { func with next_temp_id = Entity.Id.offset func.next_temp_id Mach_reg.num } )

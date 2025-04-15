@@ -78,7 +78,7 @@ let%expect_test "" =
     ; data = ()
     }
   in
-  let func = Tir.Convert_ssa.convert func in
+  let func = Tir.Convert_ssa.convert ~renumber:() func in
   print_s [%message (func : Func.t)];
   ();
   [%expect

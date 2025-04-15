@@ -1,6 +1,8 @@
 open Std
 open Ae_generic_ir_import
 module Entity_graph_utils = Ae_entity_graph_utils
+module Table = Entity.Ident.Table
+open Table.Syntax
 
 module Make (Ir : Ir) = struct
   open Make_std (Ir)
@@ -13,8 +15,18 @@ module Make (Ir : Ir) = struct
 
   module Liveness = Ae_generic_ir_liveness.Make (Ir)
 
+  let get_num_definitions func =
+    let table = Table.create () in
+    begin
+      let@: block = Func.iter_blocks func in
+      let@: instr = Block.iter_fwd block in
+      let@: def = Instr.iter_defs instr.i in
+      Table.update table def ~f:(Option.value_map ~f:(( + ) 1) ~default:1)
+    end;
+    table
+  ;;
+
   let compute_phi_placements func =
-    let module Table = Entity.Ident.Table in
     let succ_table = Func.succ_table func in
     let pred_table = Func.pred_table_of_succ succ_table in
     let def_blocks = Liveness.compute_def_blocks_non_ssa func in
@@ -49,15 +61,14 @@ module Make (Ir : Ir) = struct
     label_to_phis
   ;;
 
-  let convert ?continue (func : Func.t) =
-    let module Table = Entity.Ident.Table in
-    let open Table.Syntax in
+  let convert ?renumber (func : Func.t) =
     let idoms = Func.compute_idoms func in
     let dom_tree = Dominators.Tree.of_immediate idoms in
     let def_to_ty = Func.get_ty_table func in
     let block_to_phis = compute_phi_placements func in
+    let num_definitions = get_num_definitions func in
     let temp_gen =
-      if Option.is_some continue then Id_gen.of_id func.next_temp_id else Id_gen.create ()
+      if Option.is_some renumber then Id_gen.create () else Id_gen.of_id func.next_temp_id
     in
     let multi_edit = Multi_edit.create () in
     let rec rename_block rename_temp_map (block : Block.t) =
@@ -96,7 +107,15 @@ module Make (Ir : Ir) = struct
           in
           let instr =
             let@: temp = Instr.map_defs instr in
-            let new_temp = Ident.freshen temp_gen temp in
+            let new_temp =
+              (*
+                 keep the same name for temporaries that are already ssa,
+                these can't possible create any new phis
+              *)
+              if Option.is_some renumber || num_definitions.!(temp) > 1
+              then Ident.freshen temp_gen temp
+              else temp
+            in
             rename_temp_map := Ident.Map.set !rename_temp_map ~key:temp ~data:new_temp;
             new_temp
           in

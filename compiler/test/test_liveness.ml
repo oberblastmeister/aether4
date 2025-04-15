@@ -17,7 +17,7 @@ let check s =
 
 let check_next_use s =
   let tir = Driver.compile_source_to_tir s |> Or_error.ok_exn in
-  let tir = Convert_ssa.convert tir in
+  let tir = Convert_ssa.convert ~renumber:() tir in
   print_s [%message (tir : Func.t)];
   let pred_table = Func.pred_table tir in
   let live_in, live_out = Liveness.compute_next_use_distance ~pred_table tir in
@@ -238,8 +238,10 @@ let%expect_test "smoke2" =
     |}]
 ;;
 
-let%expect_test "smoke2" = check source2;
-  [%expect {|
+let%expect_test "smoke2" =
+  check source2;
+  [%expect
+    {|
     (tir
      ((name main)
       (blocks
@@ -292,3 +294,4 @@ let%expect_test "smoke2" = check source2;
       (start start@3) (next_temp_id 9) (next_label_id 4) (data ())))
     ((live_in ()) (live_out ()))
     |}]
+;;

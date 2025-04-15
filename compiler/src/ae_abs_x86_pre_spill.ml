@@ -1,3 +1,4 @@
+(* TODO: add stack allocator to share stack slots better *)
 open Std
 open Ae_abs_x86_types
 module Temp_entity = Ae_abs_asm_temp_entity
@@ -24,8 +25,7 @@ let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
         Table.find active_out_table pred
         |> Option.value ~default:Ident.Set.empty
         |> Ident.Set.iter
-        (* TODO: add this back *)
-        (* |> Iter.filter ~f:(Ident.Map.mem next_use_in) *)
+        |> Iter.filter ~f:(Ident.Map.mem next_use_in)
       in
       temp_freq.!(temp) <- Table.find_or_add temp_freq temp ~default:(Fn.const 0) + 1;
       in_some_pred := Ident.Set.add !in_some_pred temp;
@@ -36,14 +36,15 @@ let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
       end
     end
   end;
-  let in_all = !in_all_preds in
-  let in_some = !in_some_pred in
+  let in_all_preds = !in_all_preds in
+  let in_some_pred = !in_some_pred in
+  (* TODO: sort these by next use distance *)
   let temps_to_add =
-    Ident.Set.to_list in_some
-    |> List.take __ (Ident.Set.length in_all - num_regs)
+    Ident.Set.to_list in_some_pred
+    |> List.take __ (num_regs - Ident.Set.length in_all_preds)
     |> Ident.Set.of_list_exn
   in
-  Ident.Set.union in_all temps_to_add
+  Ident.Set.union in_all_preds temps_to_add
 ;;
 
 let sort_temps_by_ascending_next_use next_use temps =
@@ -143,7 +144,10 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
             edit
             block.label
             (Instr'.create
-               ?info:(Option.map ~f:(Info.tag_s ~tag:[%message "reload"]) instr'.info)
+               ?info:
+                 (Option.map
+                    ~f:(Info.tag_s ~tag:[%message "reload" (temp : Temp.t)])
+                    instr'.info)
                reload_instr
                instr'.index)
         end;
@@ -152,13 +156,21 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
         let new_active =
           Ident.Set.to_list !active
           |> sort_temps_by_ascending_next_use next_uses_here_out
-          (* this is somehow makes all tests pass *)
-          (* |> List.rev *)
+          (* we reverse so that we drop temporaries that are used far away *)
+          |> List.rev
           |> List.append __ non_active_uses
           |> List.append __ defs
         in
         let num_active = List.length new_active + num_clobbers in
-        active := List.drop new_active (num_active - num_regs) |> Ident.Set.of_list_exn
+        let new_active_limited = List.drop new_active (num_active - num_regs) in
+        begin
+          let num_active_limited_set = Ident.Set.of_list_exn new_active_limited in
+          begin
+            let@: def = List.iter defs in
+            assert (Ident.Set.mem num_active_limited_set def)
+          end
+        end;
+        active := Ident.Set.of_list_exn new_active_limited
     end
   end;
   !active
@@ -177,10 +189,6 @@ let fixup_edge
     Ident.Set.fold src_active_out ~init:dst_active_in ~f:Ident.Set.remove
     |> Ident.Set.to_list
   in
-  if not (List.is_empty need_to_reload)
-  then begin
-    trace_s [%message "fixup_edge" (need_to_reload : Temp.t list)]
-  end;
   let reload_instrs =
     List.map need_to_reload ~f:(fun temp ->
       let stack_slot, ty = spill_temp temp in
@@ -247,11 +255,17 @@ let insert_spills ~spilled func =
       Instr.iter_defs instr.i
       |> Iter.filter_map ~f:(fun def ->
         Hashtbl.find spilled def |> Option.map ~f:(Tuple2.create def))
-      (* |> Iter.filter ~f:(fun (def, _) -> not (Table.mem already_spilled def)) *)
+      |> Iter.filter ~f:(fun (def, _) -> not (Table.mem already_spilled def))
     in
     already_spilled.!(def) <- ();
     let new_instr = Instr.Mov { dst = Stack_slot stack_slot; src = Reg def; size = ty } in
-    Multi_edit.add_insert edit block.label (Instr'.create new_instr (instr.index + 1))
+    Multi_edit.add_insert
+      edit
+      block.label
+      (Instr'.create
+         ~info:(Info.create_s [%message "spill" (def : Temp.t)])
+         new_instr
+         (instr.index + 1))
   end;
   Func.apply_multi_edit edit func
 ;;
@@ -288,12 +302,12 @@ let spill_func ~num_regs (func : Func.t) =
           ~next_use_in:(Liveness.Next_use_table.find next_use_in_table label)
           ~active_out_table
       in
+      (* TODO: enable this for chaos mode *)
+      (* let active_in = Ident.Set.empty in *)
       let next_use_out = Liveness.Next_use_table.find next_use_out_table label in
       let active_out =
         spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit block
       in
-      trace_s
-        [%message (label : Label.t) (active_in : Temp.Set.t) (active_out : Temp.Set.t)];
       active_in_table.!(label) <- active_in;
       active_out_table.!(label) <- active_out
     end;
@@ -302,6 +316,6 @@ let spill_func ~num_regs (func : Func.t) =
   let func = fixup_func ~active_in_table ~active_out_table ~spill_temp func in
   let func = Func.apply_stack_builder stack_builder func in
   let func = insert_spills ~spilled func in
-  let func = Convert_ssa.convert ~continue:() func in
+  let func = Convert_ssa.convert func in
   func
 ;;

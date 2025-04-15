@@ -42,7 +42,7 @@ module type Arg = sig
 
   module Ann : sig
     type t [@@deriving sexp_of]
-    
+
     val default : t
   end
 

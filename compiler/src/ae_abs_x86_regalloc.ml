@@ -367,7 +367,6 @@ let alloc_func ~mach_reg_id (func : Func.t) =
   in
   let allocation = { Allocation.table = allocation; mach_reg_id } in
   let spilled_colors = Set.diff used_colors available_colors in
-  trace_s [%message "spilled_colors" (spilled_colors : Int.Set.t)];
   let func =
     Destruct_ssa.destruct
       ~mach_reg_id

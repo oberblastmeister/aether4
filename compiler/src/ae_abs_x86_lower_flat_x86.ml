@@ -1,3 +1,7 @@
+(*
+  TODO: possibly promote byte moves to double word moves
+  prefer 32 bit registers: https://stackoverflow.com/questions/41573502/why-doesnt-gcc-use-partial-registers
+*)
 open Std
 module Abs_x86 = Ae_abs_x86_types
 module Entity = Ae_entity_std
@@ -102,13 +106,12 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
         let src = lower_operand st src in
         (* only needs Byte, but we use Dword here *)
         empty
-        +> Flat_x86.Instr.
-             [ ins (Mov { dst = Reg R11; src; size = Dword })
-               (* Important! This must be Byte because only the lower byte is valid for byte size, even though we use Dword registers *)
-             ; ins (Test { src1 = Reg R11; src2 = Reg R11; size = Byte })
-             ; ins (J { cc = NE; label = label_to_string st b1.label })
-             ; ins (Jmp (label_to_string st b2.label))
-             ]
+        +> [ ins (Mov { dst = Reg R11; src; size = Dword })
+             (* Important! This must be Byte because only the lower byte is valid for byte size, even though we use Dword registers *)
+           ; ins (Test { src1 = Reg R11; src2 = Reg R11; size = Byte })
+           ; ins (J { cc = NE; label = label_to_string st b1.label })
+           ; ins (Jmp (label_to_string st b2.label))
+           ]
       | _ -> todo ()
     in
     instrs
@@ -145,13 +148,12 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
           ]
      | Rshift ->
        empty
-       +> Flat_x86.Instr.
-            [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
-              ins (Mov { dst = Reg R11; src = src1; size })
-            ; ins (Mov { dst = Reg RCX; src = src2; size = Dword })
-            ; ins (Sar { dst = Reg R11; size })
-            ; ins (Mov { dst; src = Reg R11; size })
-            ]
+       +> [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
+            ins (Mov { dst = Reg R11; src = src1; size })
+          ; ins (Mov { dst = Reg RCX; src = src2; size = Dword })
+          ; ins (Sar { dst = Reg R11; size })
+          ; ins (Mov { dst; src = Reg R11; size })
+          ]
      | Lt -> on_cmp L
      | Gt -> on_cmp G
      | Le -> on_cmp LE
@@ -162,39 +164,36 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
      | Add -> on_rmw Flat_x86.Instr.add
      | Sub -> on_rmw Flat_x86.Instr.sub
      | Imul ->
-       Flat_x86.Instr.(
-         empty
-         +> [ (* must move to scratch first before moving src2 to RAX,
+       empty
+       +> [ (* must move to scratch first before moving src2 to RAX,
                            because src1 may refer to RAX
-              *)
-              ins (Mov { dst = Reg Mach_reg.scratch; src = src1; size })
-            ; ins (Mov { dst = Reg RAX; src = src2; size })
-            ; ins (Imul { src = Reg Mach_reg.scratch; size })
-              (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; ins (Mov { dst; src = Reg RAX; size })
-            ])
+            *)
+            ins (Mov { dst = Reg Mach_reg.scratch; src = src1; size })
+          ; ins (Mov { dst = Reg RAX; src = src2; size })
+          ; ins (Imul { src = Reg Mach_reg.scratch; size })
+            (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
+          ; ins (Mov { dst; src = Reg RAX; size })
+          ]
      | Idiv ->
-       Flat_x86.Instr.(
-         empty
-         +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
-            ; ins (Mov { dst = Reg RAX; src = src1; size })
-            ; (* sign extend RAX into RDX:RAX *)
-              ins Cqo
-            ; ins (Idiv { src = Reg Mach_reg.scratch; size })
-              (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; ins (Mov { dst; src = Reg RAX; size })
-            ])
+       empty
+       +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
+          ; ins (Mov { dst = Reg RAX; src = src1; size })
+          ; (* sign extend RAX into RDX:RAX *)
+            ins Cqo
+          ; ins (Idiv { src = Reg Mach_reg.scratch; size })
+            (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
+          ; ins (Mov { dst; src = Reg RAX; size })
+          ]
      | Imod ->
-       Flat_x86.Instr.(
-         empty
-         +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
-            ; ins (Mov { dst = Reg RAX; src = src1; size })
-            ; (* sign extend RAX into RDX:RAX *)
-              ins Cqo
-            ; ins (Idiv { src = Reg Mach_reg.scratch; size })
-              (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-            ; ins (Mov { dst; src = Reg RDX; size })
-            ]))
+       empty
+       +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
+          ; ins (Mov { dst = Reg RAX; src = src1; size })
+          ; (* sign extend RAX into RDX:RAX *)
+            ins Cqo
+          ; ins (Idiv { src = Reg Mach_reg.scratch; size })
+            (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
+          ; ins (Mov { dst; src = Reg RDX; size })
+          ])
   | Ret { src; size } ->
     let src = lower_operand st src in
     Flat_x86.Instr.(
