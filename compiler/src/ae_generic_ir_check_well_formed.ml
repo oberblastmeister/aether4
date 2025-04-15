@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct
-  open Make_std(Ir)
+  open Ir
 
   exception Exn of Error.t
 

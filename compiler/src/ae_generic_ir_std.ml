@@ -10,7 +10,7 @@ module Check_well_formed = Ae_generic_ir_check_well_formed
 module Check_types = Ae_generic_ir_check_types
 module Convert_ssa = Ae_generic_ir_convert_ssa
 
-module Make_all (Arg : Sigs.Arg) = struct
+(* module Make_all (Arg : Sigs.Arg) = struct
   module Ir = struct
     include Make_ir (Arg)
   end
@@ -23,19 +23,10 @@ module Make_all (Arg : Sigs.Arg) = struct
   module Check_types = Check_types.Make (Ir)
   module Convert_ssa = Convert_ssa.Make (Ir)
 
-  module Check = struct
-    let check func =
-      let open Or_error.Let_syntax in
-      let%bind () = Check_well_formed.check func in
-      let%bind () = Check_ssa.check func in
-      let%bind () = Check_types.check func in
-      Ok ()
-    ;;
-  end
 end
 
 module Make_all_S (Arg : Sigs.Arg) = struct
   module type S = module type of struct
     include Make_all (Arg)
   end
-end
+end *)

@@ -2,7 +2,7 @@ open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) : sig
-  open Make_std(Ir)
+  open Ir
 
   module Live_set : sig
     type t [@@deriving sexp_of]

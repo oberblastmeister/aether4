@@ -5,7 +5,7 @@ module Table = Entity.Ident.Table
 open Table.Syntax
 
 module Make (Ir : Ir) = struct
-  open Make_std (Ir)
+  open Ir
 
   open struct
     let is_on_top table ~equal ~key ~data =

@@ -3,6 +3,7 @@ open Ae_generic_ir_sigs
 module Graph = Ae_data_graph_std
 
 open struct
+  module Intf = Ae_generic_ir_make_intf
   module Entity = Ae_entity_std
   module Ident = Entity.Ident
   module Label_entity = Ae_label_entity
@@ -14,7 +15,7 @@ open struct
   module Id_gen = Entity.Id_gen
 end
 
-module Make_ir (Arg : Arg) = struct
+module Make_ir (Arg : Intf.Arg) = struct
   module Arg = Arg
 
   (* very important! *)

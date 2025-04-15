@@ -1,3 +1,4 @@
+(* TODO: integrate this into the lower_flat_x86 pass *)
 open Std
 module Entity = Ae_entity_std
 module Ident = Entity.Ident

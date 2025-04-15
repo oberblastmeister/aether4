@@ -5,7 +5,7 @@ open Ae_generic_ir_sigs
 
 (* TODO: check calls when we add those *)
 module Make (Ir : Ir) = struct
-  open Make_std (Ir)
+  open Ir
 
   exception Exn of Error.t
 

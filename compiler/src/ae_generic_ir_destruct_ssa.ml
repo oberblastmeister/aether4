@@ -5,12 +5,12 @@ module Mach_reg = Ae_x86_mach_reg
 module Make
     (Ir : Ir)
     (Instr_ext : sig
-       open Make_std(Ir)
+       open Ir
 
        val move : dst:Temp.t -> src:Temp.t -> ty:Ty.t -> Instr.t
      end) =
 struct
-  open Make_std(Ir)
+  open Ir
 
   module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
       module Temp = Temp
@@ -19,8 +19,8 @@ struct
 
   open Sequentialize_parallel_moves
 
-  let move_to_instr { Move.dst; src; ty } = Instr_ext.move ~dst ~src ~ty
-  let destruct ~in_same_reg ~get_scratch (func : Func.t) = todol [%here]
+  (* let move_to_instr { Move.dst; src; ty } = Instr_ext.move ~dst ~src ~ty
+  let destruct ~in_same_reg ~get_scratch (func : Func.t) = todol [%here] *)
   (* let edit = Multi_edit.create () in
     begin
       let@: block = Func.iter_blocks func in

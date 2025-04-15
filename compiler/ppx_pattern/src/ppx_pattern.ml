@@ -33,6 +33,10 @@ let fail_expander ~ctxt (expr : expression) =
       "pattern match must be a let binding"
 ;;
 
+(* let like_expander ~ctxt (modul : module_expr) =
+  let loc = Expansion_context.Extension.extension_point_loc ctxt in
+  () *)
+
 let fail_extension =
   Extension.V3.declare
     "fail"

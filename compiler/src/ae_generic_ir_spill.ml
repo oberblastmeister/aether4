@@ -10,7 +10,7 @@ open Table.Syntax
 module Make
     (Ir : Ir)
     (Instr_ext : sig
-       open Make_std(Ir)
+       open Ir
 
        module Block_call : sig
          open Block_call
@@ -31,7 +31,7 @@ module Make
        val reload_temp : Temp.t -> Instr.t
      end) =
 struct
-  open Make_std(Ir)
+  open Ir
   module Liveness = Ae_generic_ir_liveness.Make (Ir)
 
   let init_usual ~num_regs ~preds ~reg_out_table =

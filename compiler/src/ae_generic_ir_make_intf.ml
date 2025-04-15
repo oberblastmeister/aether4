@@ -9,12 +9,9 @@ open struct
   module Graph = Ae_data_graph_std
 end
 
-module type Ir = sig
+module type Arg = sig
   module Temp_entity : Entity.S
-
-  module Temp : module type of struct
-    include Temp_entity.Ident
-  end
+  module Temp := Temp_entity.Ident
 
   module Location : sig
     type t [@@deriving sexp_of]
@@ -82,6 +79,11 @@ module type Ir = sig
   module Func_data : sig
     type t [@@deriving sexp_of]
   end
+end
+
+module type S = sig
+  module Arg : Arg
+  open Arg
 
   module Instr_ext : sig
     val iter_labels : Instr.t -> Label.t Iter.t

@@ -1,3 +1,3 @@
 open Std
-open Ae_generic_ir_sigs
-module Make_ir (Arg : Arg) : Ir with module Arg = Arg
+module Intf := Ae_generic_ir_make_intf
+module Make_ir (Arg : Intf.Arg) : Intf.S with module Arg = Arg
