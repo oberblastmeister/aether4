@@ -100,9 +100,6 @@ let build_graph ~mach_reg_id (func : Func.t) =
   graph, func
 ;;
 
-(* TODO: add in callee saved later *)
-let usable_mach_regs : Mach_reg.t list = Call_conv.caller_saved_without_r11
-
 module Allocation = struct
   type t =
     { table : int Temp.Table.t
@@ -153,7 +150,7 @@ let spill_instr
       We also have to add two due to the precolored registers.
     *)
     let evictable_colors =
-      usable_mach_regs
+      Call_conv.regalloc_usable_mach_regs
       |> List.map ~f:Mach_reg.to_enum
       |> List.filter ~f:(fun reg -> not (Set.mem used_non_spilled_colors reg))
       |> Lstack.of_list_rev
@@ -353,12 +350,12 @@ let get_precolored_colors
 
 let alloc_func ~mach_reg_id (func : Func.t) =
   let precolored =
-    List.map usable_mach_regs ~f:(fun mach_reg ->
+    List.map Call_conv.regalloc_usable_mach_regs ~f:(fun mach_reg ->
       mach_reg_ident mach_reg_id mach_reg, Mach_reg.to_enum mach_reg)
     |> Ident.Map.of_alist_exn
   in
   let available_colors =
-    List.map usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
+    List.map Call_conv.regalloc_usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
   in
   let open Ident.Table.Syntax in
   let graph, func = build_graph ~mach_reg_id func in
@@ -379,13 +376,5 @@ let alloc_func ~mach_reg_id (func : Func.t) =
       ~get_scratch:(fun () -> Temp (mach_reg_ident mach_reg_id R11))
       func
   in
-  let func =
-    let stack_builder = Func.create_stack_builder func in
-    let func =
-      spill_colors ~mach_reg_id ~stack_builder ~allocation ~spilled_colors ~func
-    in
-    let func = Func.apply_stack_builder stack_builder func in
-    func
-  in
-  allocation, func
+  allocation, spilled_colors, func
 ;;

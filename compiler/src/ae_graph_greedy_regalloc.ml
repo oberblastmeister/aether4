@@ -57,14 +57,13 @@ let simplicial_elimination_order (graph : Graph.t) (precolored : int Temp.Map.t)
 ;;
 
 let color_graph_with_ordering
-      ~spilled_color
+      ~(spilled_color : int)
       ~available_colors
       ~ordering
       ~precolored
       ~(graph : Graph.t)
   =
   let temp_to_color : int Temp.Table.t = Entity.Ident.Table.create () in
-  let spilled_color = ref spilled_color in
   let used_colors = ref available_colors in
   ordering
   |> Iter.iter ~f:(fun temp ->
@@ -83,10 +82,16 @@ let color_graph_with_ordering
       Set.diff available_colors neighbor_colors
       |> Set.min_elt
       |> Option.value_or_thunk ~default:(fun () ->
-        let color = !spilled_color in
-        used_colors := Set.add !used_colors color;
-        incr spilled_color;
-        color)
+        let color = ref spilled_color in
+        begin
+          let@ r = with_return in
+          while true do
+            if not (Set.mem neighbor_colors !color) then r.return ();
+            incr color
+          done
+        end;
+        used_colors := Set.add !used_colors !color;
+        !color)
     in
     temp_to_color.!(temp) <- color;
     ());
