@@ -137,7 +137,7 @@ let lower_func st (func : Tir.Func.t) : Lir.Func.t =
   let start = func.start in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
-  { name; blocks; start; next_temp_id; next_label_id; data = () }
+  { name; blocks; start; next_temp_id; next_label_id }
 ;;
 
 let lower func =

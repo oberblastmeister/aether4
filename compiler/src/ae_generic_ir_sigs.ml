@@ -9,12 +9,9 @@ open struct
   module Graph = Ae_data_graph_std
 end
 
-module type Ir = sig
+module type Instr = sig
   module Temp_entity : Entity.S
-
-  module Temp : module type of struct
-    include Temp_entity.Ident
-  end
+  module Temp : module type of Temp_entity.Ident
 
   module Location : sig
     type t [@@deriving sexp_of]
@@ -78,17 +75,10 @@ module type Ir = sig
     val map_block_calls : t -> f:(Block_call.t -> Block_call.t) -> t
     val iter_block_calls : t -> Block_call.t Iter.t
   end
+end
 
-  module Func_data : sig
-    type t [@@deriving sexp_of]
-  end
-
-  module Instr_ext : sig
-    val iter_labels : Instr.t -> Label.t Iter.t
-    val labels_list : Instr.t -> Label.t list
-  end
-
-  module Temp := Temp_entity.Ident
+module type Ir_simple = sig
+  include Instr
 
   module Instr' : sig
     type t =
@@ -157,18 +147,16 @@ module type Ir = sig
   end
 
   module Func : sig
-    type t =
-      { name : string
-      ; blocks : Block.t Label.Map.t
-      ; start : Label.t
-      ; next_temp_id : Temp_entity.Id.t
-      ; next_label_id : Label_entity.Id.t (* ; next_slot_id : Stack_slot_entity.Id.t *)
-      ; data : Func_data.t
-      }
-    [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
 
+    val start : t -> Label.t
+    val blocks : t -> Block.t Label.Map.t
+    val set_blocks : t -> Block.t Label.Map.t -> t
     val apply_multi_edit : ?no_sort:unit -> Multi_edit.t -> t -> t
+    val create_temp_gen : t -> Temp_entity.Witness.t Entity.Id_gen.t
     val apply_temp_gen : Temp_entity.Witness.t Entity.Id_gen.t -> t -> t
+    val create_label_gen : t -> Label_entity.Witness.t Entity.Id_gen.t
+    val apply_label_gen : Label_entity.Witness.t Entity.Id_gen.t -> t -> t
     val start_block : t -> Block.t
     val succ_map : t -> Adj_map.t
     val iter_blocks : t -> Block.t Iter.t
@@ -180,12 +168,19 @@ module type Ir = sig
     val graph : t -> Label.t Graph.t
     val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.t
     val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
-    val get_ty_table : t -> Ty.t Temp.Table.t
     val labels_postorder : t -> Label.t Vec.t
     val labels_reverse_postorder : t -> Label.t Vec.t
   end
+end
 
-  module Program : sig
-    type t = { funcs : Func.t } [@@deriving sexp_of]
+(* using make ir_extnsion *)
+module type Ir = sig
+  include Ir_simple
+  module Temp := Temp_entity.Ident
+
+  module Func : sig
+    include module type of Func
+
+    val get_ty_table : t -> Ty.t Temp.Table.t
   end
 end

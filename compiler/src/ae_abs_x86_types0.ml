@@ -451,14 +451,6 @@ module Instr = struct
   let move ~dst ~src ~ty:size = Mov { dst = Reg dst; src = Reg src; size }
 end
 
-module Func_data = struct
-  type t =
-    { next_stack_slot_id : Stack_slot_entity.Id.t
-    ; stack_slots : (Stack_slot.t * Ty.t) list
-    }
-  [@@deriving sexp_of]
-end
-
 module Stack_builder = struct
   type t =
     { mutable stack_slot_gen : Stack_slot_entity.Id.t

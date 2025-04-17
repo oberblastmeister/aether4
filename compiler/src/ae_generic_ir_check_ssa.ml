@@ -34,10 +34,10 @@ module Make (Ir : Ir) = struct
 
   let check_dominators (func : Func.t) =
     let dom_tree = Func.compute_dom_tree func in
-    let start = func.start in
+    let start = Func.start func in
     let errors = Stack.create () in
     let rec go scope label =
-      let block = Ident.Map.find_exn func.blocks label in
+      let block = Ident.Map.find_exn (Func.blocks func) label in
       let scope = ref scope in
       begin
         let@: instr = Block.iter_fwd block in

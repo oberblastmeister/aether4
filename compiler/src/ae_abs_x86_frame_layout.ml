@@ -26,7 +26,7 @@ let compute (func : Func.t) =
   let offset = ref 0 in
   let layout_table = Table.create () in
   begin
-    let@: slot, size = List.iter (List.rev func.data.stack_slots) in
+    let@: slot, size = List.iter (List.rev func.stack_slots) in
     offset := !offset - Int.round_up ~to_multiple_of:8 (Ty.to_bytes size);
     layout_table.!(slot) <- !offset
   end;

@@ -103,20 +103,45 @@ module type S = sig
   module Id : sig
     type t = Witness.t Id.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Table : module type of Id.Table.Make (Witness)
-    module Map : module type of Id.Map.Make (Witness)
-    module Set : module type of Id.Set.Make (Witness)
-    module Bitvec : module type of Bitvec.Make (Witness)
+    (* TODO: remove this shitty code *)
+    module Table : module type of struct
+      include Id.Table.Make (Witness)
+    end
+
+    module Map : module type of struct
+      include Id.Map.Make (Witness)
+    end
+
+    module Set : module type of struct
+      include Id.Set.Make (Witness)
+    end
+
+    module Bitvec : module type of struct
+      include Bitvec.Make (Witness)
+    end
+
     include Base.Comparable.S with type t := t
   end
 
   module Ident : sig
     type t = Witness.t Ident.t [@@deriving sexp_of, equal, compare, hash]
 
-    module Table : module type of Ident.Table.Make (Witness)
-    module Map : module type of Ident.Map.Make (Witness)
-    module Set : module type of Ident.Set.Make (Witness)
-    module Bitvec : module type of Bitvec.Make (Witness)
+    module Table : module type of struct
+      include Ident.Table.Make (Witness)
+    end
+
+    module Map : module type of struct
+      include Ident.Map.Make (Witness)
+    end
+
+    module Set : module type of struct
+      include Ident.Set.Make (Witness)
+    end
+
+    module Bitvec : module type of struct
+      include Bitvec.Make (Witness)
+    end
+
     include Base.Comparable.S with type t := t
   end
 end

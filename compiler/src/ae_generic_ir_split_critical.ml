@@ -9,7 +9,7 @@ module Make (Ir : Ir) = struct
     let open Ident.Table.Syntax in
     let pred_table = Func.pred_table func in
     let edit = Multi_edit.create () in
-    let label_gen = Id_gen.of_id func.next_label_id in
+    let label_gen = Func.create_label_gen func in
     begin
       let@: block = Func.iter_blocks func in
       let jump_instr = Block.find_control block in
@@ -44,9 +44,6 @@ module Make (Ir : Ir) = struct
         end
       end
     end;
-    { func with
-      blocks = Multi_edit.apply_blocks ~no_sort:() edit func.blocks
-    ; next_label_id = Id_gen.next label_gen
-    }
+    func |> Func.apply_multi_edit ~no_sort:() edit |> Func.apply_label_gen label_gen
   ;;
 end

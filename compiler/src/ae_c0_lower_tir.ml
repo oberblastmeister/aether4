@@ -254,7 +254,6 @@ let lower_program st (program : Ast.program) : Tir.Func.t =
     ; start = start_label
     ; next_temp_id
     ; next_label_id
-    ; data = ()
     }
   in
   func

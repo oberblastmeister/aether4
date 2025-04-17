@@ -60,11 +60,10 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
     empty
     +> [ ins
            (Block_params
-             (List.map params ~f:(fun param ->
-               let temp = get_temp st param.Lir.Block_param.param in
-               let ty = lower_ty param.Lir.Block_param.ty in
-               { Abs_x86.Block_param.param = Temp temp; ty }))
-           )
+              (List.map params ~f:(fun param ->
+                 let temp = get_temp st param.Lir.Block_param.param in
+                 let ty = lower_ty param.Lir.Block_param.ty in
+                 { Abs_x86.Block_param.param = Temp temp; ty })))
        ]
   | Nop -> empty +> [ ins Nop ]
   | Jump b ->
@@ -145,7 +144,8 @@ let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
   ; start
   ; next_temp_id
   ; next_label_id = func.next_label_id
-  ; data = { next_stack_slot_id; stack_slots = [] }
+  ; next_stack_slot_id
+  ; stack_slots = []
   }
 ;;
 

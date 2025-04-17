@@ -1,3 +1,8 @@
+(*
+   TODO: don't make the Func directly inside ae_generic_ir_make_intf,
+   have a function that makes the cfg utilities like iter_blocks, labels_postorder, compute_dom_tree, etc.
+   Let the users make the funcs themselves.
+*)
 open Std
 
 open struct
@@ -9,77 +14,7 @@ open struct
   module Graph = Ae_data_graph_std
 end
 
-module type Arg = sig
-  module Temp_entity : Entity.S
-  module Temp := Temp_entity.Ident
-
-  module Location : sig
-    type t [@@deriving sexp_of]
-
-    val temp_val : t -> Temp.t option
-    val of_temp : Temp.t -> t
-  end
-
-  module Ty : sig
-    type t [@@deriving sexp_of, equal, compare]
-  end
-
-  module Block_param : sig
-    type t =
-      { param : Location.t
-      ; ty : Ty.t
-      }
-    [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
-  end
-
-  module Block_call : sig
-    type t =
-      { label : Label.t
-      ; args : Location.t list
-      }
-    [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
-  end
-
-  module Ann : sig
-    type t [@@deriving sexp_of]
-
-    val default : t
-  end
-
-  module Instr : sig
-    type t [@@deriving sexp_of]
-
-    val nop : t
-    val is_nop : t -> bool
-    val block_params : Block_param.t list -> t
-    val is_block_params : t -> bool
-    val block_params_val : t -> Block_param.t list option
-    val jump : Block_call.t -> t
-    val jump_val : t -> Block_call.t option
-    val is_jump : t -> bool
-    val is_control : t -> bool
-
-    (*
-       Sometimes the type of the use is not directly known just by inspecting the instruction alone.
-      This function only needs to iterate over the *known* types alone with the associated temporary.
-      This is as opposed to definitions which always have a known type by inspecting the instruction alone.
-      For example, for block calls we have to inspect the block parameters of the destination label.
-      For function calls we need to inspect the parameters in function definition.
-    *)
-    val iter_uses_with_known_ty : t -> (Temp.t * Ty.t) Iter.t
-    val iter_uses : t -> Temp.t Iter.t
-    val iter_defs : t -> Temp.t Iter.t
-    val iter_defs_with_ty : t -> (Temp.t * Ty.t) Iter.t
-    val map_uses : t -> f:(Temp.t -> Temp.t) -> t
-    val map_defs : t -> f:(Temp.t -> Temp.t) -> t
-    val map_block_calls : t -> f:(Block_call.t -> Block_call.t) -> t
-    val iter_block_calls : t -> Block_call.t Iter.t
-  end
-
-  module Func_data : sig
-    type t [@@deriving sexp_of]
-  end
-end
+module type Arg = Ae_generic_ir_sigs.Instr
 
 module type S = sig
   module Arg : Arg
@@ -125,6 +60,7 @@ module type S = sig
     val find_block_params : t -> Instr'.t
     val create : Label.t -> (Instr'.t, [> read ]) Arrayp.t -> t
     val create_id : Label.t -> Instr'.t iarray -> t
+    val get_succ : t -> Label.t list
 
     module Table : Entity.Table.S with type 'w Key.t = t
     module Map : Entity.Map.S with type 'w Key.t = t
@@ -156,38 +92,5 @@ module type S = sig
     val add_replace : t -> Label.t -> Instr'.t -> unit
     val add_edits : t -> Label.t -> Edit.t list -> unit
     val apply_blocks : ?no_sort:unit -> t -> Block.t Label.Map.t -> Block.t Label.Map.t
-  end
-
-  module Func : sig
-    type t =
-      { name : string
-      ; blocks : Block.t Label.Map.t
-      ; start : Label.t
-      ; next_temp_id : Temp_entity.Id.t
-      ; next_label_id : Label_entity.Id.t (* ; next_slot_id : Stack_slot_entity.Id.t *)
-      ; data : Func_data.t
-      }
-    [@@deriving sexp_of]
-
-    val apply_multi_edit : ?no_sort:unit -> Multi_edit.t -> t -> t
-    val apply_temp_gen : Temp_entity.Witness.t Entity.Id_gen.t -> t -> t
-    val start_block : t -> Block.t
-    val succ_map : t -> Adj_map.t
-    val iter_blocks : t -> Block.t Iter.t
-    val find_block_exn : t -> Label.t -> Block.t
-    val pred_table : t -> Adj_table.t
-    val pred_table_of_succ : Adj_table.t -> Adj_table.t
-    val succ_table : t -> Label.t list Label.Table.t
-    val bi_graph : t -> Label.t Graph.Bi.t
-    val graph : t -> Label.t Graph.t
-    val compute_idoms : ?graph:Label.t Graph.Bi.t -> t -> Dominators.t
-    val compute_dom_tree : ?graph:Label.t Graph.Bi.t -> t -> Dominators.Tree.t
-    val get_ty_table : t -> Ty.t Temp.Table.t
-    val labels_postorder : t -> Label.t Vec.t
-    val labels_reverse_postorder : t -> Label.t Vec.t
-  end
-
-  module Program : sig
-    type t = { funcs : Func.t } [@@deriving sexp_of]
   end
 end

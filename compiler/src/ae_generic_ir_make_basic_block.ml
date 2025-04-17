@@ -15,7 +15,7 @@ open struct
   module Id_gen = Entity.Id_gen
 end
 
-module Make_ir (Arg : Intf.Arg) = struct
+module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
   module Arg = Arg
 
   (* very important! *)
@@ -89,6 +89,11 @@ module Make_ir (Arg : Intf.Arg) = struct
       |> Option.value_exn
            ~error:
              (Error.create "Could not find block params instruction in block" t sexp_of_t)
+    ;;
+
+    let get_succ t =
+      let i = find_control t in
+      Instr_ext.labels_list i.i
     ;;
 
     module Table = Entity.Table.Make (T)
@@ -188,108 +193,5 @@ module Make_ir (Arg : Intf.Arg) = struct
         let block = Edit.apply ?no_sort edits block in
         Ident.Map.set blocks ~key:label ~data:block)
     ;;
-  end
-
-  module Stack_builder = struct
-    type t =
-      { mutable stack_slot_gen : Stack_slot_entity.Id.t
-      ; mutable stack_slots : (Stack_slot.t * Ty.t) list
-      }
-  end
-
-  module Func = struct
-    type t =
-      { name : string
-      ; blocks : Block.t Label.Map.t
-      ; start : Label.t
-      ; next_temp_id : Temp_entity.Id.t
-      ; next_label_id : Label_entity.Id.t
-      ; data : Func_data.t
-      }
-    [@@deriving sexp_of]
-
-    let start_block func =
-      Entity.Ident.Map.find func.blocks func.start
-      |> Option.value_or_thunk ~default:(fun () ->
-        raise_s
-          [%message "invariant broken: start block did not exist" (func.start : Label.t)])
-    ;;
-
-    let find_block_exn func label = Entity.Ident.Map.find_exn func.blocks label
-
-    let succ_map func =
-      func.blocks
-      |> Entity.Ident.Map.map ~f:(fun b ->
-        let i = Block.find_control b in
-        Instr_ext.labels_list i.i)
-    ;;
-
-    let succ_list func =
-      func.blocks
-      |> Entity.Ident.Map.to_alist
-      |> List.map ~f:(fun (lab, b) ->
-        let i = Block.find_control b in
-        lab, Instr_ext.labels_list i.i)
-    ;;
-
-    let succ_table func = succ_list func |> Entity.Ident.Table.of_list
-
-    let pred_table_of_succ succ =
-      Entity_graph_utils.(get_pred_table (graph_of_adj_table succ))
-    ;;
-
-    let pred_table func = pred_table_of_succ (succ_table func)
-    let graph func = Entity_graph_utils.graph_of_adj_table (succ_table func)
-    let bi_graph func = graph func |> Entity_graph_utils.to_bi
-
-    let compute_idoms ?graph t =
-      Dominators.compute
-        ~start:t.start
-        (Option.value_or_thunk graph ~default:(fun () -> bi_graph t))
-    ;;
-
-    let compute_dom_tree ?graph t =
-      let idoms = compute_idoms ?graph t in
-      Dominators.Tree.of_immediate idoms
-    ;;
-
-    let iter_blocks t = t.blocks |> Ident.Map.iter
-
-    let get_ty_table func =
-      let module Table = Ident.Table in
-      let open Table.Syntax in
-      let table = Table.create () in
-      begin
-        let@: block = iter_blocks func in
-        let@: instr = Block.iter_fwd block in
-        let@: def, ty = Instr.iter_defs_with_ty instr.i in
-        if not (Table.mem table def)
-        then begin
-          table.!(def) <- ty
-        end
-        else begin
-          assert (Ty.equal table.!(def) ty)
-        end
-      end;
-      table
-    ;;
-
-    let labels_reverse_postorder func =
-      Label_entity.Dfs.reverse_postorder ~start:[ func.start ] (graph func)
-    ;;
-
-    let labels_postorder func =
-      Label_entity.Dfs.postorder ~start:[ func.start ] (graph func)
-    ;;
-
-    let apply_multi_edit ?no_sort edit func =
-      { func with blocks = Multi_edit.apply_blocks ?no_sort edit func.blocks }
-    ;;
-
-    let apply_temp_gen temp_gen func = { func with next_temp_id = Id_gen.next temp_gen }
-  end
-
-  module Program = struct
-    type t = { funcs : Func.t } [@@deriving sexp_of]
   end
 end

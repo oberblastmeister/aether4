@@ -68,7 +68,7 @@ module Make (Ir : Ir) = struct
     let block_to_phis = compute_phi_placements func in
     let num_definitions = get_num_definitions func in
     let temp_gen =
-      if Option.is_some renumber then Id_gen.create () else Id_gen.of_id func.next_temp_id
+      if Option.is_some renumber then Id_gen.create () else Func.create_temp_gen func
     in
     let multi_edit = Multi_edit.create () in
     let rec rename_block rename_temp_map (block : Block.t) =
@@ -134,20 +134,19 @@ module Make (Ir : Ir) = struct
       let rename_temp_map = !rename_temp_map in
       begin
         let@: label = Dominators.Tree.children dom_tree block.label |> List.iter in
-        rename_block rename_temp_map (Ident.Map.find_exn func.blocks label)
+        rename_block rename_temp_map (Ident.Map.find_exn (Func.blocks func) label)
       end
     in
     rename_block Ident.Map.empty (Func.start_block func);
-    { func with
-      blocks =
-        func.blocks
-        (*
-           The unreachable blocks were not in the dominator tree, so were not converted at all.
-          Just remove them here.
-        *)
-        |> Ident.Map.filteri ~f:(fun ~key ~data:_ -> Dominators.is_reachable idoms key)
-        |> Multi_edit.apply_blocks ~no_sort:() multi_edit
-    ; next_temp_id = Id_gen.next temp_gen
-    }
+    let new_blocks =
+      Func.blocks func
+      (*
+         The unreachable blocks were not in the dominator tree, so were not converted at all.
+      Just remove them here.
+      *)
+      |> Ident.Map.filteri ~f:(fun ~key ~data:_ -> Dominators.is_reachable idoms key)
+      |> Multi_edit.apply_blocks ~no_sort:() multi_edit
+    in
+    Func.set_blocks func new_blocks |> Func.apply_temp_gen temp_gen
   ;;
 end

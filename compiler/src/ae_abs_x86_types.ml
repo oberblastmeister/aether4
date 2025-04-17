@@ -5,9 +5,67 @@ open struct
   module Generic_ir = Ae_generic_ir_std
 end
 
-module T = struct
+module T0 = struct
   include Ae_abs_x86_types0
-  include Generic_ir.Make_ir (Ae_abs_x86_types0)
+  include Generic_ir.Make_basic_block (Ae_abs_x86_types0)
+
+  module Func = struct
+    module T = struct
+      type t =
+        { name : string
+        ; blocks : Block.t Label.Map.t
+        ; start : Label.t
+        ; next_temp_id : Temp_entity.Id.t
+        ; next_label_id : Label_entity.Id.t
+        ; next_stack_slot_id : Stack_slot_entity.Id.t
+        ; stack_slots : (Stack_slot.t * Ty.t) list
+        }
+      [@@deriving sexp_of, fields ~getters ~setters]
+
+      let set_blocks t blocks = { t with blocks }
+      let create_temp_gen t = Entity.Id_gen.of_id t.next_temp_id
+
+      let apply_temp_gen temp_gen t =
+        { t with next_temp_id = Entity.Id_gen.next temp_gen }
+      ;;
+
+      let apply_multi_edit ?no_sort edit t =
+        { t with blocks = Multi_edit.apply_blocks ?no_sort edit t.blocks }
+      ;;
+
+      let create_label_gen t = Entity.Id_gen.of_id t.next_label_id
+
+      let apply_label_gen label_gen t =
+        { t with next_label_id = Entity.Id_gen.next label_gen }
+      ;;
+    end
+
+    include T
+    open Generic_ir.Make_cfg (Block) (T)
+    include Func_ext
+
+    let create_stack_builder func =
+      { Stack_builder.stack_slot_gen = func.next_stack_slot_id
+      ; stack_slots = func.stack_slots
+      }
+    ;;
+
+    let apply_stack_builder (stack_builder : Stack_builder.t) func =
+      let next_stack_slot_id = stack_builder.stack_slot_gen in
+      let stack_slots = stack_builder.stack_slots in
+      { func with next_stack_slot_id; stack_slots }
+    ;;
+  end
+end
+
+module T = struct
+  open Generic_ir.Make_simple_ext (T0)
+  include T0
+
+  module Func = struct
+    include Func
+    include Func_ext
+  end
 end
 
 include T
@@ -26,22 +84,5 @@ module Check = struct
     let%bind () = Check_ssa.check func in
     let%bind () = Check_types.check func in
     Ok ()
-  ;;
-end
-
-module Func = struct
-  include Func
-
-  let create_stack_builder func =
-    { Stack_builder.stack_slot_gen = func.data.next_stack_slot_id
-    ; stack_slots = func.data.stack_slots
-    }
-  ;;
-
-  let apply_stack_builder (stack_builder : Stack_builder.t) func =
-    let next_stack_slot_id = stack_builder.stack_slot_gen in
-    let stack_slots = stack_builder.stack_slots in
-    let data = { func.data with next_stack_slot_id; stack_slots } in
-    { func with data }
   ;;
 end

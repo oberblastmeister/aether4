@@ -298,5 +298,3 @@ module Ann = struct
 
   let default = ()
 end
-
-module Func_data = Unit

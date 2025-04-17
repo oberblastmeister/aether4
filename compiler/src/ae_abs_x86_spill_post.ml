@@ -209,18 +209,15 @@ let spill_func ~num_regs ~allocation ~coloring ~max_color (func : Func.t) =
   in
   let mach_reg_start, mach_reg_slot_start, func =
     ( func.next_temp_id
-    , func.data.next_stack_slot_id
+    , func.next_stack_slot_id
     , { func with
         next_temp_id = Id.offset func.next_temp_id Mach_reg.num
-      ; data =
-          { func.data with
-            next_stack_slot_id = Id.offset func.data.next_stack_slot_id Mach_reg.num
-          }
+      ; next_stack_slot_id = Id.offset func.next_stack_slot_id Mach_reg.num
       } )
   in
   let module Table = Ident.Table in
   let open Table.Syntax in
-  let stack_slot_gen = Id_gen.of_id func.data.next_stack_slot_id in
+  let stack_slot_gen = Id_gen.of_id func.next_stack_slot_id in
   let spilled_temp_to_slot =
     let spilled_color_to_slot = Int_table.create () in
     begin

@@ -137,7 +137,7 @@ let%expect_test "smoke" =
                (b2 ((label else@2) (args ())))))
              (index 16) (info ([9,7]-[13,8])) (ann ()))
             ((i Unreachable) (index 17) (info ([2,3]-[15,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 23) (next_label_id 4) (data ())))
+      (start start@3) (next_temp_id 23) (next_label_id 4)))
     ((live_in
       ((join@0 (second@5)) (then@1 (first@1 second@5 third@9))
        (else@2 (first@1 second@5 bl@13))))
@@ -228,7 +228,7 @@ let%expect_test "smoke2" =
                (b2 ((label else@2) (args ())))))
              (index 16) (info ([9,7]-[13,8])) (ann ()))
             ((i Unreachable) (index 17) (info ([2,3]-[15,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 23) (next_label_id 4) (data ())))
+      (start start@3) (next_temp_id 23) (next_label_id 4)))
     ((live_in
       ((join@0 ((second@5 2))) (then@1 ((first@1 1) (second@5 8) (third@9 2)))
        (else@2 ((first@1 2) (second@5 6) (bl@13 1)))))
@@ -291,7 +291,7 @@ let%expect_test "smoke2" =
                (b2 ((label else@2) (args ())))))
              (index 4) (info (4:7-40)) (ann ()))
             ((i Unreachable) (index 5) (info ([2,3]-[6,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 9) (next_label_id 4) (data ())))
+      (start start@3) (next_temp_id 9) (next_label_id 4)))
     ((live_in ()) (live_out ()))
     |}]
 ;;

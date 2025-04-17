@@ -51,7 +51,6 @@ let%expect_test "smoke" =
     ; start = lab "start"
     ; next_temp_id = Temp_intern.next_id ()
     ; next_label_id = Label_intern.next_id ()
-    ; data = ()
     }
   in
   Check.check func |> Or_error.ok_exn;
@@ -93,7 +92,7 @@ let%expect_test "smoke" =
                (b1 ((label loop@0) (args (const_int@3 const_bool@4))))
                (b2 ((label done@1) (args (const_int@3))))))
              (index 3) (info ()) (ann ()))))))))
-      (start start@2) (next_temp_id 5) (next_label_id 3) (data ())))
+      (start start@2) (next_temp_id 5) (next_label_id 3)))
     (func
      ((name main)
       (blocks
@@ -130,6 +129,6 @@ let%expect_test "smoke" =
            (((i (Block_params ())) (index 0) (info ()) (ann ()))
             ((i (Jump ((label loop@0) (args (const_int@3 const_bool@4)))))
              (index 1) (info ()) (ann ()))))))))
-      (start start@2) (next_temp_id 5) (next_label_id 4) (data ())))
+      (start start@2) (next_temp_id 5) (next_label_id 4)))
     |}]
 ;;

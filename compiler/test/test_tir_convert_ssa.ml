@@ -75,7 +75,6 @@ let%expect_test "" =
     ; start = lab "start"
     ; next_temp_id = Temp_intern.next_id ()
     ; next_label_id = Label_intern.next_id ()
-    ; data = ()
     }
   in
   let func = Tir.Convert_ssa.convert ~renumber:() func in
@@ -124,7 +123,7 @@ let%expect_test "" =
               (Cond_jump (cond b1@0) (b1 ((label then@2) (args ())))
                (b2 ((label else@1) (args ())))))
              (index 2) (info ()) (ann ()))))))))
-      (start start@3) (next_temp_id 8) (next_label_id 4) (data ())))
+      (start start@3) (next_temp_id 8) (next_label_id 4)))
     |}]
 ;;
 (* let%expect_test "nothing" =

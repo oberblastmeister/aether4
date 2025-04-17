@@ -97,7 +97,7 @@ let%expect_test "smoke" =
               (b2 ((label else@2) (args ())))))
             (index 14) (info ([8,15]-[12,16])) (ann ()))
            ((i Unreachable) (index 15) (info ([2,7]-[14,12])) (ann ()))))))))
-     (start start@3) (next_temp_id 19) (next_label_id 4) (data ()))
+     (start start@3) (next_temp_id 19) (next_label_id 4))
     |}]
 ;;
 
@@ -178,6 +178,6 @@ let%expect_test "while" =
               (b2 ((label else@2) (args ())))))
             (index 12) (info ([7,7]-[11,8])) (ann ()))
            ((i Unreachable) (index 13) (info ([2,5]-[13,6])) (ann ()))))))))
-     (start start@3) (next_temp_id 14) (next_label_id 4) (data ()))
+     (start start@3) (next_temp_id 14) (next_label_id 4))
     |}]
 ;;
