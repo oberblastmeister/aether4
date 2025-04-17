@@ -11,7 +11,6 @@ module Mach_reg = Ae_x86_mach_reg
 module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
-module Destruct_ssa = Ae_abs_x86_destruct_ssa
 open Ae_trace
 
 let mach_reg_id off mach_reg = Id.offset off (Mach_reg.to_enum mach_reg)
@@ -364,17 +363,5 @@ let alloc_func ~mach_reg_id (func : Func.t) =
   in
   let allocation = { Allocation.table = allocation; mach_reg_id } in
   let spilled_colors = Set.diff used_colors available_colors in
-  let func =
-    Destruct_ssa.destruct
-      ~mach_reg_id
-      ~in_same_reg:(fun t1 t2 ->
-        let conv t =
-          Location.to_either t
-          |> Either.map ~first:(Allocation.find_color_exn allocation) ~second:Fn.id
-        in
-        [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
-      ~get_scratch:(fun () -> Temp (mach_reg_ident mach_reg_id R11))
-      func
-  in
   allocation, spilled_colors, func
 ;;

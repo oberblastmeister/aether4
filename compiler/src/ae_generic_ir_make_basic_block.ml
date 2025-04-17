@@ -23,11 +23,6 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
   open Arg
   module Temp = Temp_entity.Ident
 
-  module Instr_ext = struct
-    let iter_labels i = Instr.iter_block_calls i |> Iter.map ~f:Block_call.label
-    let labels_list i = iter_labels i |> Iter.to_list
-  end
-
   module Instr' = struct
     module T = struct
       type t =
@@ -93,7 +88,7 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
 
     let get_succ t =
       let i = find_control t in
-      Instr_ext.labels_list i.i
+      Instr.iter_block_calls i.i |> Iter.map ~f:Block_call.label |> Iter.to_list
     ;;
 
     module Table = Entity.Table.Make (T)

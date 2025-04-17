@@ -177,6 +177,34 @@ let spill_regular_instr
     |> List.map ~f:(fun i -> { i with index = instr.index + 1 }) )
 ;;
 
+let spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color (instr' : Instr'.t) =
+  assert (Instr.is_block_params instr'.i || Instr.is_control instr'.i);
+  let@: instr = Instr'.map instr' in
+  match Instr.block_params_val instr with
+  | Some block_params ->
+    let block_params =
+      begin
+        let@: location =
+          (List.map & Traverse.of_field Block_param.Fields.param) block_params
+        in
+        match location with
+        | Temp temp when Set.mem spilled_colors (get_temp_color temp) ->
+          let slot = spilled_temp_to_slot temp in
+          Slot slot
+        | _ -> location
+      end
+    in
+    Instr.block_params block_params
+  | None ->
+    let@: block_call = Instr.map_block_calls instr in
+    let@: location = (Traverse.of_field Block_call.Fields.args & List.map) block_call in
+    (match location with
+     | Temp temp when Set.mem spilled_colors (get_temp_color temp) ->
+       let slot = spilled_temp_to_slot temp in
+       Slot slot
+     | _ -> location)
+;;
+
 (*
    TODO: call this when not totally in ssa form yet by spilling the locations
   
@@ -212,25 +240,34 @@ let spill_func ~mach_reg_id ~get_temp_color ~spilled_colors (func : Func.t) =
   begin
     let@: block = Func.iter_blocks func in
     let@: instr = Block.iter_fwd block in
-    let open Ident.Table.Syntax in
-    let instrs_before, new_instr, instrs_after =
-      let get_evicted_temp_and_slot_for_mach_reg mach_reg =
-        Hashtbl.find_or_add mach_reg_to_evicted_temp mach_reg ~default:(fun () ->
-          let stack_slot = Stack_builder.alloc ~name:"evicted_slot" stack_builder Qword in
-          let temp = mach_reg_ident mach_reg_id (Mach_reg.of_enum_exn mach_reg) in
-          temp, stack_slot)
+    if Instr.is_block_params instr.i || Instr.is_control instr.i
+    then begin
+      let instr = spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color instr in
+      Multi_edit.add_replace edit block.label instr
+    end
+    else begin
+      let open Ident.Table.Syntax in
+      let instrs_before, new_instr, instrs_after =
+        let get_evicted_temp_and_slot_for_mach_reg mach_reg =
+          Hashtbl.find_or_add mach_reg_to_evicted_temp mach_reg ~default:(fun () ->
+            let stack_slot =
+              Stack_builder.alloc ~name:"evicted_slot" stack_builder Qword
+            in
+            let temp = mach_reg_ident mach_reg_id (Mach_reg.of_enum_exn mach_reg) in
+            temp, stack_slot)
+        in
+        spill_regular_instr
+          ~spilled_temp_to_slot
+          ~spilled_colors
+          ~get_temp_color
+          ~get_evicted_temp_and_slot_for_mach_reg
+          ~instr
       in
-      spill_regular_instr
-        ~spilled_temp_to_slot
-        ~spilled_colors
-        ~get_temp_color
-        ~get_evicted_temp_and_slot_for_mach_reg
-        ~instr
-    in
-    Multi_edit.add_inserts edit block.label instrs_before;
-    Multi_edit.add_replace edit block.label new_instr;
-    Multi_edit.add_inserts edit block.label instrs_after;
-    ()
+      Multi_edit.add_inserts edit block.label instrs_before;
+      Multi_edit.add_replace edit block.label new_instr;
+      Multi_edit.add_inserts edit block.label instrs_after;
+      ()
+    end
   end;
   Func.apply_multi_edit edit func |> Func.apply_stack_builder stack_builder
 ;;

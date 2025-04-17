@@ -48,6 +48,11 @@ module T = struct
   open Generic_ir.Make_simple_ext (T0)
   include T0
 
+  module Instr = struct
+    include Instr
+    include Instr_ext
+  end
+
   module Func = struct
     include Func
     include Func_ext

@@ -1,3 +1,4 @@
+open Std
 module C0 = Ae_c0_std
 module Lower_flat_x86 = Ae_abs_x86_lower_flat_x86
 module Entity = Ae_entity_std
@@ -6,6 +7,7 @@ module Flat_x86 = Ae_flat_x86_std
 module Frame_layout = Ae_abs_x86_frame_layout
 module Pre_spill = Ae_abs_x86_pre_spill
 module Spill_post = Ae_abs_x86_spill_post
+module Destruct_ssa = Ae_abs_x86_destruct_ssa
 open Ae_abs_x86_types
 open Ae_trace
 
@@ -19,6 +21,13 @@ open Ae_trace
   (ret)
 )
 *)
+let mach_reg_id off mach_reg = Entity.Id.offset off (Mach_reg.to_enum mach_reg)
+
+let mach_reg_ident ?info off mach_reg =
+  let id = mach_reg_id off mach_reg in
+  Entity.Ident.create ?info (Mach_reg.to_string mach_reg) id
+;;
+
 let convert func =
   let func = Split_critical.split func in
   let func = Pre_spill.spill_func ~num_regs:8 func in
@@ -32,6 +41,20 @@ let convert func =
       ~mach_reg_id
       ~get_temp_color:(Regalloc.Allocation.find_color_exn allocation)
       ~spilled_colors
+      func
+  in
+  let func =
+    Destruct_ssa.destruct
+      ~mach_reg_id
+      ~in_same_reg:(fun t1 t2 ->
+        let conv t =
+          Location.to_either t
+          |> Either.map
+               ~first:(Regalloc.Allocation.find_color_exn allocation)
+               ~second:Fn.id
+        in
+        [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
+      ~get_scratch:(fun () -> Temp (mach_reg_ident mach_reg_id R11))
       func
   in
   let frame_layout = Frame_layout.compute func in

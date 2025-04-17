@@ -19,12 +19,6 @@ module type Arg = Ae_generic_ir_sigs.Instr
 module type S = sig
   module Arg : Arg
   open Arg
-
-  module Instr_ext : sig
-    val iter_labels : Instr.t -> Label.t Iter.t
-    val labels_list : Instr.t -> Label.t list
-  end
-
   module Temp := Temp_entity.Ident
 
   module Instr' : sig
