@@ -20,7 +20,7 @@ let mach_reg_ident ?info off mach_reg =
   Ident.create ?info (Mach_reg.to_string mach_reg) id
 ;;
 
-let[@inline] build_graph_instr ~mach_reg_id ~graph ~live_out ~(instr : Instr'.t) =
+let[@inline] build_graph_instr ~mach_reg_gen ~graph ~live_out ~(instr : Instr'.t) =
   let iter_pairs xs ~f =
     let rec go xs =
       match xs with
@@ -49,8 +49,8 @@ let[@inline] build_graph_instr ~mach_reg_id ~graph ~live_out ~(instr : Instr'.t)
     List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live);
     begin
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-      let precolored_name = mach_reg_ident mach_reg_id mach_reg in
-      Graph.add_edge graph precolored_name live
+      let precolored_temp = Mach_reg_gen.get mach_reg_gen mach_reg in
+      Graph.add_edge graph precolored_temp live
     end
   end;
   (*
@@ -65,10 +65,10 @@ let[@inline] build_graph_instr ~mach_reg_id ~graph ~live_out ~(instr : Instr'.t)
     match instr.i with
     | Instr.Bin { dst = Mem addr; _ } -> begin
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
-      let precolored_name = mach_reg_ident mach_reg_id mach_reg in
+      let precolored_temp = Mach_reg_gen.get mach_reg_gen mach_reg in
       begin
         let@: temp = Ae_x86_address.iter_regs addr in
-        Graph.add_edge graph precolored_name temp
+        Graph.add_edge graph precolored_temp temp
       end
     end
     | _ -> ()
@@ -76,27 +76,27 @@ let[@inline] build_graph_instr ~mach_reg_id ~graph ~live_out ~(instr : Instr'.t)
   Liveness.backwards_transfer instr.i live_out
 ;;
 
-let build_graph_block ~mach_reg_id ~graph ~live_out ~(block : Block.t) =
+let build_graph_block ~mach_reg_gen ~graph ~live_out ~(block : Block.t) =
   let live_out = ref live_out in
   begin
     let@: instr = Block.iter_bwd block in
-    live_out := build_graph_instr ~mach_reg_id ~graph ~live_out:!live_out ~instr
+    live_out := build_graph_instr ~mach_reg_gen ~graph ~live_out:!live_out ~instr
   end
 ;;
 
-let build_graph ~mach_reg_id (func : Func.t) =
+let build_graph ~mach_reg_gen (func : Func.t) =
   let open Ident.Table.Syntax in
   let graph = Graph.create () in
   let _live_in, live_out = Liveness.compute ~pred_table:(Func.pred_table func) func in
   begin
     let@: block = Func.iter_blocks func in
     build_graph_block
-      ~mach_reg_id
+      ~mach_reg_gen
       ~graph
       ~live_out:(Liveness.Live_set.find live_out block.label)
       ~block
   end;
-  graph, func
+  graph
 ;;
 
 module Allocation = struct
@@ -347,21 +347,21 @@ let get_precolored_colors
   precolored_colors
 ;;
 
-let alloc_func ~mach_reg_id (func : Func.t) =
-  let precolored =
-    List.map Call_conv.regalloc_usable_mach_regs ~f:(fun mach_reg ->
-      mach_reg_ident mach_reg_id mach_reg, Mach_reg.to_enum mach_reg)
-    |> Ident.Map.of_alist_exn
-  in
+let alloc_func (func : Func.t) =
+  let mach_reg_gen = Func.create_mach_reg_gen func in
   let available_colors =
     List.map Call_conv.regalloc_usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
   in
   let open Ident.Table.Syntax in
-  let graph, func = build_graph ~mach_reg_id func in
+  let graph = build_graph ~mach_reg_gen func in
   let allocation, used_colors =
+    let precolored =
+      Hashtbl.to_alist mach_reg_gen.table
+      |> List.map ~f:(fun (mach_reg, temp) -> temp, Mach_reg.to_enum mach_reg)
+      |> Ident.Map.of_alist_exn
+    in
     Regalloc.color_graph ~spilled_color:Mach_reg.num ~available_colors ~graph ~precolored
   in
-  let allocation = { Allocation.table = allocation; mach_reg_id } in
   let spilled_colors = Set.diff used_colors available_colors in
-  allocation, spilled_colors, func
+  allocation, spilled_colors
 ;;

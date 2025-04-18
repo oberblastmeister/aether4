@@ -1,5 +1,5 @@
 (*
-  TODO: possibly promote byte moves to double word moves
+   TODO: possibly promote byte moves to double word moves
   prefer 32 bit registers: https://stackoverflow.com/questions/41573502/why-doesnt-gcc-use-partial-registers
 *)
 open Std
@@ -23,10 +23,13 @@ open Bag.Syntax
 
 type st =
   { frame_layout : Frame_layout.t
-  ; allocation : Regalloc.Allocation.t
+  ; allocation : int Abs_x86.Temp.Table.t
   }
 
-let get_temp t (temp : Abs_x86.Temp.t) = Regalloc.Allocation.find_exn t.allocation temp
+let get_temp t (temp : Abs_x86.Temp.t) =
+  let open Entity.Ident.Table.Syntax in
+  Mach_reg.of_enum_exn t.allocation.!(temp)
+;;
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with

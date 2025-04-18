@@ -131,8 +131,9 @@ let command =
         match run_test env path with
         | Ok () -> ()
         | Error e ->
-          print_endline
-          @@ Error.to_string_hum (Error.tag_s e ~tag:[%message "Filetest failed"]);
+          printf
+            "%s\n"
+            (Error.to_string_hum (Error.tag_s e ~tag:[%message "Filetest failed"]));
           ()
     end
 ;;

@@ -29,32 +29,31 @@ let mach_reg_ident ?info off mach_reg =
 ;;
 
 let convert func =
+  let module Table = Entity.Ident.Table in
+  let open Table.Syntax in
   let func = Split_critical.split func in
   let func = Pre_spill.spill_func ~num_regs:8 func in
-  let mach_reg_id, func =
-    ( func.next_temp_id
-    , { func with next_temp_id = Entity.Id.offset func.next_temp_id Mach_reg.num } )
-  in
-  let allocation, spilled_colors, func = Regalloc.alloc_func ~mach_reg_id func in
+  trace_s [%message "after_pre_spill" (func : Func.t)];
+  Check.check func |> Or_error.ok_exn;
+  let allocation, spilled_colors = Regalloc.alloc_func func in
+  let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func =
     Spill_post.spill_func
-      ~mach_reg_id
-      ~get_temp_color:(Regalloc.Allocation.find_color_exn allocation)
+      ~mach_reg_gen
+      ~get_temp_color:(fun temp -> allocation.!(temp))
       ~spilled_colors
       func
   in
   let func =
     Destruct_ssa.destruct
-      ~mach_reg_id
+      ~mach_reg_gen
       ~in_same_reg:(fun t1 t2 ->
         let conv t =
           Location.to_either t
-          |> Either.map
-               ~first:(Regalloc.Allocation.find_color_exn allocation)
-               ~second:Fn.id
+          |> Either.map ~first:(fun temp -> allocation.!(temp)) ~second:Fn.id
         in
         [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
-      ~get_scratch:(fun () -> Temp (mach_reg_ident mach_reg_id R11))
+      ~get_scratch:(fun () -> Temp (Mach_reg_gen.get mach_reg_gen R11))
       func
   in
   let frame_layout = Frame_layout.compute func in

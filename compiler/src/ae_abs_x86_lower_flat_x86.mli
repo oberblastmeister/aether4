@@ -5,6 +5,6 @@ module Frame_layout = Ae_abs_x86_frame_layout
 
 val lower
   :  frame_layout:Frame_layout.t
-  -> allocation:Regalloc.Allocation.t
+  -> allocation:int Abs_x86.Temp.Table.t
   -> Abs_x86.Func.t
   -> Flat_x86.Program.t

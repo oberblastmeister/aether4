@@ -8,18 +8,10 @@ module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
 module Mach_reg = Ae_x86_mach_reg
-module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
 module Destruct_ssa = Ae_abs_x86_destruct_ssa
 open Ae_trace
-
-let mach_reg_id off mach_reg = Id.offset off (Mach_reg.to_enum mach_reg)
-
-let mach_reg_ident ?info off mach_reg =
-  let id = mach_reg_id off mach_reg in
-  Ident.create ?info (Mach_reg.to_string mach_reg) id
-;;
 
 let spill_regular_instr
       ~spilled_temp_to_slot
@@ -216,7 +208,7 @@ let spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color (instr' : In
    
    every thing that is not spilled must be present in allocation.
 *)
-let spill_func ~mach_reg_id ~get_temp_color ~spilled_colors (func : Func.t) =
+let spill_func ~mach_reg_gen ~get_temp_color ~spilled_colors (func : Func.t) =
   let module Table = Ident.Table in
   let open Table.Syntax in
   let stack_builder = Func.create_stack_builder func in
@@ -253,7 +245,7 @@ let spill_func ~mach_reg_id ~get_temp_color ~spilled_colors (func : Func.t) =
             let stack_slot =
               Stack_builder.alloc ~name:"evicted_slot" stack_builder Qword
             in
-            let temp = mach_reg_ident mach_reg_id (Mach_reg.of_enum_exn mach_reg) in
+            let temp = Mach_reg_gen.get mach_reg_gen (Mach_reg.of_enum_exn mach_reg) in
             temp, stack_slot)
         in
         spill_regular_instr

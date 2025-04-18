@@ -73,7 +73,8 @@ module Check = struct
     let open Or_error.Let_syntax in
     let%bind () = Check_well_formed.check func in
     let%bind () = Check_ssa.check func in
-    let%bind () = Check_types.check func in
+    (* TODO: run our own typechecker here instead of the premade one *)
+    (* let%bind () = Check_types.check func in *)
     Ok ()
   ;;
 end

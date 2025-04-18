@@ -9,6 +9,10 @@ module T0 = struct
   include Ae_abs_x86_types0
   include Generic_ir.Make_basic_block (Ae_abs_x86_types0)
 
+  module Mach_reg_to_temp = struct
+    type t
+  end
+
   module Func = struct
     module T = struct
       type t =
@@ -54,6 +58,13 @@ module T0 = struct
       let next_stack_slot_id = stack_builder.stack_slot_gen in
       let stack_slots = stack_builder.stack_slots in
       { func with next_stack_slot_id; stack_slots }
+    ;;
+
+    let create_mach_reg_gen ?allocation func =
+      { Mach_reg_gen.table = Hashtbl.create (module Mach_reg)
+      ; temp_gen = func.next_temp_id
+      ; allocation
+      }
     ;;
   end
 end

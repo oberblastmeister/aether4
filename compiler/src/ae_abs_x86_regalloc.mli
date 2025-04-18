@@ -11,7 +11,4 @@ module Allocation : sig
   val find_color_exn : t -> Temp.t -> int
 end
 
-val alloc_func
-  :  mach_reg_id:Temp_entity.Id.t
-  -> Func.t
-  -> Allocation.t * Int.Set.t * Func.t
+val alloc_func : Func.t -> int Temp.Table.t * Int.Set.t

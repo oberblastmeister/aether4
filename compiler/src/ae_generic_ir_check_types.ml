@@ -13,8 +13,9 @@ module Make (Ir : Ir) = struct
 
   let check_temp_ty ty_table temp ty =
     let open Entity.Ident.Table.Syntax in
-    if not (Ty.equal ty_table.!(temp) ty)
-    then throw_s [%message "Type mismatch" (temp : Temp.t) (ty : Ty.t)]
+    let temp_ty = ty_table.!(temp) in
+    if not (Ty.equal temp_ty ty)
+    then throw_s [%message "Type mismatch" (temp : Temp.t) (temp_ty : Ty.t) (ty : Ty.t)]
   ;;
 
   let check_block_call ty_table func (block_call : Block_call.t) =

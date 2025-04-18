@@ -331,24 +331,30 @@ module Instr = struct
       ~on_use:(fun o -> Operand.iter_any_regs o ~f)
   ;;
 
-  let iter_constrained_uses t ~f =
+  let iter_constrained_uses_exn t ~f =
     match t with
     | Bin { dst = _; op; src1; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
-         f (src1, Mach_reg.RAX);
-         ()
+         (match src1 with
+          | Reg src1 -> f (src1, Mach_reg.RAX)
+          | _ ->
+            raise_s
+              [%message "Idiv should be legalized so that src1 is reg" (src1 : Operand.t)])
        | _ -> ())
     | _ -> ()
   ;;
 
-  let iter_constrained_defs t ~f =
+  let iter_constrained_defs_exn t ~f =
     match t with
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
-         f (dst, Mach_reg.RAX);
-         ()
+         (match dst with
+          | Reg dst -> f (dst, Mach_reg.RAX)
+          | _ ->
+            raise_s
+              [%message "Idiv should be legalized so that dst is reg" (dst : Operand.t)])
        (* for Imul we can use the two operand version *)
        | _ -> ())
     | _ -> ()
@@ -360,7 +366,23 @@ module Instr = struct
     | _ -> ()
   ;;
 
-  let iter_uses_with_known_ty instr ~f = todol [%here]
+  let iter_uses_with_known_ty t ~f =
+    match t with
+    | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Call _ | Pop _ -> ()
+    | Push { src; size } -> f (src, size)
+    | Mov { dst = _; src; size } ->
+      Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))
+    | Mov_abs { dst = _; src = _ } -> ()
+    | Bin { dst = _; src1; op; src2 } ->
+      let ty =
+        match op with
+        | And ty | Or ty | Xor ty | Eq ty -> ty
+        | Add | Sub | Imul | Idiv | Imod | Lshift | Rshift | Lt | Gt | Le | Ge -> Qword
+      in
+      Operand.iter_reg_val src1 ~f:(fun temp -> f (temp, ty));
+      Operand.iter_reg_val src2 ~f:(fun temp -> f (temp, ty))
+    | Ret { src; size } -> Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))
+  ;;
 
   let iter_defs instr ~f =
     iter_operand_use_defs
@@ -462,6 +484,24 @@ module Stack_builder = struct
     t.stack_slot_gen <- Entity.Id.succ t.stack_slot_gen;
     t.stack_slots <- (ident, ty) :: t.stack_slots;
     ident
+  ;;
+end
+
+module Mach_reg_gen = struct
+  type t =
+    { table : (Mach_reg.t, Temp.t) Hashtbl.t
+    ; mutable temp_gen : Temp_entity.Id.t
+    ; allocation : int Temp.Table.t option
+    }
+
+  let get t mach_reg =
+    let open Entity.Ident.Table.Syntax in
+    Hashtbl.find_or_add t.table mach_reg ~default:(fun () ->
+      let ident = Entity.Ident.create (Mach_reg.to_string mach_reg) t.temp_gen in
+      Option.iter t.allocation ~f:(fun allocation ->
+        allocation.!(ident) <- Mach_reg.to_enum mach_reg);
+      t.temp_gen <- Entity.Id.succ t.temp_gen;
+      ident)
   ;;
 end
 

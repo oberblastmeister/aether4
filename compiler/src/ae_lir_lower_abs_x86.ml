@@ -80,7 +80,7 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
        let dst = get_operand st dst in
        if Int64.(const <> 0L && const <> 1L)
        then raise_s [%message "const was not I1" (const : int64)];
-       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Dword }) ]
+       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Byte }) ]
      | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
        let dst = get_operand st dst in
        empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword }) ]
@@ -151,5 +151,8 @@ let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
 
 let lower func =
   let st = create_state func in
-  lower_func st func
+  let func = lower_func st func in
+  trace_s [%message "lowered_abs_x86" (func : Abs_x86.Func.t)];
+  Abs_x86.Check.check func |> Or_error.ok_exn;
+  func
 ;;

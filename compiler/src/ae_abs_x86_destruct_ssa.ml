@@ -18,7 +18,7 @@ let mach_reg_ident ?info off mach_reg =
   Ident.create ?info (Mach_reg.to_string mach_reg) id
 ;;
 
-let destruct ~mach_reg_id ~in_same_reg ~get_scratch (func : Func.t) =
+let destruct ~mach_reg_gen ~in_same_reg ~get_scratch (func : Func.t) =
   let edit = Multi_edit.create () in
   begin
     let@: block = Func.iter_blocks func in
@@ -59,14 +59,14 @@ let destruct ~mach_reg_id ~in_same_reg ~get_scratch (func : Func.t) =
         List.concat_map sequential_moves ~f:(fun move ->
           match move.dst, move.src with
           | Slot slot1, Slot slot2 when did_use_scratch ->
-            let r10 = mach_reg_ident mach_reg_id R10 in
+            let r10 = Mach_reg_gen.get mach_reg_gen R10 in
             [ Instr.Push { src = r10; size = Qword }
             ; Instr.Mov { dst = Reg r10; src = Stack_slot slot2; size = move.ty }
             ; Instr.Mov { dst = Stack_slot slot1; src = Reg r10; size = move.ty }
             ; Instr.Pop { dst = r10; size = Qword }
             ]
           | Slot slot1, Slot slot2 ->
-            let r11 = mach_reg_ident mach_reg_id R11 in
+            let r11 = Mach_reg_gen.get mach_reg_gen R11 in
             [ Instr.Mov { dst = Reg r11; src = Stack_slot slot2; size = move.ty }
             ; Instr.Mov { dst = Stack_slot slot1; src = Reg r11; size = move.ty }
             ]
