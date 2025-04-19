@@ -7,4 +7,4 @@ let callee_saved_without_stack = [ RBX; R12; R13; R14; R15 ]
 let callee_saved = [ RSP; RBP ] @ callee_saved_without_stack
 let args = [ RDI; RSI; RDX; RCX; R8; R9 ]
 let ret = RAX
-let regalloc_usable_mach_regs = caller_saved_without_r11
+let regalloc_usable_mach_regs = List.take caller_saved_without_r11 4

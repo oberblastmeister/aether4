@@ -1,5 +1,7 @@
 /*
-( (kind (CompileAndRun)) )
+(
+ (kind (CompileAndRun))
+)
 */
 
 int main() {

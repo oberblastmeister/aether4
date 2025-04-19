@@ -45,7 +45,6 @@ let convert func =
   let open Table.Syntax in
   let func = Legalize.legalize_func func in
   let func = Pre_spill.spill_func ~num_regs:4 func in
-  trace_s [%message "spilled" (func : Func.t)];
   Check_register_pressure.check_func ~num_regs:4 func;
   Check.check func |> Or_error.ok_exn;
   (* let allocation, spilled_colors = Regalloc.alloc_func func in *)

@@ -130,15 +130,6 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
       *)
       |> List.filter ~f:(fun (temp, _) -> Ident.Set.mem live_out temp)
     in
-    trace_s
-      [%message
-        (instr : Instr.t)
-          (live_in : Temp.Set.t)
-          (live_out : Temp.Set.t)
-          (live_through : Temp.t list)
-          (allocation : Mach_reg.t Temp.Map.t)
-          (parallel_moves_before : (Mach_reg.t * Temp.t) list)
-          (parallel_moves_after : (Temp.t * Mach_reg.t) list)];
     let in_same_reg t1 t2 =
       Mach_reg.equal (get_temp_mach_reg t1) (get_temp_mach_reg t2)
     in

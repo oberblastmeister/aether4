@@ -16,24 +16,24 @@ module Dominators = Ae_dominators
 open Table.Syntax
 open Ae_trace
 
-let alloc_block ~available_colors ~live_in ~live_out ~allocation block =
-  let used_colors =
-    Ident.Set.iter live_in
-    |> Iter.map ~f:(fun temp ->
-      Table.find allocation temp
-      |> Option.value_exn
-           ~message:
-             "Variable should have been allocated a register because we traversed the \
-              blocks in dominator order")
-    |> Iter.to_list
-  in
+let alloc_block ~use_locations ~available_colors ~live_in ~live_out ~allocation block =
   let available_colors =
+    let used_colors =
+      Ident.Set.iter live_in
+      |> Iter.map ~f:(fun temp ->
+        Table.find allocation temp
+        |> Option.value_exn
+             ~message:
+               "Variable should have been allocated a register because we traversed the \
+                blocks in dominator order")
+      |> Iter.to_list
+    in
     List.fold ~init:available_colors ~f:Set.remove used_colors |> ref
   in
   let deaths = Liveness.compute_deaths ~live_out block in
   begin
     let@: instr = Block.iter_fwd block in
-    (* reclaim dead uses *)
+    (* release dead uses *)
     begin
       let@: use =
         Instr.iter_uses instr.i
@@ -42,15 +42,24 @@ let alloc_block ~available_colors ~live_in ~live_out ~allocation block =
       available_colors := Set.add !available_colors allocation.!(use)
     end;
     (* allocate defs *)
+    let defs = Instr.iter_defs instr.i |> Iter.to_list in
     begin
-      let@: def = Instr.iter_defs instr.i in
+      let@: def = List.iter defs in
       let color =
         Set.min_elt !available_colors
-        |> Option.value_exn ~message:"We should have pre spilled"
+        |> Option.value_exn ~message:"No colors left, but we should have pre spilled"
       in
       available_colors := Set.remove !available_colors color;
       allocation.!(def) <- color
-    end
+    end;
+    (* release dead defs *)
+    begin
+      let@: def =
+        List.iter defs |> Iter.filter ~f:(fun def -> not (Table.mem use_locations def))
+      in
+      available_colors := Set.add !available_colors allocation.!(def)
+    end;
+    ()
   end
 ;;
 
@@ -62,12 +71,13 @@ let alloc_func func =
   let live_in_table, live_out_table = Liveness.compute ~pred_table func in
   let labels = Func.labels_postorder func in
   let allocation = Table.create () in
+  let _, use_locations = Liveness.compute_def_use_labels func in
   begin
     let@: label = Vec.iter_rev labels in
     let block = Func.find_block_exn func label in
     let live_in = Liveness.Live_set.find live_in_table label in
     let live_out = Liveness.Live_set.find live_out_table label in
-    alloc_block ~available_colors ~live_in ~live_out ~allocation block
+    alloc_block ~use_locations ~available_colors ~live_in ~live_out ~allocation block
   end;
   allocation
 ;;
