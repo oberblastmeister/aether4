@@ -11,9 +11,7 @@ module Index : sig
 end
 
 module Base : sig
-  type 'r t =
-    | Reg of 'r
-  [@@deriving sexp_of, variants]
+  type 'r t = Reg of 'r [@@deriving sexp_of, variants]
 end
 
 type 'r t =

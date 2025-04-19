@@ -274,10 +274,11 @@ module Make (Ir : Ir) = struct
     let next_use =
       Instr.iter_defs instr |> Iter.fold ~init:next_use ~f:Ident.Map.remove
     in
+    let next_use = Ident.Map.map next_use ~f:(( + ) 1) in
     let uses = Instr.iter_uses instr |> Iter.to_list in
     let next_use =
-      Ident.Map.mapi next_use ~f:(fun ~key ~data:distance ->
-        if List.mem ~equal:Temp.equal uses key then 0 else distance + 1)
+      List.fold uses ~init:next_use ~f:(fun next_use use ->
+        Ident.Map.update next_use use ~f:(Option.value ~default:0))
     in
     next_use
   ;;

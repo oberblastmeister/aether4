@@ -18,7 +18,7 @@ module Operand = struct
     | Imm of Int32.t
     | Reg of Mach_reg.t
     | Mem of Address.t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, variants]
 end
 
 module Instr = struct
@@ -34,7 +34,8 @@ module Instr = struct
         ; size : Ty.t
         }
     | Imul of
-        { src : Operand.t
+        { dst : Operand.t
+        ; src : Operand.t
         ; size : Ty.t
         }
     | Idiv of

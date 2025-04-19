@@ -61,8 +61,9 @@ let%expect_test "simple scratch" =
 ;;
 
 let%expect_test "repetition" =
-  check [ a; b; c; d ] [b; a; a; a];
+  check [ a; b; c; d ] [ b; a; a; a ];
   [%expect {| ((scratch b) (b a) (c a) (d a) (a scratch)) |}]
+;;
 
 let%expect_test "multiple components" =
   check [ rdi; rsi; rdx; rcx; r8; r9 ] [ rsi; rdi; rsi; rsi; r9; r8 ];

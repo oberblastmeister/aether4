@@ -139,7 +139,7 @@ let format_instr (instr : Instr.t) =
   | And { dst; src; size } -> [%string "and%{suff size} %{op src size}, %{op dst size}"]
   | Or { dst; src; size } -> [%string "or%{suff size} %{op src size}, %{op dst size}"]
   | Xor { dst; src; size } -> [%string "xor%{suff size} %{op src size}, %{op dst size}"]
-  | Imul { src; size } -> [%string "imul%{suff size} %{op src size}"]
+  | Imul { dst; src; size } -> [%string "imul%{suff size} %{op src size}, %{op dst size}"]
   | Idiv { src; size } -> [%string "idiv%{suff size} %{op src size}"]
   | Mov { dst; src; size } -> [%string "mov%{suff size} %{op src size}, %{op dst size}"]
   | Mov_abs { dst; src } -> [%string "movabsq $%{src#Int64}, %{op dst Ty.Qword}"]

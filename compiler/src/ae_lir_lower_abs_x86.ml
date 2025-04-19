@@ -152,7 +152,6 @@ let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
 let lower func =
   let st = create_state func in
   let func = lower_func st func in
-  trace_s [%message "lowered_abs_x86" (func : Abs_x86.Func.t)];
   Abs_x86.Check.check func |> Or_error.ok_exn;
   func
 ;;

@@ -67,7 +67,7 @@ module Make_phantom (Key : Key_phantom) : S_phantom with module Key = Key = stru
   let add t k = Map.set t ~key:(Key.to_int k) ~data:k
   let mem t k = Map.mem t (Key.to_int k)
   let iter t ~f = Map.iter t ~f
-  let fold t ~init ~f = Map.fold t ~init ~f:(fun ~key:_ ~data acc -> f acc data )
+  let fold t ~init ~f = Map.fold t ~init ~f:(fun ~key:_ ~data acc -> f acc data)
   let of_list_exn l = List.map ~f:(fun k -> Key.to_int k, k) l |> Int.Map.of_alist_exn
   let sexp_of_t _ t = to_list t |> List.sexp_of_t (Key.sexp_of_t sexp_of_opaque)
 

@@ -166,18 +166,10 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
      | Xor size -> on_rmw ~size Flat_x86.Instr.xor
      | Add -> on_rmw Flat_x86.Instr.add
      | Sub -> on_rmw Flat_x86.Instr.sub
-     | Imul ->
-       empty
-       +> [ (* must move to scratch first before moving src2 to RAX,
-                           because src1 may refer to RAX
-            *)
-            ins (Mov { dst = Reg Mach_reg.scratch; src = src1; size })
-          ; ins (Mov { dst = Reg RAX; src = src2; size })
-          ; ins (Imul { src = Reg Mach_reg.scratch; size })
-            (* dst here isn't clobbered because in the register allocator we prevent dst from being allocated RAX or RDX *)
-          ; ins (Mov { dst; src = Reg RAX; size })
-          ]
+     | Imul -> on_rmw Flat_x86.Instr.imul
      | Idiv ->
+       assert (Flat_x86.Operand.reg_val src1 |> Option.value_exn |> Mach_reg.equal RAX);
+       assert (Flat_x86.Operand.reg_val dst |> Option.value_exn |> Mach_reg.equal RAX);
        empty
        +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
           ; ins (Mov { dst = Reg RAX; src = src1; size })
@@ -188,6 +180,8 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
           ; ins (Mov { dst; src = Reg RAX; size })
           ]
      | Imod ->
+       assert (Flat_x86.Operand.reg_val src1 |> Option.value_exn |> Mach_reg.equal RAX);
+       assert (Flat_x86.Operand.reg_val dst |> Option.value_exn |> Mach_reg.equal RAX);
        empty
        +> [ ins (Mov { dst = Reg Mach_reg.scratch; src = src2; size })
           ; ins (Mov { dst = Reg RAX; src = src1; size })

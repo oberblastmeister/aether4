@@ -14,7 +14,7 @@ open struct
   module Graph = Ae_data_graph_std
 end
 
-module type Arg = Ae_generic_ir_sigs.Instr
+module type Arg = Ae_generic_ir_sigs.Instr_S
 
 module type S = sig
   module Arg : Arg

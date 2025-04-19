@@ -363,6 +363,9 @@ module Instr = struct
   let iter_clobbers t ~f =
     match t with
     | Call _ -> todo ()
+    | Bin { op = Idiv | Imod; _ } ->
+      f Mach_reg.RDX;
+      ()
     | _ -> ()
   ;;
 

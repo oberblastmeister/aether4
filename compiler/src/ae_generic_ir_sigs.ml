@@ -9,7 +9,7 @@ open struct
   module Graph = Ae_data_graph_std
 end
 
-module type Instr = sig
+module type Instr_S = sig
   module Temp_entity : Entity.S
   module Temp : module type of Temp_entity.Ident
 
@@ -78,7 +78,7 @@ module type Instr = sig
 end
 
 module type Ir_simple = sig
-  include Instr
+  include Instr_S
 
   module Instr' : sig
     type t =

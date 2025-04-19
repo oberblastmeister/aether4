@@ -21,6 +21,7 @@ struct
     [@@deriving sexp_of]
   end
 
+  (* TODO: check that the destinations are all distinct *)
   let sequentialize ~in_same_reg ~get_scratch (moves : Move.t list) =
     let open struct
       type status =

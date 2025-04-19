@@ -1,5 +1,4 @@
 open Core
-
 module Iter = Functional_iter
 
 type ('a, 'b) t = 'a -> 'b Iter.t
@@ -21,7 +20,6 @@ let ix fold (i, a) ~f:k = fold a ~f:(fun b -> k (i, b))
 let ix2 t = ix (ix t)
 let ix3 t = ix (ix (ix t))
 let dup t = map ~f:(fun x -> x, x) t
-
 let fold fold x ~init ~f = Iter.fold ~init ~f (fold x)
 let iter x fold ~f = Iter.iter ~f (fold x)
 let to_iter fold x = fold x

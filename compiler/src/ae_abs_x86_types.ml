@@ -14,6 +14,9 @@ module T0 = struct
   end
 
   module Func = struct
+    (*
+       TODO: make the temp gen have an expected temp_id so that we can enforce having only one borrow at a time
+    *)
     module T = struct
       type t =
         { name : string

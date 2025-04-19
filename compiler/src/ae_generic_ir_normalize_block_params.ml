@@ -1,5 +1,6 @@
 (* TODO: test this file *)
-(* TODO: also normalize other stuff like removing dead code after jumps, removing unreferenced blocks, etc *) open Std
+(* TODO: also normalize other stuff like removing dead code after jumps, removing unreferenced blocks, etc *)
+open Std
 open Ae_generic_ir_import
 
 module Make (Ir : Ir) = struct

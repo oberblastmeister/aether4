@@ -33,244 +33,186 @@ asm
 _c0_main:
     pushq %rbp # prologue
     movq %rsp, %rbp # prologue
-    subq $336, %rsp # prologue
+    subq $112, %rsp # prologue
 .Lstart_0:
     movq $1, %rax # 9:12
-    movq %rax, %rsi # 9:7-9
-    movq %rsi, %rcx # 9:7-9
+    movq %rax, %rdi # 9:7-9
+    movq %rdi, %rcx # 9:7-9
     movq $1, %rax # 10:15
     movq %rcx, %r11 # 10:12-16
     addq %rax, %r11 # 10:12-16
     movq %r11, %rax # 10:12-16
-    movq %rax, %rdx # 10:7-9
-    movq %rdx, %rcx # 10:7-9
+    movq %rax, %rsi # 10:7-9
+    movq %rsi, %rcx # 10:7-9
     movq $1, %rax # 11:15
     movq %rcx, %r11 # 11:12-16
     addq %rax, %r11 # 11:12-16
     movq %r11, %rax # 11:12-16
     movq %rax, %rax # 11:7-9
-    movq %rax, -120(%rbp) # (spill(def x2@9))
-    movq %rax, %rax # 11:7-9
-    movq %rax, -8(%rbp) # (spill(def lhs@10))
-    movq $1, %rcx # 12:15
-    movq -8(%rbp), %rax # ((reload(temp lhs@10))12:12-16)
-    movq %rax, %r11 # 12:12-16
-    addq %rcx, %r11 # 12:12-16
+    movq %rax, -8(%rbp) # spill
+    movq %rax, %rcx # 11:7-9
+    movq $1, %rax # 12:15
+    movq %rcx, %r11 # 12:12-16
+    addq %rax, %r11 # 12:12-16
     movq %r11, %rax # 12:12-16
     movq %rax, %rax # 12:7-9
-    movq %rax, -136(%rbp) # (spill(def x3@13))
-    movq %rax, %rax # 12:7-9
-    movq %rax, -16(%rbp) # (spill(def lhs@14))
-    movq $1, %rcx # 13:15
-    movq -16(%rbp), %rax # ((reload(temp lhs@14))13:12-16)
-    movq %rax, %r11 # 13:12-16
-    addq %rcx, %r11 # 13:12-16
+    movq %rax, -16(%rbp) # spill
+    movq %rax, %rcx # 12:7-9
+    movq $1, %rax # 13:15
+    movq %rcx, %r11 # 13:12-16
+    addq %rax, %r11 # 13:12-16
     movq %r11, %rax # 13:12-16
     movq %rax, %rax # 13:7-9
-    movq %rax, -152(%rbp) # (spill(def x4@17))
-    movq %rax, %rax # 13:7-9
-    movq %rax, -24(%rbp) # (spill(def lhs@18))
-    movq $1, %rcx # 14:15
-    movq -24(%rbp), %rax # ((reload(temp lhs@18))14:12-16)
-    movq %rax, %r11 # 14:12-16
-    addq %rcx, %r11 # 14:12-16
+    movq %rax, -24(%rbp) # spill
+    movq %rax, %rcx # 13:7-9
+    movq $1, %rax # 14:15
+    movq %rcx, %r11 # 14:12-16
+    addq %rax, %r11 # 14:12-16
     movq %r11, %rax # 14:12-16
     movq %rax, %rax # 14:7-9
-    movq %rax, -168(%rbp) # (spill(def x5@21))
-    movq %rax, %rax # 14:7-9
-    movq %rax, -32(%rbp) # (spill(def lhs@22))
-    movq $1, %rcx # 15:15
-    movq -32(%rbp), %rax # ((reload(temp lhs@22))15:12-16)
-    movq %rax, %r11 # 15:12-16
-    addq %rcx, %r11 # 15:12-16
+    movq %rax, -32(%rbp) # spill
+    movq %rax, %rcx # 14:7-9
+    movq $1, %rax # 15:15
+    movq %rcx, %r11 # 15:12-16
+    addq %rax, %r11 # 15:12-16
     movq %r11, %rax # 15:12-16
     movq %rax, %rax # 15:7-9
-    movq %rax, -184(%rbp) # (spill(def x6@25))
-    movq %rax, %rax # 15:7-9
-    movq %rax, -40(%rbp) # (spill(def lhs@26))
-    movq $1, %rcx # 16:15
-    movq -40(%rbp), %rax # ((reload(temp lhs@26))16:12-16)
-    movq %rax, %r11 # 16:12-16
-    addq %rcx, %r11 # 16:12-16
+    movq %rax, -40(%rbp) # spill
+    movq %rax, %rcx # 15:7-9
+    movq $1, %rax # 16:15
+    movq %rcx, %r11 # 16:12-16
+    addq %rax, %r11 # 16:12-16
     movq %r11, %rax # 16:12-16
     movq %rax, %rax # 16:7-9
-    movq %rax, -200(%rbp) # (spill(def x7@29))
-    movq %rax, %rax # 16:7-9
-    movq %rax, -48(%rbp) # (spill(def lhs@30))
-    movq $1, %rcx # 17:15
-    movq -48(%rbp), %rax # ((reload(temp lhs@30))17:12-16)
-    movq %rax, %r11 # 17:12-16
-    addq %rcx, %r11 # 17:12-16
+    movq %rax, -48(%rbp) # spill
+    movq %rax, %rcx # 16:7-9
+    movq $1, %rax # 17:15
+    movq %rcx, %r11 # 17:12-16
+    addq %rax, %r11 # 17:12-16
     movq %r11, %rax # 17:12-16
     movq %rax, %rax # 17:7-9
-    movq %rax, -216(%rbp) # (spill(def x8@33))
-    movq %rax, %rax # 17:7-9
-    movq %rax, -56(%rbp) # (spill(def lhs@34))
-    movq $1, %rcx # 18:15
-    movq -56(%rbp), %rax # ((reload(temp lhs@34))18:12-16)
-    movq %rax, %r11 # 18:12-16
-    addq %rcx, %r11 # 18:12-16
+    movq %rax, -56(%rbp) # spill
+    movq %rax, %rcx # 17:7-9
+    movq $1, %rax # 18:15
+    movq %rcx, %r11 # 18:12-16
+    addq %rax, %r11 # 18:12-16
     movq %r11, %rax # 18:12-16
     movq %rax, %rax # 18:7-9
-    movq %rax, -232(%rbp) # (spill(def x9@37))
-    movq %rax, %rax # 18:7-9
-    movq %rax, -64(%rbp) # (spill(def lhs@38))
-    movq $1, %rcx # 19:15
-    movq -64(%rbp), %rax # ((reload(temp lhs@38))19:12-16)
-    movq %rax, %r11 # 19:12-16
-    addq %rcx, %r11 # 19:12-16
+    movq %rax, -64(%rbp) # spill
+    movq %rax, %rcx # 18:7-9
+    movq $1, %rax # 19:15
+    movq %rcx, %r11 # 19:12-16
+    addq %rax, %r11 # 19:12-16
     movq %r11, %rax # 19:12-16
     movq %rax, %rax # 19:7-9
-    movq %rax, -248(%rbp) # (spill(def xA@41))
-    movq %rax, %rax # 19:7-9
-    movq %rax, -72(%rbp) # (spill(def lhs@42))
-    movq $1, %rcx # 20:15
-    movq -72(%rbp), %rax # ((reload(temp lhs@42))20:12-16)
-    movq %rax, %r11 # 20:12-16
-    addq %rcx, %r11 # 20:12-16
+    movq %rax, -72(%rbp) # spill
+    movq %rax, %rcx # 19:7-9
+    movq $1, %rax # 20:15
+    movq %rcx, %r11 # 20:12-16
+    addq %rax, %r11 # 20:12-16
     movq %r11, %rax # 20:12-16
     movq %rax, %rax # 20:7-9
-    movq %rax, -264(%rbp) # (spill(def xB@45))
-    movq %rax, %rax # 20:7-9
-    movq %rax, -80(%rbp) # (spill(def lhs@46))
-    movq $1, %rcx # 21:15
-    movq -80(%rbp), %rax # ((reload(temp lhs@46))21:12-16)
-    movq %rax, %r11 # 21:12-16
-    addq %rcx, %r11 # 21:12-16
+    movq %rax, -80(%rbp) # spill
+    movq %rax, %rcx # 20:7-9
+    movq $1, %rax # 21:15
+    movq %rcx, %r11 # 21:12-16
+    addq %rax, %r11 # 21:12-16
     movq %r11, %rax # 21:12-16
     movq %rax, %rax # 21:7-9
-    movq %rax, -280(%rbp) # (spill(def xC@49))
-    movq %rax, %rax # 21:7-9
-    movq %rax, -88(%rbp) # (spill(def lhs@50))
-    movq $1, %rcx # 22:15
-    movq -88(%rbp), %rax # ((reload(temp lhs@50))22:12-16)
-    movq %rax, %r11 # 22:12-16
-    addq %rcx, %r11 # 22:12-16
+    movq %rax, -88(%rbp) # spill
+    movq %rax, %rcx # 21:7-9
+    movq $1, %rax # 22:15
+    movq %rcx, %r11 # 22:12-16
+    addq %rax, %r11 # 22:12-16
     movq %r11, %rax # 22:12-16
     movq %rax, %rax # 22:7-9
-    movq %rax, -296(%rbp) # (spill(def xD@53))
-    movq %rax, %rax # 22:7-9
-    movq %rax, -96(%rbp) # (spill(def lhs@54))
-    movq $1, %rcx # 23:15
-    movq -96(%rbp), %rax # ((reload(temp lhs@54))23:12-16)
-    movq %rax, %r11 # 23:12-16
-    addq %rcx, %r11 # 23:12-16
+    movq %rax, -96(%rbp) # spill
+    movq %rax, %rcx # 22:7-9
+    movq $1, %rax # 23:15
+    movq %rcx, %r11 # 23:12-16
+    addq %rax, %r11 # 23:12-16
     movq %r11, %rax # 23:12-16
     movq %rax, %rax # 23:7-9
-    movq %rax, -312(%rbp) # (spill(def xE@57))
-    movq %rax, %rax # 23:7-9
-    movq %rax, -104(%rbp) # (spill(def lhs@58))
-    movq $1, %rcx # 24:15
-    movq -104(%rbp), %rax # ((reload(temp lhs@58))24:12-16)
-    movq %rax, %r11 # 24:12-16
-    addq %rcx, %r11 # 24:12-16
-    movq %r11, %rax # 24:12-16
-    movq %rax, %rax # 24:7-9
-    movq %rax, -328(%rbp) # (spill(def xF@61))
-    movq %rsi, %rax # 9:7-9
-    movq %rax, -112(%rbp) # (spill(def lhs@62))
-    movq %rdx, %rcx # 10:7-9
-    movq -112(%rbp), %rax # ((reload(temp lhs@62))26:6-11)
-    movq %rax, %r11 # 26:6-11
-    addq %rcx, %r11 # 26:6-11
-    movq %r11, %rax # 26:6-11
-    movq %rax, -128(%rbp) # (spill(def lhs@64))
-    movq -120(%rbp), %rax # ((reload(temp x2@9))11:7-9)
-    movq %rax, %rcx # 11:7-9
-    movq -128(%rbp), %rax # ((reload(temp lhs@64))26:6-14)
-    movq %rax, %r11 # 26:6-14
-    addq %rcx, %r11 # 26:6-14
-    movq %r11, %rax # 26:6-14
-    movq %rax, -144(%rbp) # (spill(def lhs@66))
-    movq -136(%rbp), %rax # ((reload(temp x3@13))12:7-9)
-    movq %rax, %rcx # 12:7-9
-    movq -144(%rbp), %rax # ((reload(temp lhs@66))26:6-17)
-    movq %rax, %r11 # 26:6-17
-    addq %rcx, %r11 # 26:6-17
-    movq %r11, %rax # 26:6-17
-    movq %rax, -160(%rbp) # (spill(def lhs@68))
-    movq -152(%rbp), %rax # ((reload(temp x4@17))13:7-9)
-    movq %rax, %rcx # 13:7-9
-    movq -160(%rbp), %rax # ((reload(temp lhs@68))26:6-20)
-    movq %rax, %r11 # 26:6-20
-    addq %rcx, %r11 # 26:6-20
-    movq %r11, %rax # 26:6-20
-    movq %rax, -176(%rbp) # (spill(def lhs@70))
-    movq -168(%rbp), %rax # ((reload(temp x5@21))14:7-9)
-    movq %rax, %rcx # 14:7-9
-    movq -176(%rbp), %rax # ((reload(temp lhs@70))26:6-23)
-    movq %rax, %r11 # 26:6-23
-    addq %rcx, %r11 # 26:6-23
-    movq %r11, %rax # 26:6-23
-    movq %rax, -192(%rbp) # (spill(def lhs@72))
-    movq -184(%rbp), %rax # ((reload(temp x6@25))15:7-9)
-    movq %rax, %rcx # 15:7-9
-    movq -192(%rbp), %rax # ((reload(temp lhs@72))26:6-26)
-    movq %rax, %r11 # 26:6-26
-    addq %rcx, %r11 # 26:6-26
-    movq %r11, %rax # 26:6-26
-    movq %rax, -208(%rbp) # (spill(def lhs@74))
-    movq -200(%rbp), %rax # ((reload(temp x7@29))16:7-9)
-    movq %rax, %rcx # 16:7-9
-    movq -208(%rbp), %rax # ((reload(temp lhs@74))26:6-29)
-    movq %rax, %r11 # 26:6-29
-    addq %rcx, %r11 # 26:6-29
-    movq %r11, %rax # 26:6-29
-    movq %rax, -224(%rbp) # (spill(def lhs@76))
-    movq -216(%rbp), %rax # ((reload(temp x8@33))17:7-9)
-    movq %rax, %rcx # 17:7-9
-    movq -224(%rbp), %rax # ((reload(temp lhs@76))[26,6]-[27,8])
-    movq %rax, %r11 # [26,6]-[27,8]
-    addq %rcx, %r11 # [26,6]-[27,8]
-    movq %r11, %rax # [26,6]-[27,8]
-    movq %rax, -240(%rbp) # (spill(def lhs@78))
-    movq -232(%rbp), %rax # ((reload(temp x9@37))18:7-9)
-    movq %rax, %rcx # 18:7-9
-    movq -240(%rbp), %rax # ((reload(temp lhs@78))[26,6]-[27,11])
-    movq %rax, %r11 # [26,6]-[27,11]
-    addq %rcx, %r11 # [26,6]-[27,11]
-    movq %r11, %rax # [26,6]-[27,11]
-    movq %rax, -256(%rbp) # (spill(def lhs@80))
-    movq -248(%rbp), %rax # ((reload(temp xA@41))19:7-9)
-    movq %rax, %rcx # 19:7-9
-    movq -256(%rbp), %rax # ((reload(temp lhs@80))[26,6]-[27,14])
-    movq %rax, %r11 # [26,6]-[27,14]
-    addq %rcx, %r11 # [26,6]-[27,14]
-    movq %r11, %rax # [26,6]-[27,14]
-    movq %rax, -272(%rbp) # (spill(def lhs@82))
-    movq -264(%rbp), %rax # ((reload(temp xB@45))20:7-9)
-    movq %rax, %rcx # 20:7-9
-    movq -272(%rbp), %rax # ((reload(temp lhs@82))[26,6]-[27,17])
-    movq %rax, %r11 # [26,6]-[27,17]
-    addq %rcx, %r11 # [26,6]-[27,17]
-    movq %r11, %rax # [26,6]-[27,17]
-    movq %rax, -288(%rbp) # (spill(def lhs@84))
-    movq -280(%rbp), %rax # ((reload(temp xC@49))21:7-9)
-    movq %rax, %rcx # 21:7-9
-    movq -288(%rbp), %rax # ((reload(temp lhs@84))[26,6]-[27,20])
-    movq %rax, %r11 # [26,6]-[27,20]
-    addq %rcx, %r11 # [26,6]-[27,20]
-    movq %r11, %rax # [26,6]-[27,20]
-    movq %rax, -304(%rbp) # (spill(def lhs@86))
-    movq -296(%rbp), %rax # ((reload(temp xD@53))22:7-9)
-    movq %rax, %rcx # 22:7-9
-    movq -304(%rbp), %rax # ((reload(temp lhs@86))[26,6]-[27,23])
-    movq %rax, %r11 # [26,6]-[27,23]
-    addq %rcx, %r11 # [26,6]-[27,23]
-    movq %r11, %rax # [26,6]-[27,23]
-    movq %rax, -320(%rbp) # (spill(def lhs@88))
-    movq -312(%rbp), %rax # ((reload(temp xE@57))23:7-9)
+    movq %rax, -104(%rbp) # spill
     movq %rax, %rcx # 23:7-9
-    movq -320(%rbp), %rax # ((reload(temp lhs@88))[26,6]-[27,26])
-    movq %rax, %r11 # [26,6]-[27,26]
-    addq %rcx, %r11 # [26,6]-[27,26]
-    movq %r11, %rax # [26,6]-[27,26]
-    movq %rax, -336(%rbp) # (spill(def lhs@90))
-    movq -328(%rbp), %rax # ((reload(temp xF@61))24:7-9)
-    movq %rax, %rcx # 24:7-9
-    movq -336(%rbp), %rax # ((reload(temp lhs@90))[26,6]-[27,29])
-    movq %rax, %r11 # [26,6]-[27,29]
-    addq %rcx, %r11 # [26,6]-[27,29]
+    movq $1, %rax # 24:15
+    movq %rcx, %r11 # 24:12-16
+    addq %rax, %r11 # 24:12-16
+    movq %r11, %rax # 24:12-16
+    movq %rax, %rdx # 24:7-9
+    movq %rdi, %rcx # 9:7-9
+    movq %rsi, %rax # 10:7-9
+    movq %rcx, %r11 # 26:6-11
+    addq %rax, %r11 # 26:6-11
+    movq %r11, %rcx # 26:6-11
+    movq -8(%rbp), %rax # (reload 11:7-9)
+    movq %rax, %rax # 11:7-9
+    movq %rcx, %r11 # 26:6-14
+    addq %rax, %r11 # 26:6-14
+    movq %r11, %rcx # 26:6-14
+    movq -16(%rbp), %rax # (reload 12:7-9)
+    movq %rax, %rax # 12:7-9
+    movq %rcx, %r11 # 26:6-17
+    addq %rax, %r11 # 26:6-17
+    movq %r11, %rcx # 26:6-17
+    movq -24(%rbp), %rax # (reload 13:7-9)
+    movq %rax, %rax # 13:7-9
+    movq %rcx, %r11 # 26:6-20
+    addq %rax, %r11 # 26:6-20
+    movq %r11, %rcx # 26:6-20
+    movq -32(%rbp), %rax # (reload 14:7-9)
+    movq %rax, %rax # 14:7-9
+    movq %rcx, %r11 # 26:6-23
+    addq %rax, %r11 # 26:6-23
+    movq %r11, %rcx # 26:6-23
+    movq -40(%rbp), %rax # (reload 15:7-9)
+    movq %rax, %rax # 15:7-9
+    movq %rcx, %r11 # 26:6-26
+    addq %rax, %r11 # 26:6-26
+    movq %r11, %rcx # 26:6-26
+    movq -48(%rbp), %rax # (reload 16:7-9)
+    movq %rax, %rax # 16:7-9
+    movq %rcx, %r11 # 26:6-29
+    addq %rax, %r11 # 26:6-29
+    movq %r11, %rcx # 26:6-29
+    movq -56(%rbp), %rax # (reload 17:7-9)
+    movq %rax, %rax # 17:7-9
+    movq %rcx, %r11 # [26,6]-[27,8]
+    addq %rax, %r11 # [26,6]-[27,8]
+    movq %r11, %rcx # [26,6]-[27,8]
+    movq -64(%rbp), %rax # (reload 18:7-9)
+    movq %rax, %rax # 18:7-9
+    movq %rcx, %r11 # [26,6]-[27,11]
+    addq %rax, %r11 # [26,6]-[27,11]
+    movq %r11, %rcx # [26,6]-[27,11]
+    movq -72(%rbp), %rax # (reload 19:7-9)
+    movq %rax, %rax # 19:7-9
+    movq %rcx, %r11 # [26,6]-[27,14]
+    addq %rax, %r11 # [26,6]-[27,14]
+    movq %r11, %rcx # [26,6]-[27,14]
+    movq -80(%rbp), %rax # (reload 20:7-9)
+    movq %rax, %rax # 20:7-9
+    movq %rcx, %r11 # [26,6]-[27,17]
+    addq %rax, %r11 # [26,6]-[27,17]
+    movq %r11, %rcx # [26,6]-[27,17]
+    movq -88(%rbp), %rax # (reload 21:7-9)
+    movq %rax, %rax # 21:7-9
+    movq %rcx, %r11 # [26,6]-[27,20]
+    addq %rax, %r11 # [26,6]-[27,20]
+    movq %r11, %rcx # [26,6]-[27,20]
+    movq -96(%rbp), %rax # (reload 22:7-9)
+    movq %rax, %rax # 22:7-9
+    movq %rcx, %r11 # [26,6]-[27,23]
+    addq %rax, %r11 # [26,6]-[27,23]
+    movq %r11, %rcx # [26,6]-[27,23]
+    movq -104(%rbp), %rax # (reload 23:7-9)
+    movq %rax, %rax # 23:7-9
+    movq %rcx, %r11 # [26,6]-[27,26]
+    addq %rax, %r11 # [26,6]-[27,26]
+    movq %r11, %rcx # [26,6]-[27,26]
+    movq %rdx, %rax # 24:7-9
+    movq %rcx, %r11 # [26,6]-[27,29]
+    addq %rax, %r11 # [26,6]-[27,29]
     movq %r11, %rax # [26,6]-[27,29]
     movq %rax, %rax # [25,3]-[27,29]
     movq %rbp, %rsp # (epilogue [25,3]-[27,29])
