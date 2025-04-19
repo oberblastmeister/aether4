@@ -4,6 +4,7 @@ module Lower_flat_x86 = Ae_abs_x86_lower_flat_x86
 module Entity = Ae_entity_std
 module Legalize = Ae_abs_x86_legalize
 module Regalloc = Ae_abs_x86_regalloc
+module Regalloc_treescan = Ae_abs_x86_regalloc_treescan
 module Flat_x86 = Ae_flat_x86_std
 module Frame_layout = Ae_abs_x86_frame_layout
 module Pre_spill = Ae_abs_x86_pre_spill
@@ -31,25 +32,36 @@ let mach_reg_ident ?info off mach_reg =
   Entity.Ident.create ?info (Mach_reg.to_string mach_reg) id
 ;;
 
+let trace_allocation allocation =
+  let allocation =
+    Entity.Ident.Table.to_list allocation
+    |> (List.map & Tuple2.map_snd) ~f:Mach_reg.of_enum_exn
+  in
+  trace_s [%message (allocation : (Temp.t * Mach_reg.t) list)]
+;;
+
 let convert func =
   let module Table = Entity.Ident.Table in
   let open Table.Syntax in
   let func = Legalize.legalize_func func in
   let func = Pre_spill.spill_func ~num_regs:4 func in
+  trace_s [%message "spilled" (func : Func.t)];
   Check_register_pressure.check_func ~num_regs:4 func;
   Check.check func |> Or_error.ok_exn;
-  let allocation, spilled_colors = Regalloc.alloc_func func in
-  if not (Set.is_empty spilled_colors)
-  then raise_s [%message (spilled_colors : Int.Set.t)];
+  (* let allocation, spilled_colors = Regalloc.alloc_func func in *)
+  let allocation = Regalloc_treescan.alloc_func func in
+  trace_allocation allocation;
+  (* if not (Set.is_empty spilled_colors)
+  then raise_s [%message (spilled_colors : Int.Set.t)]; *)
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
-  let func =
+  (* let func =
     Post_spill.spill_func
       ~mach_reg_gen
       ~get_temp_color:(fun temp -> allocation.!(temp))
       ~spilled_colors
       func
-  in
+  in *)
   let func = Split_critical.split func in
   let func =
     Destruct_ssa.destruct

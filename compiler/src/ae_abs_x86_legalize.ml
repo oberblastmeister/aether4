@@ -8,6 +8,7 @@ module Entity = Ae_entity_std
 module Id_gen = Entity.Id_gen
 module Ident = Entity.Ident
 
+(* TODO: legalize sal and sar *)
 let legalize_block ~edit ~temp_gen block =
   begin
     let@: instr' = Block.iter_fwd block in

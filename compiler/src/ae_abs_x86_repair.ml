@@ -23,7 +23,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
   else begin
     let uses = Instr.iter_uses instr |> Iter.to_list in
     let defs = Instr.iter_defs instr |> Iter.to_list in
-    let live_through_temps =
+    let live_through =
       Ident.Set.iter live_in |> Iter.filter ~f:(Ident.Set.mem live_out) |> Iter.to_list
     in
     let constrained_uses_map = Ident.Map.of_alist_exn constrained_uses in
@@ -58,6 +58,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     let available_mach_regs =
       Set.of_list (module Mach_reg) Call_conv.regalloc_usable_mach_regs
       |> Set.diff __ defined_mach_regs
+      |> Set.diff __ used_mach_regs
       |> ref
     in
     let parallel_moves_before = Lstack.create () in
@@ -68,12 +69,13 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
       Lstack.push parallel_moves_before (mach_reg, temp));
     (* then allocate live through temps **)
     begin
-      let@: live_through = List.iter live_through_temps in
+      let@: live_through = List.iter live_through in
       match Ident.Map.find constrained_uses_map live_through with
       | Some constrained_to ->
         assert (Ident.Map.mem !allocation live_through);
         if Set.mem defined_mach_regs constrained_to
         then begin
+          (* now duplicate *)
           let mach_reg = alloc_register available_mach_regs live_through in
           (* overwrite the allocation to a copy *)
           allocation := Ident.Map.set !allocation ~key:live_through ~data:mach_reg;
@@ -128,6 +130,15 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
       *)
       |> List.filter ~f:(fun (temp, _) -> Ident.Set.mem live_out temp)
     in
+    trace_s
+      [%message
+        (instr : Instr.t)
+          (live_in : Temp.Set.t)
+          (live_out : Temp.Set.t)
+          (live_through : Temp.t list)
+          (allocation : Mach_reg.t Temp.Map.t)
+          (parallel_moves_before : (Mach_reg.t * Temp.t) list)
+          (parallel_moves_after : (Temp.t * Mach_reg.t) list)];
     let in_same_reg t1 t2 =
       Mach_reg.equal (get_temp_mach_reg t1) (get_temp_mach_reg t2)
     in

@@ -333,8 +333,12 @@ module Instr = struct
 
   let iter_constrained_uses_exn t ~f =
     match t with
-    | Bin { dst = _; op; src1; src2 = _ } ->
+    | Bin { dst = _; op; src1; src2 } ->
       (match op with
+       | Lshift | Rshift ->
+         (match src2 with
+          | Reg src2 -> f (src2, Mach_reg.RCX)
+          | _ -> ())
        | Idiv | Imod ->
          (match src1 with
           | Reg src1 -> f (src1, Mach_reg.RAX)

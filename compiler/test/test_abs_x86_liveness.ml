@@ -12,16 +12,17 @@ let lab = Label_intern.intern
 let temp = Temp_intern.intern
 let ins = Instr'.create_unindexed
 
+let instrs =
+  [ Instr.Mov { dst = Reg (temp "a3"); src = Imm 1l; size = Qword }
+  ; Instr.Bin
+      { dst = Reg (temp "w"); op = Sub; src1 = Reg (temp "a1"); src2 = Reg (temp "b1") }
+  ; Instr.Bin
+      { dst = Reg (temp "z"); op = Add; src1 = Reg (temp "a"); src2 = Reg (temp "b") }
+  ; Instr.Mov { dst = Reg (temp "x"); src = Reg (temp "y"); size = Qword }
+  ]
+;;
+
 let%expect_test "simple next use backwards transfer" =
-  let instrs =
-    [ Instr.Mov { dst = Reg (temp "a3"); src = Imm 1l; size = Qword }
-    ; Instr.Bin
-        { dst = Reg (temp "w"); op = Sub; src1 = Reg (temp "a1"); src2 = Reg (temp "b1") }
-    ; Instr.Bin
-        { dst = Reg (temp "z"); op = Add; src1 = Reg (temp "a"); src2 = Reg (temp "b") }
-    ; Instr.Mov { dst = Reg (temp "x"); src = Reg (temp "y"); size = Qword }
-    ]
-  in
   let next_uses_out = Ident.Map.of_alist_exn [ temp "x", 10; temp "z", 20 ] |> ref in
   begin
     let@: instr = List.rev instrs |> List.iter in
@@ -40,4 +41,17 @@ let%expect_test "simple next use backwards transfer" =
     ((instr (Mov (dst (Reg a3@8)) (src (Imm 1)) (size Qword)))
      (next_uses_out ((y@0 2) (b@2 1) (a@3 1) (b1@5 0) (a1@6 0))))
     |}]
+;;
+
+let%expect_test "compute deaths" =
+  let live_out = Ident.Set.of_list_exn [ temp "x"; temp "z" ] in
+  let block =
+    List.map ~f:(fun i -> Instr'.create_unindexed i) instrs
+    |> Arrayp.of_list
+    |> Block.create (lab "start")
+  in
+  let deaths = Liveness.compute_deaths ~live_out block in
+  print_s [%message (deaths : Temp.Set.t iarray)];
+  ();
+  [%expect {| (deaths (() (b1@5 a1@6) (b@2 a@3) (y@0))) |}]
 ;;

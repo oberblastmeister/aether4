@@ -142,6 +142,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     (match op with
      | Eq size -> on_cmp ~size E
      | Lshift ->
+       assert (Flat_x86.Operand.reg_val src2 |> Option.value_exn |> Mach_reg.equal RCX);
        empty
        +> [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
             ins (Mov { dst = Reg R11; src = src1; size })
@@ -150,6 +151,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
           ; ins (Mov { dst; src = Reg R11; size })
           ]
      | Rshift ->
+       assert (Flat_x86.Operand.reg_val src2 |> Option.value_exn |> Mach_reg.equal RCX);
        empty
        +> [ (* assembler will fail if src2 is more than 8 bit immediate on sal, so move it to rcx first *)
             ins (Mov { dst = Reg R11; src = src1; size })

@@ -31,7 +31,7 @@ let sort_temps_by_ascending_next_use next_use temps =
   |> List.map ~f:fst
 ;;
 
-let init_usual ~label ~num_regs ~preds ~next_use_in ~active_out_table =
+let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
   let preds_num = List.length preds in
   let temp_freq = Table.create () in
   let in_all_preds = ref Ident.Set.empty in
@@ -348,7 +348,6 @@ let spill_func ~num_regs (func : Func.t) =
       let block = Func.find_block_exn func label in
       let active_in =
         init_usual
-          ~label
           ~num_regs
           ~preds:pred_table.!(label)
           ~next_use_in:(Liveness.Next_use_table.find next_use_in_table label)
