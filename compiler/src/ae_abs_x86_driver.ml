@@ -44,14 +44,12 @@ let convert func =
   let module Table = Entity.Ident.Table in
   let open Table.Syntax in
   let func = Legalize.legalize_func func in
-  let func = Pre_spill.spill_func ~num_regs:4 func in
-  Check_register_pressure.check_func ~num_regs:4 func;
+  let func = Pre_spill.spill_func ~num_regs:3 func in
+  Check_register_pressure.check_func ~num_regs:3 func;
   Check.check func |> Or_error.ok_exn;
   (* let allocation, spilled_colors = Regalloc.alloc_func func in *)
   let allocation = Regalloc_treescan.alloc_func func in
   trace_allocation allocation;
-  (* if not (Set.is_empty spilled_colors)
-  then raise_s [%message (spilled_colors : Int.Set.t)]; *)
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
   (* let func =
