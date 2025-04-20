@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// Calculate the binary digit sum of the input
+int main() {
+    int input = 96198526;    // 101101110111101111101111110
+    int sum = 0;
+    int shifts;
+    for (shifts = 0; shifts < 32; shifts += 1) {
+        sum += input & 1;
+        input >>= 1;
+    }
+    return sum;
+}
+----
+21

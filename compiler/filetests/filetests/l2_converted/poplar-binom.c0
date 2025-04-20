@@ -1,0 +1,25 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// compute sums of binomial coefficients
+int main() {
+        int sum = 0;
+        int i;
+        for (i = 1; i < 10; i += 1) {
+                int s = 1;
+                int x = 1;
+                int j;
+                for (j = 0; j <= i; j += 1) {
+                        x *= i - j;
+                        x /= j + 1;
+                        s += x;
+                }
+                sum += s - (1 << i);
+        }      
+        return sum;
+}
+----
+0

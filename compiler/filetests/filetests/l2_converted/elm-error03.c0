@@ -1,0 +1,11 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// if used as a variable
+int main() {
+  int if = 2;
+  return if;
+}
+----
+("Parse error" "if is a keyword")

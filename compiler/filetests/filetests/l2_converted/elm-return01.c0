@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int square = 49;
+  int root = 0;
+
+  while ( root*root != square ) {
+    root += 1;
+  }
+  return root;
+}
+----
+7

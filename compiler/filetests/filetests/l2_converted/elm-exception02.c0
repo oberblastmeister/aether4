@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+// it will eventually divide by zero
+int main() {
+  int result = 4096;
+  
+  int i;
+  for(i=-2; i<=2; i+=1)
+  {
+    result /= i;
+  }
+
+  return result;
+}
+----

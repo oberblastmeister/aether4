@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+  int x = 41;
+  if (x == 42 || 42/0 == 1) {
+    return x;
+  }
+  return -1;
+}
+----

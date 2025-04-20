@@ -1,0 +1,20 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// partial order of tuples (u1, u2) and (v1, v2)
+int main() {
+  int U1 = 34;
+  int U2 = 27;
+  int V1 = 40;
+  int V2 = 33;
+ 
+  int greater = (U1 > V1) && (U2 > V2) ? 1 : 0;
+  int less = (U1 < V1) && (U2 < V2) ? 1 : 0;
+
+  return greater | ~(less - 1);
+}
+----
+-1

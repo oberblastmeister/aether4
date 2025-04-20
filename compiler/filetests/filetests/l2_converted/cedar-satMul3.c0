@@ -1,0 +1,18 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int x = 1879048192;
+  int sig = x >> 31;
+  int xt2 = x + x;
+  int xt3 = xt2 + x;
+  int min = ~(1 << 31);
+  int ovf = ((x ^ xt2) | (xt2 ^ xt3)) >> 31;
+  int sigsel = sig ^ min;
+  return ((sigsel ^ xt3) & ovf) ^ xt3;
+}
+----
+2147483647

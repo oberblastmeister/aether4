@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+// mod by zero in shift
+int main() {
+  int i = 20;
+  return i << i % 0 + 2;
+}
+----

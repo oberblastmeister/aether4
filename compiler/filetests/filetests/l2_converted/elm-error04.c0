@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// break used as a variable
+int main() {
+  int i = 2;
+  int break /= i;
+  int j = break;
+  return j;
+}
+----
+("Parse error" "break is a keyword")

@@ -1,0 +1,28 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+//sum of total digits
+int main() {
+  int total = 256;
+  int size = 3;
+
+  int sum = 0;
+  while (size >= 1) {
+    int j = 1;
+    int place = 1;
+    while ( j < size ) {
+      place *= 10;
+      j+=1;
+    }
+
+    sum += total/place;
+    total -= (total/place)*place;
+    size-=1;
+  }
+  return sum;
+}
+----
+13

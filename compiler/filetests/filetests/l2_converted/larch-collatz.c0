@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  /* Tests the Collatz conjecture on n */
+  int n = 4823879;
+
+  while (n != 1) {
+    if (n % 2 == 0) {
+      n = n / 2;
+    } else {
+      n = 3 * n + 1;
+    }
+  }
+
+  return n;
+}
+----
+1

@@ -1,0 +1,31 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int byte0 = 119;
+  int byte1 = 97;
+  int byte2 = 110;
+  int byte3 = 107;
+
+  int a = 1;
+  int b = 0;
+
+  a += byte0;
+  b += a;
+  a += byte1;
+  b += a;
+  a += byte2;
+  b += a;
+  a += byte3;
+  b += a;
+
+  a %= 65521;
+  b %= 65521;
+
+  return (b << 16) | a;
+}
+----
+71958962

@@ -1,0 +1,26 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  /* Returns the smallest factor of n, other than 1 */
+  int n = 1883473201;
+
+  if (n % 2 == 0) {
+    return 2;
+  }
+
+  int f = 3;
+  while (f < n) {
+    if (n % f == 0) {
+      return f;
+    }
+    f += 2;
+  }
+
+  return n;
+}
+----
+43399

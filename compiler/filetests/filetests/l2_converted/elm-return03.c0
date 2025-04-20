@@ -1,0 +1,46 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+//checks if array's digits contains a pair with a sum equal to x
+int main() {
+  int array = 2375;
+  int size = 4;
+  int x = 8;
+
+  int i;
+  for(i=0; i<size; i+=1) {
+
+    int j = 1;
+    int place = 1;
+    while (j < (size-i)) {
+      place *= 10;
+      j+=1;
+    }
+    int element = array/place;
+    array -= element*place;
+
+    int array2 = array;
+    for(j=i+1; j<size; j+=1) {
+
+      int k = 1;
+      int place = 1;
+      while (k < (size-j)) {
+        place *= 10;
+        k+=1;
+      }
+      int element2 = array2/place;
+      array2 -= element2*place;
+
+      if( (element+element2) == x ) {
+        return 1;
+      }
+    }
+  }
+
+  return 0;
+}
+----
+1

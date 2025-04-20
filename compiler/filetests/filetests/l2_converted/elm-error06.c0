@@ -1,0 +1,19 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// Else without if is not allowed
+int main() {
+  int flag = 1;
+  int sum = 0;
+
+  else {
+    int i;
+    for(i=1; i<=10;i+=1)
+      sum += i;
+  }
+
+  return sum;
+}
+----
+("Parse error" "else must follow if")

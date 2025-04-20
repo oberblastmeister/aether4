@@ -1,0 +1,25 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  /* Tests for loops, with break and continue */
+  int n;
+  for (n = -1234; 42 != 0; n += 1) {
+    if (n != 12) {
+      continue;
+    }
+    break;
+  }
+
+  int c;
+  for (c = n; c != 0; c -= 1) {
+    n += 1;
+  }
+
+  return n;
+}
+----
+24

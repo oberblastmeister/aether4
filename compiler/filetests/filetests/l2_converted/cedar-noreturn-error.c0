@@ -1,0 +1,12 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+	int i;
+	for(i = 0; i > 0; i = 0) {
+		i = 1;
+	}
+}
+----
+("Function does not return on all control flow paths" (func.name main@0))

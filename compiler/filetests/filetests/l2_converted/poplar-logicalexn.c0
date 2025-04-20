@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+// Will throw an exception if short-circuit logical operators work
+int main() {
+    int t = 5;
+    int f = 0;
+    return (t != 0 && 0 != 0) || (f != 0 && 3 != 0) || 1/0;
+}
+----

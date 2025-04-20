@@ -1,0 +1,24 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+  int x;
+  if (2 + 2 == 5) {
+    x = 0;
+    while (x < 5) {
+      x = x + 1;
+    }
+  } else {
+    x = 7;
+  }
+  return 1 && (42 / (x - x));
+
+  int y;
+  if (0) {
+    y = x + 32;
+  }
+}
+----

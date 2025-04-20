@@ -1,0 +1,36 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+	int modulus = 23947;
+	int exponent = 1248123;
+	int base = 328;
+
+	int var1 = 0;
+	int var2 = ~0;
+
+	var1 |= (((var2<<16)&exponent) != 0)<<4; 
+	var1 |= (((var2<<8)&(exponent>>var1)) != 0)<<3;
+	var1 |= (((var2<<4)&(exponent>>var1)) != 0)<<2;
+	var1 |= (((var2<<2)&(exponent>>var1)) != 0)<<1;
+	var1 |= exponent>>(var1+1);
+
+	if (var1 < 0) var1 = 31;
+	int mask = (1 << 31);
+
+	int x = 1;
+	while (exponent != 0)
+	{
+    x *= x;
+    x %= modulus;
+		if ((mask & exponent) != 0) {x *= base; x %= modulus;}
+		exponent <<= 1;
+	}
+  
+	return x;
+}
+----
+16162

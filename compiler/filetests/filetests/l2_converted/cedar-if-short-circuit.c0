@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+	int i = 100;
+	int a = 0;
+	if(a == 0 || i/a == 10)
+		return a;
+	return 0;
+}
+----
+0

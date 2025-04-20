@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int one = 1;
+  int twentyone = one | (one << 2) | (one << 4);	// 21
+  int q = twentyone;
+  q |= (q << 1); // 63
+  int seven = q / 9;
+  return twentyone / seven;
+}
+----
+3

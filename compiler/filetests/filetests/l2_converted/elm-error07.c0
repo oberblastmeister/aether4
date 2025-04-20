@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// variable used before defined
+int main() {
+  int a = 5;
+  int j = i + a;
+  j += 3;
+  return j;
+}
+----
+("Undeclared variable" (var-name i))

@@ -1,0 +1,29 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+// computes the Nth prime
+int main() {
+  int N = 200;
+
+  if (N <= 0) return 0;
+  else if (N == 1) return 2;
+  else {
+    int prime = 1;
+    int found;
+    for (found = 1; found < N; found += 1) {
+      prime += 2;
+      int i;
+      for (i = 3; prime >= i * i; i += 2) {
+        if (prime % i != 0) continue;
+        found -= 1;
+        break;
+      }
+    }
+    return prime;
+  }
+}
+----
+1223

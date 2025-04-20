@@ -1,0 +1,23 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+  int ten = 10;
+
+  if( ten-10 == 0 ) {
+    int result = 0;
+    int i;
+    for(i=0; i<ten; i+=1)
+    {
+      if(i == (ten-1))
+      {
+        result = ten*ten;
+      }
+    }
+  }
+
+  return result;
+}
+----
+("Undeclared variable" (var-name result))

@@ -1,0 +1,28 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int ten = 10;
+  int result;
+
+  if(ten-10 == 0)
+  {
+    result = 0;
+    int i;
+    for(i=0; i<ten; i+=1)
+    {
+      result += ten;
+    }
+  }
+  else 
+  {
+    result = 0;
+  }
+
+  return result;
+}
+----
+100

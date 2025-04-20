@@ -1,0 +1,14 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+// divide by zero
+int main() {
+  int x = 1;
+  if(x * 1 != 0 && x / 0 != 0) 
+    return 0;
+  return 3;
+}
+----

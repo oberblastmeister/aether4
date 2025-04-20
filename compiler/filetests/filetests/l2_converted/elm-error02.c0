@@ -1,0 +1,14 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+// return not in every path of execution
+int main() {
+  int i = 5;
+  if(i == 5)
+    return 4;
+  else
+    i += 2;
+}
+----
+("Function does not return on all control flow paths" (func.name main@0))

@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGFPE))))
+)
+*/
+
+int main() {
+  // make sure shift uses sign extension
+  int v = 1;
+  int i;
+  for (i = 0; i < 31; i += 1) {
+    v <<= 1;
+  }
+  for (i = 0; i < 32; i += 1) {
+    v |= (v >> 1);
+  }
+  return 1 / (~v);
+}
+----

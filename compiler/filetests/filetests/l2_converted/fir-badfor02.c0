@@ -1,0 +1,10 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+int main() {
+	for ( ; ; );
+	return 0;
+}
+----
+("Parse error" "Empty for loop condition")
