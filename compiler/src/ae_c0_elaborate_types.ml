@@ -1,5 +1,6 @@
 open Std
 module Ast = Ae_c0_ast
+module Span = Ae_span
 
 exception Exn of Sexp.t
 
@@ -26,11 +27,12 @@ let var_ty st var =
     throw_s [%message "Var not found!" (var : Ast.Var.t)])
 ;;
 
-let check_ty_eq _st (ty : Ast.ty) (ty' : Ast.ty) =
+let check_ty_eq _st span (ty : Ast.ty) (ty' : Ast.ty) =
   match ty, ty' with
   | Int _, Int _ -> ()
   | Bool _, Bool _ -> ()
-  | _ -> throw_s [%message "Types were not equal" (ty : Ast.ty) (ty' : Ast.ty)]
+  | _ ->
+    throw_s [%message "Types were not equal" (span : Span.t) (ty : Ast.ty) (ty' : Ast.ty)]
 ;;
 
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
@@ -41,7 +43,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     let cond = check_expr st cond Ast.bool_ty in
     let then_expr = infer_expr st then_expr in
     let else_expr = infer_expr st else_expr in
-    check_ty_eq st (Ast.expr_ty_exn then_expr) (Ast.expr_ty_exn else_expr);
+    check_ty_eq st span (Ast.expr_ty_exn then_expr) (Ast.expr_ty_exn else_expr);
     Ternary { cond; then_expr; else_expr; ty = Some (Ast.expr_ty_exn then_expr); span }
   | Bin { lhs; op; rhs; ty = _; span } ->
     (match op with
@@ -56,13 +58,13 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
      | Eq ->
        let lhs = infer_expr st lhs in
        let rhs = infer_expr st rhs in
-       check_ty_eq st (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
+       check_ty_eq st span (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
   | Call { func; args; ty = _; span = _ } -> todol [%here]
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in
-  check_ty_eq st ty (Ast.expr_ty_exn expr);
+  check_ty_eq st Span.none ty (Ast.expr_ty_exn expr);
   expr
 ;;
 
@@ -115,7 +117,7 @@ let check_func_sig_eq st name (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_s
   in
   begin
     let@: param1, param2 = List.iter params in
-    check_ty_eq st param1.ty param2.ty
+    check_ty_eq st Span.none param1.ty param2.ty
   end
 ;;
 

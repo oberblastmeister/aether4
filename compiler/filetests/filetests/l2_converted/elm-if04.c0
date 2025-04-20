@@ -20,4 +20,4 @@ int main() {
   return result;
 }
 ----
-("Undeclared variable" (var-name result))
+("Variable not found" (var ((t result) (span 20:10-16))))

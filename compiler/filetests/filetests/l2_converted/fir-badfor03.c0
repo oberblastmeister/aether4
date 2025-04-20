@@ -12,4 +12,6 @@ int main() {
 	return n;
 }
 ----
-("Parse error" "expected ;")
+("Parse error"
+ ("expected closing brace for block"
+  ("Stream.peek (Parser.stream env)" (((t (Ident n)) (span 10:3))))))

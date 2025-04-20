@@ -17,4 +17,4 @@ int main() {
   return hello;
 }
 ----
-("Variable might be used before initialized" (var hello@6))
+("Types were not equal" (span -1:-1) (ty (Bool -1:-1)) (ty' (Int -1:-1)))

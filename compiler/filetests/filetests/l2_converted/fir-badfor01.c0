@@ -8,4 +8,4 @@ int main() {
 	return 0;
 }
 ----
-("Parse error" "expected for parens")
+("Parse error" "expected closing RParen")

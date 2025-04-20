@@ -14,10 +14,10 @@ int main() {
   } else {
     x = 7;
   }
-  return 1 && (42 / (x - x));
+  return (true && ((42 / (x - x)) != 0)) ? 1 : 0;
 
   int y;
-  if (0) {
+  if (false) {
     y = x + 32;
   }
 }

@@ -7,7 +7,7 @@
 int main() {
   int wrong = 12345;
   int right = 67890;
-  if(-4--4 != 0)
+  if((-4 - (-4)) != 0)
     return wrong;
   else
     return right;

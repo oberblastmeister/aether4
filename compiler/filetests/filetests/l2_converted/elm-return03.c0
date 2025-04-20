@@ -26,7 +26,7 @@ int main() {
     for(j=i+1; j<size; j+=1) {
 
       int k = 1;
-      int place = 1;
+      place = 1;
       while (k < (size-j)) {
         place *= 10;
         k+=1;

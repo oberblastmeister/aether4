@@ -8,4 +8,6 @@ int main() {
   return if;
 }
 ----
-("Parse error" "if is a keyword")
+("Parse error"
+ ("expected closing brace for block"
+  ("Stream.peek (Parser.stream env)" (((t Int) (span 7:3-6))))))

@@ -30,7 +30,8 @@ int main() {
   {
     int sum = 0;
     int i;
-    for (i = 15 ; i >=0  ; i -= 1 )
+    bool break = false;
+    for (i = 15 ; !break && i >=0  ; i -= 1 )
     {   
       if ( ((number >> i) & 1) != 0)
         if (i == 0) sum += item0;
@@ -49,7 +50,7 @@ int main() {
         else if (i == 13) sum += item13;
         else if (i == 14) sum += item14;
         else if (i == 15) sum += item15;
-      if (sum>target) break;
+      if (sum>target) break = true;
       else if (sum == target) return number;
     }   
   }

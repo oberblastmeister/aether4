@@ -6,7 +6,7 @@
 
 int main() {
   int i = 15 / 0;
-  if (0) return i;
+  if (false) return i;
   return 1;
 }
 ----

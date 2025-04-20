@@ -6,13 +6,13 @@
 
 int main() {
   int z1 = 1;
-  int z2 = !z1; // 0
+  int z2 = !(z1 != 0) ? 1 : 0; // 0
   int z3 = ~z2; // -1
-  int z4 = !z3; // 0
-  int z5 = !z4; // 1
+  int z4 = !(z3 != 0) ? 1 : 0; // 0
+  int z5 = !(z4 != 0) ? 1 : 0; // 1
   int z6 = ~z5; // -2
 
-  int frob = (z1 != 0 && !(z3 + z5)) || (z6 / z4 != 0);
+  int frob = ((z1 != 0 && (!((z3 + z5) != 0) != false)) || (z6 / z4 != 0)) ? 1 : 0;
   return frob + z3;
 }
 ----

@@ -24,4 +24,4 @@ int main() {
   return result;
 }
 ----
-("Variable might be used before initialized" (var result@6))
+("Variable was used before initialized" (var result@2))

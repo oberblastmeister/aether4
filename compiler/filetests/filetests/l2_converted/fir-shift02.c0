@@ -17,4 +17,4 @@ int main() {
   return ~i;
 }
 ----
-0
+31

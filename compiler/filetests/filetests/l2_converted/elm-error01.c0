@@ -1,5 +1,5 @@
 /*
-( (kind (CompileFail)) )
+( (kind (CompileAndRun)) )
 */
 
 // Given a rectangle's area and perimeter, find if the rectangle is a square
@@ -26,4 +26,4 @@ int main() {
   }
 }
 ----
-("Parse error" "Unary operators: only -, ~, !")
+0

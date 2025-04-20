@@ -8,4 +8,4 @@ int main() {
   return i;
 }
 ----
-("Parse error" "expected )", 6:22)
+("Parse error" "expected closing RParen")

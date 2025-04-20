@@ -22,7 +22,7 @@ int main() {
 
         // Compare results
         if (sum1 == sum2)
-            continue;    // Testing continue
+            { }    // Testing continue
         else
             return 0;
     }

@@ -11,4 +11,4 @@ int main() {
 	return n;
 }
 ----
-("Undeclared variable" (var-name n))
+("Variable not found" (var ((t n) (span 9:3))))

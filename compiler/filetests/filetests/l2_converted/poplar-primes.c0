@@ -10,9 +10,10 @@ int main() {
         int i;
         for (i = 2; i < 100; i += 1) {
                 int j;
-                for (j = 2; j < i; j += 1) {
+                bool break = false;
+                for (j = 2; !break && j < i; j += 1) {
                         if (i % j == 0)
-                                break;
+                                break = true;
                 }
                 if (j == i)
                         count += 1;
