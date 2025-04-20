@@ -1,8 +1,20 @@
 open Std
+module A = Accessor_core
 
 let orders = [ 1000; 10_000; 100_000; 1_000_000 ]
 
-let%bench ("stack push" [@indexed len = orders]) =
+let%bench ("accessors map" [@indexed len = orders]) =
+  let my_list = List.range 0 len in
+  let res = A.map A.List.each my_list ~f:succ in
+  res
+;;
+
+let%bench ("normal map" [@indexed len = orders]) =
+  let my_list = List.range 0 len in
+  let res = List.map my_list ~f:succ in
+  res
+;;
+(* let%bench ("stack push" [@indexed len = orders]) =
   let stack = Stack.create () in
   for i = 0 to len do
     Stack.push stack i
@@ -70,7 +82,7 @@ let%bench ("list push" [@indexed len = orders]) =
     list := i :: !list
   done;
   List.rev !list
-;;
+;; *)
 (* This shows some sample uses of BENCH. Build and look at ppx_bench_sample.ml.pp in this
    directory to see how the preprocessor works. *)
 
