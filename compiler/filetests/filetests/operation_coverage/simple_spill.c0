@@ -29,6 +29,19 @@ int main() {
 ----
 asm
 .text
+.globl c0_main_export
+c0_main_export:
+    pushq %rbx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+    callq _c0_main
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbx
 .globl _c0_main
 _c0_main:
     pushq %rbp # prologue

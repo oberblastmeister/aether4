@@ -1,5 +1,5 @@
 (*
-   TODO: possibly promote byte moves to double word moves
+  TODO: possibly promote byte moves to double word moves
   prefer 32 bit registers: https://stackoverflow.com/questions/41573502/why-doesnt-gcc-use-partial-registers
 *)
 open Std
@@ -15,6 +15,7 @@ module Label = Ae_label_entity.Ident
 module Condition_code = Ae_x86_condition_code
 module Frame_layout = Ae_abs_x86_frame_layout
 module Address = Ae_x86_address
+module Call_conv = Ae_x86_call_conv
 
 let ins ?info i = Flat_x86.Line.Instr { i; info }
 let empty = Bag.empty
@@ -226,7 +227,7 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   in
   let instrs =
     empty
-    +> Flat_x86.Line.[ Directive ".text"; Directive ".globl _c0_main"; Label "_c0_main" ]
+    +> Flat_x86.Line.[ Directive ".globl _c0_main"; Label "_c0_main" ]
     ++ prologue
          ~info:(Info.create_s [%message "prologue"])
          (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout))
@@ -235,7 +236,30 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   Bag.to_list instrs
 ;;
 
+let push_callee_saved =
+  Call_conv.callee_saved_without_stack
+  |> List.map ~f:(fun reg ->
+    Flat_x86.Line.Instr
+      { i = Flat_x86.Instr.Push { src = Reg reg; size = Qword }; info = None })
+;;
+
+let pop_callee_saved =
+  Call_conv.callee_saved_without_stack
+  |> List.rev
+  |> List.map ~f:(fun reg ->
+    Flat_x86.Line.Instr
+      { i = Flat_x86.Instr.Pop { dst = Reg reg; size = Qword }; info = None })
+;;
+
+let c0_main_export =
+  Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
+  @ push_callee_saved
+  @ [ Flat_x86.Line.Instr { i = Call "_c0_main"; info = None } ]
+  @ pop_callee_saved
+;;
+
 let lower ~frame_layout ~allocation func =
   let st = { frame_layout; allocation } in
-  lower_func st func
+  let prog = Flat_x86.Line.[ Directive ".text" ] @ c0_main_export @ lower_func st func in
+  prog
 ;;
