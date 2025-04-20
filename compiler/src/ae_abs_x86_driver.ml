@@ -59,3 +59,8 @@ let convert func =
   let func = Lower_flat_x86.lower ~frame_layout ~allocation func in
   func
 ;;
+
+let convert_program (program : Program.t) =
+  let funcs = List.concat_map program.funcs ~f:convert in
+  Flat_x86.Line.[ Directive ".text" ] @ Lower_flat_x86.c0_main_export_instructions @ funcs
+;;

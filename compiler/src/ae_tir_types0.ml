@@ -102,7 +102,7 @@ module Instr = struct
     | Call of
         { dst : Temp.t
         ; ty : Ty.t
-        ; args : Temp.t list
+        ; args : (Temp.t * Ty.t) list
         }
     | Unreachable
   [@@deriving sexp_of, variants]
@@ -124,7 +124,7 @@ module Instr = struct
   let iter_uses (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
-    | Call { dst = _; ty = _; args } -> List.iter args ~f
+    | Call { dst = _; ty = _; args } -> (List.iter @> Fold.of_fn fst) args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;
@@ -227,7 +227,7 @@ module Instr = struct
     | Nop -> Nop
     | Block_params _ -> instr
     | Call p ->
-      let args = List.map p.args ~f in
+      let args = (List.map & Tuple2.map_fst) p.args ~f in
       Call { p with args }
     | Bin p ->
       let src1 = f p.src1 in

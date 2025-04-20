@@ -85,24 +85,26 @@ let compile_source_to_tir ?(emit = []) source =
   if Emit.mem emit Ast then print_s [%message "ast" (program : C0.Ast.program)];
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
-  let tir = C0.Lower_tree_ir.lower program in
-  if Emit.mem emit Tir_non_ssa then print_s [%message "tir_non_ssa" (tir : Tir.Func.t)];
-  let tir = Tir.Convert_ssa.convert ~renumber:() tir in
-  if Emit.mem emit Tir then print_s [%message "tir" (tir : Tir.Func.t)];
+  let tir = C0.Lower_tree_ir.lower_program program in
+  if Emit.mem emit Tir_non_ssa then print_s [%message "tir_non_ssa" (tir : Tir.Program.t)];
+  let tir =
+    (Tir.Program.map_funcs & List.map) ~f:(Tir.Convert_ssa.convert ~renumber:()) tir
+  in
+  if Emit.mem emit Tir then print_s [%message "tir" (tir : Tir.Program.t)];
   Ok tir
 ;;
 
 let compile_source_to_asm ?(emit = []) source =
   let open Result.Let_syntax in
   let%bind tir = compile_source_to_tir ~emit source in
-  let%bind () = Tir.Check.check tir in
-  let lir = Tir.Lower_lir.lower tir in
-  let%bind () = Lir.Check.check lir in
-  if Emit.mem emit Emit.Lir then print_s [%message (lir : Lir.Func.t)];
-  let abs_x86 = Lir.Lower_abs_x86.lower lir in
-  let%bind () = Abs_x86.Check.check abs_x86 in
-  if Emit.mem emit Emit.Abs_asm then print_s [%message (abs_x86 : Abs_x86.Func.t)];
-  let asm = Abs_x86.Driver.convert abs_x86 in
+  let%bind () = Tir.Check.check_program tir in
+  let lir = Tir.Lower_lir.lower_program tir in
+  let%bind () = Lir.Check.check_program lir in
+  if Emit.mem emit Emit.Lir then print_s [%message (lir : Lir.Program.t)];
+  let abs_x86 = Lir.Lower_abs_x86.lower_program lir in
+  let%bind () = Abs_x86.Check.check_program abs_x86 in
+  if Emit.mem emit Emit.Abs_asm then print_s [%message (abs_x86 : Abs_x86.Program.t)];
+  let asm = Abs_x86.Driver.convert_program abs_x86 in
   let formatted_asm = Flat_x86.Format.format asm in
   if Emit.mem emit Emit.Asm
   then begin

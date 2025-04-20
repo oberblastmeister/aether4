@@ -1,5 +1,5 @@
 (*
-  TODO: possibly promote byte moves to double word moves
+   TODO: possibly promote byte moves to double word moves
   prefer 32 bit registers: https://stackoverflow.com/questions/41573502/why-doesnt-gcc-use-partial-registers
 *)
 open Std
@@ -251,7 +251,7 @@ let pop_callee_saved =
       { i = Flat_x86.Instr.Pop { dst = Reg reg; size = Qword }; info = None })
 ;;
 
-let c0_main_export =
+let c0_main_export_instructions =
   Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
   @ push_callee_saved
   @ [ Flat_x86.Line.Instr { i = Call "_c0_main"; info = None } ]
@@ -260,6 +260,5 @@ let c0_main_export =
 
 let lower ~frame_layout ~allocation func =
   let st = { frame_layout; allocation } in
-  let prog = Flat_x86.Line.[ Directive ".text" ] @ c0_main_export @ lower_func st func in
-  prog
+  lower_func st func
 ;;

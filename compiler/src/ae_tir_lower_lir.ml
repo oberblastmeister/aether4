@@ -131,7 +131,8 @@ let lower_block st (block : Tir.Block.t) : Lir.Block.t =
   Lir.Block.create block.label body
 ;;
 
-let lower_func st (func : Tir.Func.t) : Lir.Func.t =
+let lower_func (func : Tir.Func.t) : Lir.Func.t =
+  let st = create_state func in
   let name = func.name in
   let blocks = func.blocks |> Entity.Ident.Map.map ~f:(lower_block st) in
   let start = func.start in
@@ -140,7 +141,7 @@ let lower_func st (func : Tir.Func.t) : Lir.Func.t =
   { name; blocks; start; next_temp_id; next_label_id }
 ;;
 
-let lower func =
-  let st = create_state func in
-  lower_func st func
+let lower_program (program : Tir.Program.t) : Lir.Program.t =
+  let funcs = List.map program.funcs ~f:lower_func in
+  { funcs }
 ;;

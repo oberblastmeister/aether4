@@ -14,20 +14,28 @@ let empty = Bag.empty
 let ins = Tir.Instr'.create_unindexed
 let bc ?(args = []) label = { Tir.Block_call.label; args }
 
+type global_st = { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t }
+type instrs = Tir.Instr'.t Bag.t [@@deriving sexp_of]
+
+let create_global_state _program =
+  let func_ty_map = Hashtbl.create (module Ast.Var) in
+  { func_ty_map }
+;;
+
 type st =
   { temp_gen : Tir.Temp_entity.Witness.t Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
   ; label_gen : Tir.Label_entity.Witness.t Id_gen.t
   ; mutable blocks : Tir.Block.t list
+  ; global_st : global_st
   }
 
-type instrs = Tir.Instr'.t Bag.t [@@deriving sexp_of]
-
-let create_state () =
+let create_state global_st =
   { temp_gen = Id_gen.create ()
   ; var_to_temp = Ast.Var.Table.create ()
   ; label_gen = Id_gen.create ()
   ; blocks = []
+  ; global_st
   }
 ;;
 
@@ -232,23 +240,17 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
   | Call _ -> todol [%here]
 ;;
 
-let lower_program st (program : Ast.program) : Tir.Func.t =
-  let main_func =
-    List.find_map program ~f:(function
-      | Func_defn func -> Some func
-      | _ -> None)
-    |> Option.value_exn
-  in
-  let name = main_func.name in
-  let start_instrs = lower_block st empty main_func.body in
+let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
+  let st = create_state st in
+  let start_instrs = lower_block st empty defn.body in
   let start_label =
-    add_fresh_block ~info:(Span.to_info main_func.span) ~name:"start" st start_instrs
+    add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" st start_instrs
   in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
   let blocks = st.blocks in
   let func : Tir.Func.t =
-    { name = name.name
+    { name = defn.name.name
     ; blocks =
         blocks |> List.map ~f:(fun b -> b.label, b) |> Entity.Ident.Map.of_alist_exn
     ; start = start_label
@@ -259,7 +261,20 @@ let lower_program st (program : Ast.program) : Tir.Func.t =
   func
 ;;
 
-let lower p =
-  let st = create_state () in
-  lower_program st p
+let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
+  match decl with
+  | Ast.Extern_func_defn _ -> todol [%here]
+  | Ast.Func_decl { name; ty } ->
+    Hashtbl.set st.func_ty_map ~key:name ~data:ty;
+    None
+  | Ast.Func_defn defn ->
+    Hashtbl.set st.func_ty_map ~key:defn.name ~data:(Ast.func_defn_to_ty defn);
+    Some (lower_func_defn st defn)
+  | Ast.Typedef _ -> None
+;;
+
+let lower_program (program : Ast.program) : Tir.Program.t =
+  let st = create_global_state program in
+  let funcs = List.filter_map ~f:(lower_global_decl st) program in
+  { funcs }
 ;;

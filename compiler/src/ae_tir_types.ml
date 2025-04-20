@@ -42,6 +42,13 @@ module T0 = struct
     open Generic_ir.Make_cfg (Block) (T)
     include Func_ext
   end
+
+  module Program = struct
+    type t = { funcs : Func.t list } [@@deriving sexp_of]
+
+    let map_funcs t ~f = { t with funcs = f t.funcs }
+    let funcs t = t.funcs
+  end
 end
 
 module T = struct
@@ -76,5 +83,17 @@ module Check = struct
     (* TODO: run our own typechecker here instead of the premade one *)
     (* let%bind () = Check_types.check func in *)
     Ok ()
+  ;;
+
+  let check_program (program : Program.t) =
+    let open Or_error.Let_syntax in
+    let rec go program =
+      match program with
+      | func :: funcs ->
+        let%bind () = check func in
+        go funcs
+      | [] -> return ()
+    in
+    go program.funcs
   ;;
 end

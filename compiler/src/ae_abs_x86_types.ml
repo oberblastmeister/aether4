@@ -70,6 +70,10 @@ module T0 = struct
       }
     ;;
   end
+
+  module Program = struct
+    type t = { funcs : Func.t list } [@@deriving sexp_of]
+  end
 end
 
 module T = struct
@@ -103,5 +107,17 @@ module Check = struct
     let%bind () = Check_ssa.check func in
     let%bind () = Check_types.check func in
     Ok ()
+  ;;
+
+  let check_program (program : Program.t) =
+    let open Or_error.Let_syntax in
+    let rec go program =
+      match program with
+      | func :: funcs ->
+        let%bind () = check func in
+        go funcs
+      | [] -> return ()
+    in
+    go program.funcs
   ;;
 end

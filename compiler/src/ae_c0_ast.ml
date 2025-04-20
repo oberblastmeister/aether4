@@ -177,3 +177,13 @@ let expr_ty_exn = function
 ;;
 
 let nop_stmt span = Block { block = []; span }
+
+let get_func_ty_map program =
+  List.filter_map program ~f:(fun decl ->
+    match decl with
+    | Extern_func_defn { name; ty } -> Some (name, ty)
+    | Func_decl { name; ty } -> Some (name, ty)
+    | Func_defn ({ name; _ } as defn) -> Some (name, func_defn_to_ty defn)
+    | Typedef _ -> None)
+  |> Var.Map.of_alist_exn
+;;

@@ -19,7 +19,9 @@ let temp = Temp_intern.intern
 let ins = Instr'.create_unindexed
 
 let check s =
-  let func = Driver.compile_source_to_tir s |> Or_error.ok_exn in
+  let func =
+    Driver.compile_source_to_tir s |> Or_error.ok_exn |> Program.funcs |> List.hd_exn
+  in
   (* let placements = Tir.Convert_ssa.compute_phi_placements func in *)
   (* print_s [%message (placements : Tir.Temp.t list Label.Table.t)]; *)
   (* let func = Tir.Convert_ssa.convert func in *)

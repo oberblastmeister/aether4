@@ -6,7 +6,9 @@ module Tir = Ae_tir_std
 open Tir
 
 let check s =
-  let tir = Driver.compile_source_to_tir s |> Or_error.ok_exn in
+  let tir =
+    Driver.compile_source_to_tir s |> Or_error.ok_exn |> Program.funcs |> List.hd_exn
+  in
   print_s [%message (tir : Func.t)];
   let pred_table = Func.pred_table tir in
   let live_in, live_out = Tir.Liveness.compute_non_ssa ~pred_table tir in
@@ -16,7 +18,9 @@ let check s =
 ;;
 
 let check_next_use s =
-  let tir = Driver.compile_source_to_tir s |> Or_error.ok_exn in
+  let tir =
+    Driver.compile_source_to_tir s |> Or_error.ok_exn |> Program.funcs |> List.hd_exn
+  in
   let tir = Convert_ssa.convert ~renumber:() tir in
   print_s [%message (tir : Func.t)];
   let pred_table = Func.pred_table tir in

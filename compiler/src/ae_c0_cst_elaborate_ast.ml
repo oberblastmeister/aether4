@@ -396,12 +396,13 @@ let elab_program st (prog : Cst.program) : Ast.program =
   let main_decl =
     Ast.Func_decl { name = main; ty = { ty = Ast.int_ty; params = []; span = Span.none } }
   in
-  let panic, _st = declare_func_var st { t = "_runtime_c0_panic"; span = Span.none } in
+  (* let panic, _st = declare_func_var st { t = "_runtime_c0_panic"; span = Span.none } in
   let panic_decl =
     Ast.Extern_func_defn
       { name = panic; ty = { ty = Ast.void_ty; params = []; span = Span.none } }
   in
-  panic_decl :: main_decl :: res
+  panic_decl :: main_decl :: res *)
+  main_decl :: res
 ;;
 
 let elaborate_program prog =

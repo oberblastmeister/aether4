@@ -133,7 +133,8 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
   Abs_x86.Block.create block.label body
 ;;
 
-let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
+let lower_func (func : Lir.Func.t) : Abs_x86.Func.t =
+  let st = create_state func in
   let name = func.name in
   let blocks = Ident.Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
@@ -149,9 +150,7 @@ let lower_func st (func : Lir.Func.t) : Abs_x86.Func.t =
   }
 ;;
 
-let lower func =
-  let st = create_state func in
-  let func = lower_func st func in
-  Abs_x86.Check.check func |> Or_error.ok_exn;
-  func
+let lower_program (program : Lir.Program.t) : Abs_x86.Program.t =
+  let funcs = List.map program.funcs ~f:lower_func in
+  { funcs }
 ;;
