@@ -55,7 +55,9 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
-  | Call _ -> todol [%here]
+  | Call { dst; ty; args } -> 
+  (* if List.length args >  *)
+    todol [%here]
   | Block_params params ->
     empty
     +> [ ins

@@ -70,7 +70,11 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
-  | Call _ -> todol [%here]
+  | Call { dst; ty; args } ->
+    let dst = get_temp st dst in
+    let ty = lower_ty ty in
+    let args = List.map args ~f:(Tuple2.map_both ~f1:(get_temp st) ~f2:lower_ty) in
+    empty +> [ ins (Call { dst; ty; args }) ]
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call st b in

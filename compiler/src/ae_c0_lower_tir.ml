@@ -237,7 +237,32 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
            (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src })
        ]
     ++ cont
-  | Call _ -> todol [%here]
+  | Call { func; args; ty; span } ->
+    let ty = Option.value_exn ty in
+    let info = Span.to_info span in
+    let func_sig = Hashtbl.find_exn st.global_st.func_ty_map func in
+    let arg_temps =
+      List.mapi args ~f:(fun i _arg ->
+        fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
+    in
+    let cont =
+      empty
+      +> [ ins
+             (Call
+                { dst
+                ; ty = lower_ty ty
+                ; args =
+                    List.zip_exn arg_temps func_sig.params
+                    |> List.map ~f:(fun (arg, param) -> arg, lower_ty param.ty)
+                })
+         ]
+    in
+    let cont =
+      List.zip_exn arg_temps args
+      |> List.fold_right ~init:cont ~f:(fun (arg_temp, arg_expr) cont ->
+        lower_expr st cont arg_temp arg_expr)
+    in
+    cont
 ;;
 
 let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =

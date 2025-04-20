@@ -183,7 +183,7 @@ module Instr = struct
     | Call of
         { dst : Temp.t
         ; size : Ty.t
-        ; args : Temp.t list
+        ; args : (Temp.t * Ty.t) list
         }
     | Unreachable
   [@@deriving sexp_of, variants]
@@ -213,7 +213,7 @@ module Instr = struct
       ()
     | Call { dst; size; args } ->
       on_def (Operand.Reg dst, size);
-      List.iter args ~f:(fun temp -> on_use (Operand.Reg temp))
+      (List.iter @> Fold.of_fn fst) args ~f:(fun temp -> on_use (Operand.Reg temp))
     | Block_params params ->
       List.iter params ~f:(fun param ->
         Location.iter_temp param.param ~f:(fun temp ->
@@ -269,7 +269,7 @@ module Instr = struct
       let dst = map_temp dst ~f:on_def in
       Pop { dst; size }
     | Call p ->
-      let args = List.map p.args ~f:(map_temp ~f:on_def) in
+      let args = (List.map & Tuple2.map_fst) p.args ~f:(map_temp ~f:on_def) in
       Call { p with args }
     | Block_params params ->
       let mapper =
@@ -351,6 +351,7 @@ module Instr = struct
 
   let iter_constrained_defs_exn t ~f =
     match t with
+    | Call { dst; _ } -> f (dst, Mach_reg.RAX)
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
@@ -366,7 +367,7 @@ module Instr = struct
 
   let iter_clobbers t ~f =
     match t with
-    | Call _ -> todo ()
+    | Call _ -> List.iter Call_conv.call_clobbers ~f
     | Bin { op = Idiv | Imod; _ } ->
       f Mach_reg.RDX;
       ()
@@ -375,7 +376,8 @@ module Instr = struct
 
   let iter_uses_with_known_ty t ~f =
     match t with
-    | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Call _ | Pop _ -> ()
+    | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ -> ()
+    | Call { dst = _; args; size = _ } -> List.iter args ~f
     | Push { src; size } -> f (src, size)
     | Mov { dst = _; src; size } ->
       Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))
