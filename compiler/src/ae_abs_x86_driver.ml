@@ -15,16 +15,6 @@ module Check_register_pressure = Ae_abs_x86_check_register_pressure
 open Ae_abs_x86_types
 open Ae_trace
 
-(*
-   (label ir
-  (block_params n_23 n_24 n_25)
-  (n_23 <- var n_24)
-  (rhs_6 <- eq.q lhs_4 rhs_5)
-  (rhs_7 <- add.q lhs_4 rhs_5)
-  (jump (first rhs_6 rhs_7) (second rhs_6 rhs_7))
-  (ret)
-)
-*)
 let mach_reg_id off mach_reg = Entity.Id.offset off (Mach_reg.to_enum mach_reg)
 
 let mach_reg_ident ?info off mach_reg =
@@ -44,21 +34,14 @@ let convert func =
   let module Table = Entity.Ident.Table in
   let open Table.Syntax in
   let func = Legalize.legalize_func func in
-  let func = Pre_spill.spill_func ~num_regs:3 func in
-  Check_register_pressure.check_func ~num_regs:3 func;
+  let func = Pre_spill.spill_func ~num_regs:Call_conv.num_regs func in
+  Check_register_pressure.check_func ~num_regs:Call_conv.num_regs func;
   Check.check func |> Or_error.ok_exn;
-  (* let allocation, spilled_colors = Regalloc.alloc_func func in *)
-  let allocation = Regalloc_treescan.alloc_func func in
-  trace_allocation allocation;
+  let allocation =
+    Regalloc_treescan.alloc_func ~colors:Call_conv.regalloc_usable_colors func
+  in
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
-  (* let func =
-    Post_spill.spill_func
-      ~mach_reg_gen
-      ~get_temp_color:(fun temp -> allocation.!(temp))
-      ~spilled_colors
-      func
-  in *)
   let func = Split_critical.split func in
   let func =
     Destruct_ssa.destruct

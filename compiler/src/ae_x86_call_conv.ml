@@ -8,3 +8,9 @@ let callee_saved = [ RSP; RBP ] @ callee_saved_without_stack
 let args = [ RDI; RSI; RDX; RCX; R8; R9 ]
 let ret = RAX
 let regalloc_usable_mach_regs = List.take caller_saved_without_r11 3
+
+let regalloc_usable_colors =
+  List.map regalloc_usable_mach_regs ~f:to_enum |> Int.Set.of_list
+;;
+
+let num_regs = List.length regalloc_usable_mach_regs

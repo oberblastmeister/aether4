@@ -160,6 +160,15 @@ let bool_ty = Bool Span.none
 let int_ty = Int Span.none
 let void_ty = Void Span.none
 
+let expr_span = function
+  | Ternary { span; _ }
+  | Var { var = { span; _ }; _ }
+  | Bin { span; _ }
+  | Call { span; _ }
+  | Int_const { span; _ }
+  | Bool_const { span; _ } -> span
+;;
+
 let expr_ty_exn = function
   | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } | Call { ty; _ } ->
     Option.value_exn ty

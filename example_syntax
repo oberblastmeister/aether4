@@ -1,0 +1,10 @@
+(*
+(label ir
+  (block_params n_23 n_24 n_25)
+  (n_23 <- var n_24)
+  (rhs_6 <- eq.q lhs_4 rhs_5)
+  (rhs_7 <- add.q lhs_4 rhs_5)
+  (jump (first rhs_6 rhs_7) (second rhs_6 rhs_7))
+  (ret)
+)
+*)

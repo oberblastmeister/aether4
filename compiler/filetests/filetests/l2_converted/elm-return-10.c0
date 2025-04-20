@@ -1,0 +1,60 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+  int v = 128; 
+  
+  int m1 = 2;
+  int m2 = 12;
+  int m3 = 240;
+  int m4 = 65280;
+  int m5 = 4294901760;
+  
+  int r = 0;
+  for (int i = 5; i >= 0; i -= 1)
+  {
+    int shift = 1; 
+    for(int j = 1; j < i; j += 1)
+    {
+      shift *= 2;
+    }
+  
+    if(i == 5) {
+      if((v & m5) != 0) {
+          v >>= shift;
+          r |= shift;
+      }
+    }
+    if(i == 4) {
+      if((v & m4) != 0) {
+          v >>= shift;
+          r |= shift;
+        }
+    }
+    if(i == 3) {
+      if((v & m3) != 0) {
+          v >>= shift;
+          r |= shift;
+      }
+    }
+     if(i == 2) {
+      if((v & m2) != 0) {
+          v >>= shift;
+          r |= shift;
+        }
+    }
+    if(i == 1) {
+      if((v & m1) != 0) {
+          v >>= shift;
+          r |= shift;
+        }
+    }
+  }
+  return r;
+}
+
+----
+7

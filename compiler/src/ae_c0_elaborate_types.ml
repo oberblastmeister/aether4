@@ -64,7 +64,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in
-  check_ty_eq st Span.none ty (Ast.expr_ty_exn expr);
+  check_ty_eq st (Ast.expr_span expr) ty (Ast.expr_ty_exn expr);
   expr
 ;;
 

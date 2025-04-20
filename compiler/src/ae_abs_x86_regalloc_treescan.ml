@@ -42,6 +42,10 @@ let alloc_block ~use_locations ~available_colors ~live_in ~live_out ~allocation 
       available_colors := Set.add !available_colors allocation.!(use)
     end;
     (* allocate defs *)
+    (*
+      It is important that we do the defs first before releasing dead defs instead
+      of just calculating the set different so we can check that we spilled properly
+    *)
     let defs = Instr.iter_defs instr.i |> Iter.to_list in
     begin
       let@: def = List.iter defs in
@@ -63,10 +67,7 @@ let alloc_block ~use_locations ~available_colors ~live_in ~live_out ~allocation 
   end
 ;;
 
-let alloc_func func =
-  let available_colors =
-    List.map Call_conv.regalloc_usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
-  in
+let alloc_func ~colors func =
   let pred_table = Func.pred_table func in
   let live_in_table, live_out_table = Liveness.compute ~pred_table func in
   let labels = Func.labels_postorder func in
@@ -77,7 +78,13 @@ let alloc_func func =
     let block = Func.find_block_exn func label in
     let live_in = Liveness.Live_set.find live_in_table label in
     let live_out = Liveness.Live_set.find live_out_table label in
-    alloc_block ~use_locations ~available_colors ~live_in ~live_out ~allocation block
+    alloc_block
+      ~use_locations
+      ~available_colors:colors
+      ~live_in
+      ~live_out
+      ~allocation
+      block
   end;
   allocation
 ;;
