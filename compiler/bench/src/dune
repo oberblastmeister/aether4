@@ -1,6 +1,6 @@
 (library
  (name bench)
- (libraries std accessor accessor_base accessor_core)
+ (libraries std)
  (library_flags -linkall)
  (flags
    ; turn pattern matching into error 

@@ -33,9 +33,6 @@
    (= v0.17.0))
   (core_unix
    (= v0.17.0))
-  accessor
-  accessor_base
-  accessor_core
   ; needed by cmd
   stdio
   spawn
