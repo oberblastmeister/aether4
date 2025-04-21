@@ -3,6 +3,7 @@ open Ae_abs_x86_types
 module Mach_reg = Ae_x86_mach_reg
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
+module Call_conv = Ae_x86_call_conv
 open Ae_trace
 
 module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
@@ -173,31 +174,65 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
   end
 ;;
 
-let repair_block ~edit ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_out block =
+let repair_block
+      ~is_start
+      ~edit
+      ~mach_reg_gen
+      ~ty_table
+      ~get_temp_mach_reg
+      ~live_out
+      block
+  =
   let live_out_ref = ref live_out in
   begin
     let@: instr' = Block.iter_bwd block in
-    let instr = instr'.i in
-    let live_out = !live_out_ref in
-    let live_in = Liveness.backwards_transfer instr live_out in
-    let moves_before, new_instr, moves_after =
-      repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr
-    in
-    Multi_edit.add_inserts
-      edit
-      block.label
-      (List.map moves_before ~f:(fun instr ->
-         Instr'.create ~info:(Info.create_s [%message "repair"]) instr instr'.index));
-    Multi_edit.add_replace
-      edit
-      block.label
-      (Instr'.create ?info:instr'.info new_instr instr'.index);
-    Multi_edit.add_inserts
-      edit
-      block.label
-      (List.map moves_after ~f:(fun instr ->
-         Instr'.create ~info:(Info.create_s [%message "repair"]) instr (instr'.index + 1)));
-    live_out_ref := live_in
+    if is_start && instr'.index = 0
+    then begin
+      (* TODO: assert the the prefix of temps must be in the mach_reg, allocated in tree_scan *)
+      (* Then perform moves into the stack slots *)
+      let block_params = Instr.block_params_val instr'.i |> Option.value_exn in
+      let moves, moves_rem =
+        List.zip_with_remainder block_params Call_conv.call_arguments
+      in
+      begin
+        match moves_rem with
+        (* assert for now *)
+        | Some (First _) -> todol [%here]
+        | _ -> ()
+      end;
+      (* let moves =
+        moves
+        |> List.map ~f:(fun (param, mach_reg) ->
+          { Sequentialize_parallel_moves.Move.dst = param.param
+          ; src = Mach_reg_gen.get mach_reg_gen mach_reg
+          ; ty = param.ty
+          })
+      in *)
+      ()
+    end
+    else begin
+      let instr = instr'.i in
+      let live_out = !live_out_ref in
+      let live_in = Liveness.backwards_transfer instr live_out in
+      let moves_before, new_instr, moves_after =
+        repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr
+      in
+      Multi_edit.add_inserts
+        edit
+        block.label
+        (List.map moves_before ~f:(fun instr ->
+           Instr'.create ~info:(Info.create_s [%message "repair"]) instr instr'.index));
+      Multi_edit.add_replace
+        edit
+        block.label
+        (Instr'.create ?info:instr'.info new_instr instr'.index);
+      Multi_edit.add_inserts
+        edit
+        block.label
+        (List.map moves_after ~f:(fun instr ->
+           Instr'.create ~info:(Info.create_s [%message "repair"]) instr (instr'.index + 1)));
+      live_out_ref := live_in
+    end
   end;
   ()
 ;;
@@ -213,7 +248,15 @@ let repair_func ~allocation ~mach_reg_gen func =
   begin
     let@: block = Func.iter_blocks func in
     let live_out = Liveness.Live_set.find live_out_table block.label in
-    repair_block ~edit ~ty_table ~mach_reg_gen ~get_temp_mach_reg ~live_out block;
+    let is_start = Label.equal block.label func.start in
+    repair_block
+      ~is_start
+      ~edit
+      ~ty_table
+      ~mach_reg_gen
+      ~get_temp_mach_reg
+      ~live_out
+      block;
     ()
   end;
   Func.apply_multi_edit edit func

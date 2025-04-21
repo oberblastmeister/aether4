@@ -65,7 +65,11 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     let args, rem = List.zip_with_remainder args func_sig.params in
     if Option.is_some rem
     then
-      throw_s [%message "Invalid number of arguments" ~expected:(List.length args : int)];
+      throw_s
+        [%message
+          "Invalid number of arguments"
+            ~expected:(List.length func_sig.params : int)
+            ~actual:(List.length args : int)];
     let args = List.map args ~f:(fun (arg, param) -> check_expr st arg param.ty) in
     Call { func; args; ty = Some func_sig.ty; span }
 

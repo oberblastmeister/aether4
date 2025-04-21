@@ -18,11 +18,12 @@ let regalloc_usable_colors =
 
 let num_regs = List.length regalloc_usable_mach_regs
 
-(* Make sure R11 is not present in these lists below *)
+(* Make sure R11 is not present in any of these lists below *)
 (* our current calling convention *)
 let call_clobbers = [ RCX; RDX; RBX; RSI; RDI; R8; R9; R10; R12; R13; R14; R15 ]
 let return_register = RAX
 
 (* this is in order of argument number *)
-let call_arguments = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX ]
+(* TODO: should rax be in here? *)
+let call_arguments = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ]
 let num_arguments_in_registers = List.length call_arguments

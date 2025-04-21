@@ -4,13 +4,13 @@
 )
 */
 
-int first() {
-    return 1234;
+int first(int first, int second, int third, int fourth) {
+    return 1234 + first + second + third + fourth;
 }
 
 // variable a not fully initialized, but it is never used so it is ok
 int main() {
-    return first();
+    return first(12, 1, 1, 1);
 }
 ----
-1234
+1249

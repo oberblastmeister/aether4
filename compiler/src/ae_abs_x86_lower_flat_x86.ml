@@ -230,7 +230,7 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   in
   let instrs =
     List.map labels ~f:(fun label ->
-      lower_block st (Ident.Map.find_exn func.blocks label))
+      lower_block st (Abs_x86.Func.find_block_exn func label))
     |> Bag.concat
   in
   let instrs =

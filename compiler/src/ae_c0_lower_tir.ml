@@ -56,7 +56,7 @@ let fresh_label ?(name = "fresh") ?info t : Label.t =
   Entity.Ident.create ?info name id
 ;;
 
-let add_block ?info t label instrs =
+let add_block ?(params = []) ?info t label instrs =
   (*
      make sure to add an unreachable instruction at the end so that all blocks have a terminator
   *)
@@ -64,15 +64,18 @@ let add_block ?info t label instrs =
     Tir.Block.create
       label
       (Bag.to_arrayp
-         (empty +> [ ins ?info (Block_params []) ] ++ instrs +> [ ins ?info Unreachable ]))
+         (empty
+          +> [ ins ?info (Block_params params) ]
+          ++ instrs
+          +> [ ins ?info Unreachable ]))
   in
   t.blocks <- block :: t.blocks;
   ()
 ;;
 
-let add_fresh_block ?name ?info t instrs : Label.t =
+let add_fresh_block ?name ?info ?params t instrs : Label.t =
   let label = fresh_label ?name ?info t in
-  add_block ?info t label instrs;
+  add_block ?info ?params t label instrs;
   label
 ;;
 
@@ -271,7 +274,11 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let st = create_state st in
   let start_instrs = lower_block st empty defn.body in
   let start_label =
-    add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" st start_instrs
+    let params =
+      List.map defn.params ~f:(fun param ->
+        { Tir.Block_param.param = var_temp st param.var; ty = lower_ty param.ty })
+    in
+    add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" ~params st start_instrs
   in
   let next_temp_id = Id_gen.next st.temp_gen in
   let next_label_id = Id_gen.next st.label_gen in
