@@ -25,6 +25,7 @@ open Bag.Syntax
 type st =
   { frame_layout : Frame_layout.t
   ; allocation : int Abs_x86.Temp.Table.t
+  ; func_index : int
   }
 
 let get_temp t (temp : Abs_x86.Temp.t) =
@@ -70,8 +71,8 @@ let epilogue_without_base ?info stack_size =
   empty +> [ ins (Add { dst = Reg RSP; src = Imm stack_size; size = Qword }); ins Ret ]
 ;;
 
-let label_to_string _st (label : Label.t) =
-  [%string ".L%{label.name}_%{label.id#Entity.Id}"]
+let label_to_string (st : st) (label : Label.t) =
+  [%string ".L%{label.name}_%{st.func_index#Int}_%{label.id#Entity.Id}"]
 ;;
 
 let lower_cmp ?info (cc : Condition_code.t) size ~dst ~src1 ~src2 =
@@ -200,7 +201,14 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       empty
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
       ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ())
-  | Call _ -> todol [%here]
+  | Call { dst; size = _; func; args } ->
+    let args = (List.map & Tuple2.map_fst) ~f:(get_temp st) args in
+    (* check that constraints were satisfied *)
+    List.zip_with_remainder args Call_conv.call_arguments
+    |> fst
+    |> List.iter ~f:(fun ((m1, _), m2) -> assert (Mach_reg.equal m1 m2));
+    assert (Mach_reg.equal (get_temp st dst) Call_conv.return_register);
+    empty +> [ ins (Call func) ]
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Line.t Bag.t =
@@ -227,7 +235,7 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   in
   let instrs =
     empty
-    +> Flat_x86.Line.[ Directive ".globl _c0_main"; Label "_c0_main" ]
+    +> Flat_x86.Line.[ Directive (".globl " ^ func.name); Label func.name ]
     ++ prologue
          ~info:(Info.create_s [%message "prologue"])
          (Int32.of_int_exn (Frame_layout.frame_size st.frame_layout))
@@ -253,12 +261,21 @@ let pop_callee_saved =
 
 let c0_main_export_instructions =
   Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
+  (* for alignment *)
+  @ [ Flat_x86.Line.Instr
+        { i = Sub { dst = Reg RSP; src = Imm 8l; size = Qword }; info = None }
+    ]
   @ push_callee_saved
   @ [ Flat_x86.Line.Instr { i = Call "_c0_main"; info = None } ]
   @ pop_callee_saved
+  (* for alignment *)
+  @ [ Flat_x86.Line.Instr
+        { i = Add { dst = Reg RSP; src = Imm 8l; size = Qword }; info = None }
+    ]
+  @ [ Flat_x86.Line.Instr { i = Ret; info = None } ]
 ;;
 
-let lower ~frame_layout ~allocation func =
-  let st = { frame_layout; allocation } in
+let lower ~frame_layout ~allocation ~func_index func =
+  let st = { frame_layout; allocation; func_index } in
   lower_func st func
 ;;

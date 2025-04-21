@@ -66,15 +66,18 @@ let lower_block_call st (b : Tir.Block_call.t) : Lir.Block_call.t =
   { label = b.label; args = List.map b.args ~f:(get_temp st) }
 ;;
 
+let mangle_func_name name = "_c0_" ^ name
+
 let lower_instr st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
-  | Call { dst; ty; args } ->
+  | Call { dst; ty; func; args } ->
     let dst = get_temp st dst in
+    let func = mangle_func_name func in
     let ty = lower_ty ty in
     let args = List.map args ~f:(Tuple2.map_both ~f1:(get_temp st) ~f2:lower_ty) in
-    empty +> [ ins (Call { dst; ty; args }) ]
+    empty +> [ ins (Call { dst; ty; func; args }) ]
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call st b in
@@ -137,7 +140,7 @@ let lower_block st (block : Tir.Block.t) : Lir.Block.t =
 
 let lower_func (func : Tir.Func.t) : Lir.Func.t =
   let st = create_state func in
-  let name = func.name in
+  let name = mangle_func_name func.name in
   let blocks = func.blocks |> Entity.Ident.Map.map ~f:(lower_block st) in
   let start = func.start in
   let next_temp_id = Id_gen.next st.temp_gen in

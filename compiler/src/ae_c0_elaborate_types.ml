@@ -60,7 +60,14 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
        let rhs = infer_expr st rhs in
        check_ty_eq st span (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
-  | Call { func; args; ty = _; span = _ } -> todol [%here]
+  | Call { func; args; ty = _; span } ->
+    let func_sig = Map.find_exn st.declared_funcs func in
+    let args, rem = List.zip_with_remainder args func_sig.params in
+    if Option.is_some rem
+    then
+      throw_s [%message "Invalid number of arguments" ~expected:(List.length args : int)];
+    let args = List.map args ~f:(fun (arg, param) -> check_expr st arg param.ty) in
+    Call { func; args; ty = Some func_sig.ty; span }
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in
@@ -80,7 +87,9 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
     let cond = check_expr st cond Ast.bool_ty in
     let body = check_stmt st body in
     While { cond; body; span }
-  | Return { expr; span } -> Return { expr = check_expr st expr Ast.int_ty; span }
+  | Return { expr; span } ->
+    (* TODO: fix this *)
+    Return { expr = check_expr st expr Ast.int_ty; span }
   | Effect expr ->
     let expr = infer_expr st expr in
     Effect expr

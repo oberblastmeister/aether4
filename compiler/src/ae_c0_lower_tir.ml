@@ -251,11 +251,13 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
              (Call
                 { dst
                 ; ty = lower_ty ty
+                ; func = func.name
                 ; args =
                     List.zip_exn arg_temps func_sig.params
                     |> List.map ~f:(fun (arg, param) -> arg, lower_ty param.ty)
                 })
          ]
+      ++ cont
     in
     let cont =
       List.zip_exn arg_temps args

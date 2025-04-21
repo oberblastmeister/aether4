@@ -183,6 +183,7 @@ module Instr = struct
     | Call of
         { dst : Temp.t
         ; size : Ty.t
+        ; func : string
         ; args : (Temp.t * Ty.t) list
         }
     | Unreachable
@@ -211,7 +212,7 @@ module Instr = struct
     | Pop { dst; size } ->
       on_def (Operand.Reg dst, size);
       ()
-    | Call { dst; size; args } ->
+    | Call { dst; size; func = _; args } ->
       on_def (Operand.Reg dst, size);
       (List.iter @> Fold.of_fn fst) args ~f:(fun temp -> on_use (Operand.Reg temp))
     | Block_params params ->
@@ -269,8 +270,9 @@ module Instr = struct
       let dst = map_temp dst ~f:on_def in
       Pop { dst; size }
     | Call p ->
-      let args = (List.map & Tuple2.map_fst) p.args ~f:(map_temp ~f:on_def) in
-      Call { p with args }
+      let dst = (map_temp ~f:on_def) p.dst in
+      let args = (List.map & Tuple2.map_fst) p.args ~f:(map_temp ~f:on_use) in
+      Call { p with dst; args }
     | Block_params params ->
       let mapper =
         List.map & Traverse.of_field Block_param.Fields.param & Location.map_temp
@@ -333,25 +335,44 @@ module Instr = struct
 
   let iter_constrained_uses_exn t ~f =
     match t with
-    | Bin { dst = _; op; src1; src2 } ->
-      (match op with
-       | Lshift | Rshift ->
-         (match src2 with
-          | Reg src2 -> f (src2, Mach_reg.RCX)
-          | _ -> ())
-       | Idiv | Imod ->
-         (match src1 with
-          | Reg src1 -> f (src1, Mach_reg.RAX)
-          | _ ->
-            raise_s
-              [%message "Idiv should be legalized so that src1 is reg" (src1 : Operand.t)])
-       | _ -> ())
+    | Ret { src; _ } -> begin
+      match src with
+      | Reg src -> f (src, Mach_reg.RAX)
+      | _ -> ()
+    end
+    | Call { dst = _; args; func = _; size = _ } ->
+      let zipped, rem =
+        List.zip_with_remainder (List.map args ~f:fst) Call_conv.call_arguments
+      in
+      begin
+        match rem with
+        | Some (First _) -> raise_s [%message "Don't support stack arguments yet" [%here]]
+        | _ -> ()
+      end;
+      List.iter zipped ~f;
+      ()
+    | Bin { dst = _; op; src1; src2 } -> begin
+      match op with
+      | Lshift | Rshift -> begin
+        match src2 with
+        | Reg src2 -> f (src2, Mach_reg.RCX)
+        | _ -> ()
+      end
+      | Idiv | Imod -> begin
+        match src1 with
+        | Reg src1 -> f (src1, Mach_reg.RAX)
+        | _ ->
+          raise_s
+            [%message "Idiv should be legalized so that src1 is reg" (src1 : Operand.t)]
+      end
+      | _ -> ()
+    end
     | _ -> ()
   ;;
 
   let iter_constrained_defs_exn t ~f =
     match t with
-    | Call { dst; _ } -> f (dst, Mach_reg.RAX)
+    | Call { dst; _ } -> f (dst, Call_conv.return_register)
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
@@ -377,7 +398,7 @@ module Instr = struct
   let iter_uses_with_known_ty t ~f =
     match t with
     | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ -> ()
-    | Call { dst = _; args; size = _ } -> List.iter args ~f
+    | Call { dst = _; func = _; args; size = _ } -> List.iter args ~f
     | Push { src; size } -> f (src, size)
     | Mov { dst = _; src; size } ->
       Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))

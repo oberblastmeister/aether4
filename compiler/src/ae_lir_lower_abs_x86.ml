@@ -7,6 +7,7 @@ module Bag = Ae_data_bag
 module Table = Entity.Ident.Table
 module Ident = Entity.Ident
 module Label_entity = Ae_label_entity
+module X86_call_conv = Ae_x86_call_conv
 open Ae_trace
 
 let empty = Bag.empty
@@ -55,9 +56,12 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
-  | Call { dst; ty; args } -> 
-  (* if List.length args >  *)
-    todol [%here]
+  | Call { dst; func; ty; args } ->
+    if List.length args > X86_call_conv.num_arguments_in_registers then todol [%here];
+    let ty = lower_ty ty in
+    let dst = get_temp st dst in
+    let args = List.map args ~f:(Tuple2.map_both ~f1:(get_temp st) ~f2:lower_ty) in
+    empty +> [ ins (Call { dst; func; size = ty; args }) ]
   | Block_params params ->
     empty
     +> [ ins

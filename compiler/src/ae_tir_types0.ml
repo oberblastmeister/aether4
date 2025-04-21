@@ -102,6 +102,7 @@ module Instr = struct
     | Call of
         { dst : Temp.t
         ; ty : Ty.t
+        ; func : string
         ; args : (Temp.t * Ty.t) list
         }
     | Unreachable
@@ -124,7 +125,7 @@ module Instr = struct
   let iter_uses (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
-    | Call { dst = _; ty = _; args } -> (List.iter @> Fold.of_fn fst) args ~f
+    | Call { dst = _; func = _; ty = _; args } -> (List.iter @> Fold.of_fn fst) args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;
@@ -190,7 +191,7 @@ module Instr = struct
     match t with
     | Block_params params -> (List.iter @> Fold.of_fn Block_param.to_tuple2) params ~f
     | Nop -> ()
-    | Call { dst; ty; args = _ } ->
+    | Call { dst; ty; func = _; args = _ } ->
       f (dst, ty);
       ()
     | Bin { dst; op; src1 = _; src2 = _ } ->

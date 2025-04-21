@@ -30,7 +30,7 @@ let trace_allocation allocation =
   trace_s [%message (allocation : (Temp.t * Mach_reg.t) list)]
 ;;
 
-let convert func =
+let convert ~func_index func =
   let module Table = Entity.Ident.Table in
   let open Table.Syntax in
   let func = Legalize.legalize_func func in
@@ -56,11 +56,13 @@ let convert func =
       func
   in
   let frame_layout = Frame_layout.compute func in
-  let func = Lower_flat_x86.lower ~frame_layout ~allocation func in
+  let func = Lower_flat_x86.lower ~frame_layout ~allocation ~func_index func in
   func
 ;;
 
 let convert_program (program : Program.t) =
-  let funcs = List.concat_map program.funcs ~f:convert in
+  let funcs =
+    List.concat_mapi program.funcs ~f:(fun func_index func -> convert ~func_index func)
+  in
   Flat_x86.Line.[ Directive ".text" ] @ Lower_flat_x86.c0_main_export_instructions @ funcs
 ;;

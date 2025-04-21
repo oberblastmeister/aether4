@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int first() {
+    return 1234;
+}
+
+// variable a not fully initialized, but it is never used so it is ok
+int main() {
+    return first();
+}
+----
+1234

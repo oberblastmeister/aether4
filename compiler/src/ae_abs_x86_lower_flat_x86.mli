@@ -8,5 +8,6 @@ val c0_main_export_instructions : Flat_x86.Line.t list
 val lower
   :  frame_layout:Frame_layout.t
   -> allocation:int Abs_x86.Temp.Table.t
+  -> func_index:int (* so that labels don't clash *)
   -> Abs_x86.Func.t
   -> Flat_x86.Program.t

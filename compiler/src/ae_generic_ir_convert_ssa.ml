@@ -82,7 +82,7 @@ module Make (Ir : Ir) = struct
                    must be strict, which means each temporary must be initialized on all \
                    paths before used. This allows the result to be in strict-ssa form"
                   temp
-                  [%sexp_of: Temp.t])
+                  Temp.sexp_of_t)
       in
       begin
         let@: instr = Block.iter_fwd block in
