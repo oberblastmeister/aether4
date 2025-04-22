@@ -1,14 +1,12 @@
 open Std
 open Ae_tir_types
-module Entity = Ae_entity_std
 
 exception Exn of Error.t
 
 let throw_s s = raise (Exn (Error.create_s s))
 
 let check_temp_ty ty_table temp ty =
-  let open Entity.Ident.Table.Syntax in
-  if not (Ty.equal ty_table.!(temp) ty)
+  if not (Ty.equal ty_table.Temp.Table.Syntax.!(temp) ty)
   then throw_s [%message "Type mismatch" (temp : Temp.t) (ty : Ty.t)]
 ;;
 

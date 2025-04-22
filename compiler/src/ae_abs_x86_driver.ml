@@ -24,8 +24,7 @@ let mach_reg_ident ?info off mach_reg =
 
 let trace_allocation allocation =
   let allocation =
-    Entity.Ident.Table.to_list allocation
-    |> (List.map & Tuple2.map_snd) ~f:Mach_reg.of_enum_exn
+    Temp.Table.to_list allocation |> (List.map & Tuple2.map_snd) ~f:Mach_reg.of_enum_exn
   in
   trace_s [%message (allocation : (Temp.t * Mach_reg.t) list)]
 ;;
@@ -49,7 +48,9 @@ let convert ~func_index func =
       ~in_same_reg:(fun t1 t2 ->
         let conv t =
           Location.to_either t
-          |> Either.map ~first:(fun temp -> allocation.!(temp)) ~second:Fn.id
+          |> Either.map
+               ~first:(fun temp -> allocation.Temp.Table.Syntax.!(temp))
+               ~second:Fn.id
         in
         [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
       ~get_scratch:(fun () -> Temp (Mach_reg_gen.get mach_reg_gen R11))

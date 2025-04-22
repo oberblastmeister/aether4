@@ -1,44 +1,42 @@
+(* TODO: fix this file *)
 open Std
-module Entity = Ae_entity_std
-module Temp_entity = Ae_abs_asm_temp_entity
-module Temp = Ae_abs_asm_temp_entity.Ident
-module Temp_id = Temp_entity.Id
-module Id = Entity.Id
-module Table = Entity.Ident.Table
-module Ident = Entity.Ident
 module Bounded_heap = Ae_bounded_heap
+module Temp = Ae_temp
 open Ae_trace
-open Table.Syntax
 
 module Graph = struct
   type t = Temp.Set.t Temp.Table.t [@@deriving sexp_of]
 
-  let create () = Table.create ()
-  let add (t : t) v = Table.find_or_add t v ~default:(fun () -> Ident.Set.empty) |> ignore
-  let mem (t : t) v = Table.mem t v
-  let iter_temp (t : t) ~f = Table.iter_keys t ~f
+  let create () = Temp.Table.create ()
+
+  let add (t : t) v =
+    Temp.Table.find_or_add t v ~default:(fun () -> Temp.Set.empty) |> ignore
+  ;;
+
+  let mem (t : t) v = Temp.Table.mem t v
+  let iter_temp (t : t) ~f = Temp.Table.iter_keys t ~f
 
   let add_edge (t : t) v1 v2 =
-    Table.update t v1 ~f:(function
-      | None -> Ident.Set.singleton v2
-      | Some set -> Ident.Set.add set v2);
-    Table.update t v2 ~f:(function
-      | None -> Ident.Set.singleton v1
-      | Some set -> Ident.Set.add set v1);
+    Temp.Table.update t v1 ~f:(function
+      | None -> Temp.Set.singleton v2
+      | Some set -> Set.add set v2);
+    Temp.Table.update t v2 ~f:(function
+      | None -> Temp.Set.singleton v1
+      | Some set -> Set.add set v1);
     ()
   ;;
 end
 
 let simplicial_elimination_order (graph : Graph.t) (precolored : int Temp.Map.t) ~f =
-  let heap = Bounded_heap.create ~weight_bound:(Table.length graph) () in
+  (* let heap = Bounded_heap.create ~weight_bound:(Temp.Table.length graph) () in
   let id_to_name =
-    Table.iter_keys graph |> Iter.map ~f:(fun temp -> temp.id, temp) |> Id.Table.of_iter
+    Temp.Table.iter_keys graph |> Iter.map ~f:(fun temp -> temp.id, temp) |> Id.Table.of_iter
   in
-  Table.iter_keys graph
-  |> Iter.filter ~f:(fun temp -> not (Ident.Map.mem precolored temp))
+  Temp.Table.iter_keys graph
+  |> Iter.filter ~f:(fun temp -> not (Map.mem precolored temp))
   |> Iter.iter ~f:(fun (temp : Temp.t) -> Bounded_heap.add_exn heap temp.id 0);
   let increase_neighbor_weights temp =
-    Ident.Set.iter graph.!(temp) ~f:(fun neighbor ->
+    Set.iter graph.Temp.Table.Syntax.!(temp) ~f:(fun neighbor ->
       if Bounded_heap.mem heap neighbor.id
       then Bounded_heap.increase_exn heap neighbor.id 1;
       ());
@@ -53,7 +51,8 @@ let simplicial_elimination_order (graph : Graph.t) (precolored : int Temp.Map.t)
     let temp = Id.Table.find_exn id_to_name temp_id in
     increase_neighbor_weights temp;
     Some (temp, ()))
-  |> Iter.iter ~f
+  |> Iter.iter ~f *)
+  todol [%here]
 ;;
 
 let color_graph_with_ordering
@@ -63,7 +62,7 @@ let color_graph_with_ordering
       ~precolored
       ~(graph : Graph.t)
   =
-  let temp_to_color : int Temp.Table.t = Entity.Ident.Table.create () in
+  (* let temp_to_color : int Temp.Table.t = Entity.Ident.Table.create () in
   let used_colors = ref available_colors in
   ordering
   |> Iter.iter ~f:(fun temp ->
@@ -95,7 +94,8 @@ let color_graph_with_ordering
     in
     temp_to_color.!(temp) <- color;
     ());
-  temp_to_color, !used_colors
+  temp_to_color, !used_colors *)
+  todol [%here]
 ;;
 
 let color_graph ~spilled_color ~available_colors ~graph ~precolored =

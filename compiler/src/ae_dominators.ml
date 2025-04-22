@@ -1,12 +1,9 @@
 open Std
 open Ae_trace
-module Entity = Ae_entity_std
-module Table = Entity.Ident.Table
-module Ident = Entity.Ident
-module Label_entity = Ae_label_entity
-module Label = Label_entity.Ident
 module Graph = Ae_data_graph_std
-module Dfs = Label_entity.Dfs
+module Label = Ae_label
+module Dfs = Label.Dfs
+module Table = Label.Table
 
 type node =
   { idom : Label.t
@@ -85,6 +82,7 @@ let compute_idoms ?node_length ~start (graph : Label.t Graph.Bi.t) : node Label.
 ;;
 
 let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
+  let module Table = Label.Table in
   let is_join_point preds_length = preds_length >= 2 in
   let frontier_of_node = Table.create () in
   let rec add_until node node_idom runner =
@@ -92,8 +90,8 @@ let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
     then begin
       (* add node to runner's frontier set because runner doesn't dominate node *)
       Table.update frontier_of_node runner ~f:(function
-        | None -> Ident.Set.singleton node
-        | Some fs -> Ident.Set.add fs node);
+        | None -> Label.Set.singleton node
+        | Some fs -> Set.add fs node);
       add_until node node_idom (Table.find_exn idoms runner).idom
     end
   in
@@ -167,10 +165,10 @@ module Frontier = struct
   let compute idoms = compute_frontier idoms.table
 
   let find (t : t) label =
-    Table.find t label |> Option.value_map ~f:Ident.Set.to_list ~default:[]
+    Table.find t label |> Option.value_map ~f:Set.to_list ~default:[]
   ;;
 
   let find_iter (t : t) label =
-    Table.find t label |> Option.value_map ~f:Ident.Set.iter ~default:Iter.empty
+    Table.find t label |> Option.value_map ~f:Set.iter ~default:Iter.empty
   ;;
 end

@@ -1,12 +1,12 @@
 open Std
 open Aether4
 open Ae_abs_x86_std
-module Label = Ae_label_entity.Ident
+module Label = Ae_label
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
 module Label_entity = Ae_label_entity
-module Label_intern = Entity.Intern.String_to_name.Make_global (Label_entity.Witness) ()
-module Temp_intern = Entity.Intern.String_to_name.Make_global (Temp_entity.Witness) ()
+module Label_intern = Label.Intern.Make_global ()
+module Temp_intern = Temp.Intern.Make_global ()
 
 let lab = Label_intern.intern
 let temp = Temp_intern.intern
@@ -23,7 +23,7 @@ let instrs =
 ;;
 
 let%expect_test "simple next use backwards transfer" =
-  let next_uses_out = Ident.Map.of_alist_exn [ temp "x", 10; temp "z", 20 ] |> ref in
+  let next_uses_out = Temp.Map.of_alist_exn [ temp "x", 10; temp "z", 20 ] |> ref in
   begin
     let@: instr = List.rev instrs |> List.iter in
     print_s [%message (instr : Instr.t) (next_uses_out : int Temp.Map.t ref)];
@@ -44,7 +44,7 @@ let%expect_test "simple next use backwards transfer" =
 ;;
 
 let%expect_test "compute deaths" =
-  let live_out = Ident.Set.of_list_exn [ temp "x"; temp "z" ] in
+  let live_out = Temp.Set.of_list [ temp "x"; temp "z" ] in
   let block =
     List.map ~f:(fun i -> Instr'.create_unindexed i) instrs
     |> Arrayp.of_list

@@ -5,15 +5,16 @@ module Graph = Ae_data_graph_std
 
 open struct
   module Intf = Ae_generic_ir_make_intf
-  module Entity = Ae_entity_std
+  module Label = Ae_label
+
+  (* module Entity = Ae_entity_std
   module Ident = Entity.Ident
-  module Label_entity = Ae_label_entity
-  module Label = Label_entity.Ident
   module Entity_graph_utils = Ae_entity_graph_utils
+  module Label = Ae_label *)
   module Dominators = Ae_dominators
   module Stack_slot_entity = Ae_stack_slot_entity
   module Stack_slot = Stack_slot_entity.Ident
-  module Id_gen = Entity.Id_gen
+  (* module Id_gen = Entity.Id_gen *)
 end
 
 module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
@@ -22,7 +23,6 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
   (* very important! *)
   (* the open Arg must be after the module alias *)
   open Arg
-  module Temp = Temp_entity.Ident
 
   module Instr' = struct
     module T = struct
@@ -45,8 +45,8 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
     let create_unindexed ?(ann = Ann.default) ?info i = { i; index = -1; info; ann }
     let invalid_nop = { i = Instr.nop; index = -1; info = None; ann = Ann.default }
 
-    module Table = Entity.Table.Make (T)
-    module Map = Entity.Map.Make (T)
+    (* module Table = Entity.Table.Make (T)
+    module Map = Entity.Map.Make (T) *)
   end
 
   module Block = struct
@@ -57,7 +57,7 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
         }
       [@@deriving sexp_of]
 
-      let to_int t = Entity.Id.to_int t.label.id
+      (* let to_int t = Entity.Id.to_int t.label.id *)
     end
 
     include T
@@ -92,8 +92,8 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
       Instr.iter_block_calls i.i |> Iter.map ~f:Block_call.label |> Iter.to_list
     ;;
 
-    module Table = Entity.Table.Make (T)
-    module Map = Entity.Map.Make (T)
+    (* module Table = Entity.Table.Make (T)
+    module Map = Entity.Map.Make (T) *)
   end
 
   module Adj_map = struct
@@ -152,15 +152,15 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
   module Multi_edit = struct
     type t = Edit.t list Label.Table.t [@@deriving sexp_of]
 
-    let create () = Ident.Table.create ()
+    let create () = Label.Table.create ()
 
     let add_insert t label instr =
-      Ident.Table.add_multi t ~key:label ~data:(Edit.insert instr);
+      Label.Table.add_multi t ~key:label ~data:(Edit.insert instr);
       ()
     ;;
 
     let add_edits t label edits =
-      Ident.Table.update t label ~f:(function
+      Label.Table.update t label ~f:(function
         | None -> List.rev edits
         | Some es -> List.rev_append edits es)
     ;;
@@ -168,26 +168,26 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
     let add_inserts t label inserts = add_edits t label @@ List.map inserts ~f:Edit.insert
 
     let add_remove t label instr =
-      Ident.Table.add_multi t ~key:label ~data:(Edit.remove instr);
+      Label.Table.add_multi t ~key:label ~data:(Edit.remove instr);
       ()
     ;;
 
     let add_replace t label instr =
-      Ident.Table.add_multi t ~key:label ~data:(Edit.replace instr);
+      Label.Table.add_multi t ~key:label ~data:(Edit.replace instr);
       ()
     ;;
 
     let apply_blocks ?no_sort t blocks =
-      Ident.Table.iteri t
+      Label.Table.iteri t
       |> Iter.fold ~init:blocks ~f:(fun blocks (label, edits) ->
         let edits = List.rev edits in
         let block =
-          Ident.Map.find blocks label
+          Map.find blocks label
           |> Option.value_or_thunk ~default:(fun () ->
             Block.create label (Arrayp.of_list []))
         in
         let block = Edit.apply ?no_sort edits block in
-        Ident.Map.set blocks ~key:label ~data:block)
+        Map.set blocks ~key:label ~data:block)
     ;;
   end
 end

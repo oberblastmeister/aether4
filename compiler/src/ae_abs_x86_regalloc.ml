@@ -1,24 +1,12 @@
 open Std
 open Ae_abs_x86_types
-module Entity = Ae_entity_std
-module Id = Entity.Id
-module Ident = Entity.Ident
-module Int_table = Entity.Table.Int_table
 module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
 module Mach_reg = Ae_x86_mach_reg
-module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
 open Ae_trace
-
-let mach_reg_id off mach_reg = Id.offset off (Mach_reg.to_enum mach_reg)
-
-let mach_reg_ident ?info off mach_reg =
-  let id = mach_reg_id off mach_reg in
-  Ident.create ?info (Mach_reg.to_string mach_reg) id
-;;
 
 let[@inline] build_graph_instr ~graph ~live_out ~(instr : Instr'.t) =
   let iter_pairs xs ~f =
@@ -45,7 +33,7 @@ let[@inline] build_graph_instr ~graph ~live_out ~(instr : Instr'.t) =
   in
   (* add interference edges *)
   begin
-    let@: live = Ident.Set.iter live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter in
+    let@: live = Set.iter live_out |> Iter.filter ~f:can_add_edge_to |> Iter.iter in
     List.iter defs |> Iter.iter ~f:(fun def -> Graph.add_edge graph def live)
     (* begin
       let@: mach_reg = Instr.iter_mach_reg_defs instr.i in
@@ -85,7 +73,6 @@ let build_graph_block ~graph ~live_out ~(block : Block.t) =
 ;;
 
 let build_graph (func : Func.t) =
-  let open Ident.Table.Syntax in
   let graph = Graph.create () in
   let _live_in, live_out = Liveness.compute ~pred_table:(Func.pred_table func) func in
   begin
@@ -102,7 +89,6 @@ let alloc_func (func : Func.t) =
   let available_colors =
     List.map Call_conv.regalloc_usable_mach_regs ~f:Mach_reg.to_enum |> Int.Set.of_list
   in
-  let open Ident.Table.Syntax in
   let graph = build_graph func in
   let allocation, used_colors =
     (* let precolored =
@@ -110,7 +96,7 @@ let alloc_func (func : Func.t) =
       |> List.map ~f:(fun (mach_reg, temp) -> temp, Mach_reg.to_enum mach_reg)
       |> Ident.Map.of_alist_exn
     in *)
-    let precolored = Ident.Map.empty in
+    let precolored = Temp.Map.empty in
     Regalloc.color_graph ~spilled_color:Mach_reg.num ~available_colors ~graph ~precolored
   in
   let spilled_colors = Set.diff used_colors available_colors in

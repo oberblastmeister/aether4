@@ -11,9 +11,7 @@ module Mach_reg = Ae_x86_mach_reg
 module Id_gen = Entity.Id_gen
 module Call_conv = Ae_x86_call_conv
 module Chaos_mode = Ae_chaos_mode
-module Table = Entity.Ident.Table
 module Dominators = Ae_dominators
-open Table.Syntax
 open Ae_trace
 
 let alloc_block
@@ -22,14 +20,14 @@ let alloc_block
       ~(usable_colors : Int.Set.t)
       ~live_in
       ~live_out
-      ~allocation
+      ~(allocation : _ Temp.Table.t)
       block
   =
   let available_colors =
     let used_colors =
-      Ident.Set.iter live_in
+      Set.iter live_in
       |> Iter.map ~f:(fun temp ->
-        Table.find allocation temp
+        Temp.Table.find allocation temp
         |> Option.value_exn
              ~message:
                "Variable should have been allocated a register because we traversed the \
@@ -70,7 +68,7 @@ let alloc_block
         let@: param, mach_reg = List.iter params_with_mach_reg in
         begin
           match param.param with
-          | Temp temp -> allocation.!(temp) <- Mach_reg.to_enum mach_reg
+          | Temp temp -> allocation.Temp.Table.Syntax.!(temp) <- Mach_reg.to_enum mach_reg
           | _ -> todol [%here]
         end
       end
@@ -80,10 +78,12 @@ let alloc_block
       begin
         let@: use =
           Instr.iter_uses instr'.i
-          |> Iter.filter ~f:(fun temp -> Ident.Set.mem deaths.@(instr'.index) temp)
+          |> Iter.filter ~f:(fun temp -> Set.mem deaths.@(instr'.index) temp)
         in
-        if Set.mem usable_colors allocation.!(use)
-        then available_colors := Set.add !available_colors allocation.!(use)
+        if Set.mem usable_colors allocation.Temp.Table.Syntax.!(use)
+        then
+          available_colors
+          := Set.add !available_colors allocation.Temp.Table.Syntax.!(use)
       end;
       (* allocate defs *)
       (*
@@ -98,16 +98,19 @@ let alloc_block
           |> Option.value_exn ~message:"No colors left, but we should have pre spilled"
         in
         available_colors := Set.remove !available_colors color;
-        allocation.!(def) <- color
+        allocation.Temp.Table.Syntax.!(def) <- color
       end;
       (* release dead defs *)
       (* TODO: maybe check that the color is in the usable ones *)
       begin
         let@: def =
-          List.iter defs |> Iter.filter ~f:(fun def -> not (Table.mem use_locations def))
+          List.iter defs
+          |> Iter.filter ~f:(fun def -> not (Temp.Table.mem use_locations def))
         in
-        if Set.mem usable_colors allocation.!(def)
-        then available_colors := Set.add !available_colors allocation.!(def)
+        if Set.mem usable_colors allocation.Temp.Table.Syntax.!(def)
+        then
+          available_colors
+          := Set.add !available_colors allocation.Temp.Table.Syntax.!(def)
       end
     end
   end
@@ -117,7 +120,7 @@ let alloc_func ~colors func =
   let pred_table = Func.pred_table func in
   let live_in_table, live_out_table = Liveness.compute ~pred_table func in
   let labels = Func.labels_postorder func in
-  let allocation = Table.create () in
+  let allocation = Temp.Table.create () in
   let _, use_locations = Liveness.compute_def_use_labels func in
   begin
     let@: label = Vec.iter_rev labels in

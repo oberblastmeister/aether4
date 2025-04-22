@@ -7,9 +7,8 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
-  module Label_entity = Ae_label_entity
+  module Label = Ae_label
   module Stack_slot_entity = Ae_stack_slot_entity
-  module Label = Label_entity.Ident
   module Dominators = Ae_dominators
   module Graph = Ae_data_graph_std
 end
@@ -19,7 +18,6 @@ module type Arg = Ae_generic_ir_sigs.Instr_S
 module type S = sig
   module Arg : Arg
   open Arg
-  module Temp := Temp_entity.Ident
 
   module Instr' : sig
     type t =
@@ -35,8 +33,8 @@ module type S = sig
     val create : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> int -> t
     val create_unindexed : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> t
 
-    module Table : Entity.Table.S with type 'w Key.t = t
-    module Map : Entity.Map.S with type 'w Key.t = t
+    (* module Table : Entity.Table.S with type 'w Key.t = t
+    module Map : Entity.Map.S with type 'w Key.t = t *)
   end
 
   module Block : sig
@@ -56,8 +54,8 @@ module type S = sig
     val create_id : Label.t -> Instr'.t iarray -> t
     val get_succ : t -> Label.t list
 
-    module Table : Entity.Table.S with type 'w Key.t = t
-    module Map : Entity.Map.S with type 'w Key.t = t
+    (* module Table : Entity.Table.S with type 'w Key.t = t
+    module Map : Entity.Map.S with type 'w Key.t = t *)
   end
 
   module Adj_map : sig

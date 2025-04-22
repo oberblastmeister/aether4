@@ -9,10 +9,8 @@ open struct
   module Generic_ir = Ae_generic_ir_std
 end
 
-module Temp_entity = Entity.Make ()
-module Temp = Temp_entity.Ident
-module Label_entity = Ae_label_entity
-module Label = Label_entity.Ident
+module Temp = Ae_temp
+module Label = Ae_label
 
 module Ty = struct
   type t =

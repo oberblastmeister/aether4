@@ -1,6 +1,5 @@
 open Std
-module Label_entity = Ae_label_entity
-module Label = Label_entity.Ident
+module Label = Ae_label
 module Ast = Ae_c0_ast
 module Tir = Ae_tir_types
 module Entity = Ae_entity_std
@@ -23,17 +22,17 @@ let create_global_state _program =
 ;;
 
 type st =
-  { temp_gen : Tir.Temp_entity.Witness.t Id_gen.t
+  { temp_gen : Temp.Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
-  ; label_gen : Tir.Label_entity.Witness.t Id_gen.t
+  ; label_gen : Label.Id_gen.t
   ; mutable blocks : Tir.Block.t list
   ; global_st : global_st
   }
 
 let create_state global_st =
-  { temp_gen = Id_gen.create ()
+  { temp_gen = Temp.Id_gen.create 0
   ; var_to_temp = Ast.Var.Table.create ()
-  ; label_gen = Id_gen.create ()
+  ; label_gen = Label.Id_gen.create 0
   ; blocks = []
   ; global_st
   }
@@ -41,19 +40,19 @@ let create_state global_st =
 
 let var_temp t var =
   Hashtbl.find_or_add t.var_to_temp var ~default:(fun () ->
-    let id = Id_gen.next t.temp_gen in
-    let temp = Entity.Ident.create ~info:(Span.to_info var.span) var.name id in
+    let id = Temp.Id_gen.get t.temp_gen in
+    let temp = Temp.create ~info:(Span.to_info var.span) var.name id in
     temp)
 ;;
 
 let fresh_temp ?(name = "fresh") ?info t : Temp.t =
-  let id = Id_gen.next t.temp_gen in
-  Entity.Ident.create ?info name id
+  let id = Temp.Id_gen.get t.temp_gen in
+  Temp.create ?info name id
 ;;
 
 let fresh_label ?(name = "fresh") ?info t : Label.t =
-  let id = Id_gen.next t.label_gen in
-  Entity.Ident.create ?info name id
+  let id = Label.Id_gen.get t.label_gen in
+  Label.create ?info name id
 ;;
 
 let add_block ?(params = []) ?info t label instrs =
@@ -280,13 +279,12 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
     in
     add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" ~params st start_instrs
   in
-  let next_temp_id = Id_gen.next st.temp_gen in
-  let next_label_id = Id_gen.next st.label_gen in
+  let next_temp_id = Temp.Id_gen.get st.temp_gen in
+  let next_label_id = Label.Id_gen.get st.label_gen in
   let blocks = st.blocks in
   let func : Tir.Func.t =
     { name = defn.name.name
-    ; blocks =
-        blocks |> List.map ~f:(fun b -> b.label, b) |> Entity.Ident.Map.of_alist_exn
+    ; blocks = blocks |> List.map ~f:(fun b -> b.label, b) |> Label.Map.of_alist_exn
     ; start = start_label
     ; next_temp_id
     ; next_label_id

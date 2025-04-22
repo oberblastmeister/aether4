@@ -1,8 +1,6 @@
 open Std
 open Ae_abs_x86_types
 module Mach_reg = Ae_x86_mach_reg
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
 module Call_conv = Ae_x86_call_conv
 open Ae_trace
 
@@ -16,7 +14,6 @@ module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (stru
   with a definition that is constrained
 *)
 let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr =
-  let open Ident.Table.Syntax in
   let constrained_uses = Instr.iter_constrained_uses_exn instr |> Iter.to_list in
   let constrained_defs = Instr.iter_constrained_defs_exn instr |> Iter.to_list in
   if List.is_empty constrained_uses && List.is_empty constrained_defs
@@ -25,10 +22,10 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     let uses = Instr.iter_uses instr |> Iter.to_list in
     let defs = Instr.iter_defs instr |> Iter.to_list in
     let live_through =
-      Ident.Set.iter live_in |> Iter.filter ~f:(Ident.Set.mem live_out) |> Iter.to_list
+      Set.iter live_in |> Iter.filter ~f:(Set.mem live_out) |> Iter.to_list
     in
-    let constrained_uses_map = Ident.Map.of_alist_exn constrained_uses in
-    let constrained_defs_map = Ident.Map.of_alist_exn constrained_defs in
+    let constrained_uses_map = Temp.Map.of_alist_exn constrained_uses in
+    let constrained_defs_map = Temp.Map.of_alist_exn constrained_defs in
     let clobbers = Instr.iter_clobbers instr |> Iter.to_list in
     let used_mach_regs =
       List.map ~f:snd constrained_uses |> Set.of_list (module Mach_reg)
@@ -64,32 +61,32 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     in
     let parallel_moves_before = Lstack.create () in
     (* first allocate constrained uses *)
-    let allocation = ref Ident.Map.empty in
+    let allocation = ref Temp.Map.empty in
     List.iter constrained_uses ~f:(fun (temp, mach_reg) ->
-      allocation := Ident.Map.add_exn !allocation ~key:temp ~data:mach_reg;
+      allocation := Map.add_exn !allocation ~key:temp ~data:mach_reg;
       Lstack.push parallel_moves_before (mach_reg, temp));
     (* then allocate live through temps **)
     begin
       let@: live_through = List.iter live_through in
-      match Ident.Map.find constrained_uses_map live_through with
+      match Map.find constrained_uses_map live_through with
       | Some constrained_to ->
-        assert (Ident.Map.mem !allocation live_through);
+        assert (Map.mem !allocation live_through);
         if Set.mem defined_mach_regs constrained_to
         then begin
           (* now duplicate *)
           let mach_reg = alloc_register available_mach_regs live_through in
           (* overwrite the allocation to a copy *)
-          allocation := Ident.Map.set !allocation ~key:live_through ~data:mach_reg;
+          allocation := Map.set !allocation ~key:live_through ~data:mach_reg;
           Lstack.push parallel_moves_before (mach_reg, live_through)
         end
         else begin
           (* don't need to move it, because we already moved all constrained uses above *)
-          assert (
-            Mach_reg.equal (Ident.Map.find_exn !allocation live_through) constrained_to)
+          assert (Mach_reg.equal (Map.find_exn !allocation live_through) constrained_to)
         end
       | None ->
         let mach_reg = alloc_register available_mach_regs live_through in
-        allocation := Ident.Map.set !allocation ~key:live_through ~data:mach_reg;
+        (* TODO: maybe use add_exn here *)
+        allocation := Map.set !allocation ~key:live_through ~data:mach_reg;
         Lstack.push parallel_moves_before (mach_reg, live_through)
     end;
     (* then allocate all used temps that died here *)
@@ -103,33 +100,33 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         |> ref
       in
       let@: last_use =
-        List.iter uses |> Iter.filter ~f:(fun use -> not (Ident.Map.mem !allocation use))
+        List.iter uses |> Iter.filter ~f:(fun use -> not (Map.mem !allocation use))
       in
-      assert (not (Ident.Set.mem live_out last_use));
-      assert (not (Ident.Map.mem constrained_uses_map last_use));
+      assert (not (Set.mem live_out last_use));
+      assert (not (Map.mem constrained_uses_map last_use));
       let mach_reg = alloc_register available_mach_regs last_use in
-      allocation := Ident.Map.add_exn !allocation ~key:last_use ~data:mach_reg;
+      allocation := Map.add_exn !allocation ~key:last_use ~data:mach_reg;
       Lstack.push parallel_moves_before (mach_reg, last_use)
     end;
     let parallel_moves_before = Lstack.to_list_rev parallel_moves_before in
     List.iter constrained_defs ~f:(fun (def, mach_reg) ->
-      allocation := Ident.Map.add_exn !allocation ~key:def ~data:mach_reg);
+      allocation := Map.add_exn !allocation ~key:def ~data:mach_reg);
     begin
       let@: def =
         List.iter defs
-        |> Iter.filter ~f:(fun def -> not (Ident.Map.mem constrained_defs_map def))
+        |> Iter.filter ~f:(fun def -> not (Map.mem constrained_defs_map def))
       in
       let mach_reg = alloc_register available_mach_regs def in
-      allocation := Ident.Map.add_exn !allocation ~key:def ~data:mach_reg
+      allocation := Map.add_exn !allocation ~key:def ~data:mach_reg
     end;
     let allocation = !allocation in
     let parallel_moves_after =
-      Ident.Map.to_alist allocation
+      Map.to_alist allocation
       (* very important!
       We must do this because uses that die here have registers that are reused by the register allocation with some def.
       This would cause a parallel move to have duplicate move destinations, which is incorrect.
       *)
-      |> List.filter ~f:(fun (temp, _) -> Ident.Set.mem live_out temp)
+      |> List.filter ~f:(fun (temp, _) -> Set.mem live_out temp)
     in
     let in_same_reg t1 t2 =
       Mach_reg.equal (get_temp_mach_reg t1) (get_temp_mach_reg t2)
@@ -143,7 +140,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         List.map parallel_moves_before ~f:(fun (mach_reg, temp) ->
           { Sequentialize_parallel_moves.Move.dst = Mach_reg_gen.get mach_reg_gen mach_reg
           ; src = temp
-          ; ty = ty_table.!(temp)
+          ; ty = ty_table.Temp.Table.Syntax.!(temp)
           })
       in
       sequentialize parallel_moves_before
@@ -153,7 +150,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         List.map parallel_moves_after ~f:(fun (temp, mach_reg) ->
           { Sequentialize_parallel_moves.Move.dst = temp
           ; src = Mach_reg_gen.get mach_reg_gen mach_reg
-          ; ty = ty_table.!(temp)
+          ; ty = ty_table.Temp.Table.Syntax.!(temp)
           })
       in
       sequentialize parallel_moves_after
@@ -164,11 +161,11 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     in
     let new_instr =
       let@: temp = Instr.map_uses instr in
-      Mach_reg_gen.get mach_reg_gen (Ident.Map.find_exn allocation temp)
+      Mach_reg_gen.get mach_reg_gen (Map.find_exn allocation temp)
     in
     let new_instr =
       let@: temp = Instr.map_defs new_instr in
-      Mach_reg_gen.get mach_reg_gen (Ident.Map.find_exn allocation temp)
+      Mach_reg_gen.get mach_reg_gen (Map.find_exn allocation temp)
     in
     convert sequential_moves_before, new_instr, convert sequential_moves_after
   end
@@ -243,7 +240,7 @@ let repair_func ~allocation ~mach_reg_gen func =
   let _live_in_table, live_out_table = Liveness.compute ~pred_table func in
   let edit = Multi_edit.create () in
   let get_temp_mach_reg temp =
-    Entity.Ident.Table.find_exn allocation temp |> Mach_reg.of_enum_exn
+    Temp.Table.find_exn allocation temp |> Mach_reg.of_enum_exn
   in
   begin
     let@: block = Func.iter_blocks func in

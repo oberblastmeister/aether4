@@ -5,8 +5,8 @@ module Make (Ir : Ir) = struct
   open Ir
 
   let split (func : Func.t) =
-    let module Table = Ident.Table in
-    let open Ident.Table.Syntax in
+    let module Table = Label.Table in
+    let open Table.Syntax in
     let pred_table = Func.pred_table func in
     let edit = Multi_edit.create () in
     let label_gen = Func.create_label_gen func in
@@ -22,7 +22,7 @@ module Make (Ir : Ir) = struct
           let preds = pred_table.!(Block_call.label block_call) in
           if List.length preds > 1
           then begin
-            let new_label = Ident.freshen label_gen (Block_call.label block_call) in
+            let new_label = Label.freshen label_gen (Block_call.label block_call) in
             Multi_edit.add_insert edit new_label (Instr'.create (Instr.block_params []) 0);
             (* this block jumps to the original destination *)
             Multi_edit.add_insert edit new_label (Instr'.create (Instr.jump block_call) 0);

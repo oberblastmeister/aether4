@@ -5,10 +5,9 @@ module Tir = Ae_tir_std
 open Tir
 module Entity = Ae_entity_std
 module Ident = Entity.Ident
-module Label_entity = Ae_label_entity
-module Label = Label_entity.Ident
-module Label_intern = Entity.Intern.String_to_name.Make_global (Label_entity.Witness) ()
-module Temp_intern = Entity.Intern.String_to_name.Make_global (Temp_entity.Witness) ()
+module Label = Ae_label
+module Label_intern = Label.Intern.Make_global ()
+module Temp_intern = Temp.Intern.Make_global ()
 
 let lab = Label_intern.intern
 let temp = Temp_intern.intern
@@ -43,7 +42,7 @@ let%expect_test "smoke" =
   let blocks =
     blocks
     |> List.map ~f:(fun (lab, block) -> lab, Block.create lab (Arrayp.of_list block))
-    |> Ident.Map.of_alist_exn
+    |> Label.Map.of_alist_exn
   in
   let func =
     { Func.name = "main"

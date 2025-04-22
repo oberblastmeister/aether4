@@ -1,5 +1,9 @@
 open Std
-module Sigs = Ae_generic_ir_sigs
+
+open struct
+  module Sigs = Ae_generic_ir_sigs
+  module Temp = Ae_temp
+end
 
 module Make (Ir : Sigs.Ir_simple) = struct
   include Ir
@@ -20,19 +24,17 @@ module Make (Ir : Sigs.Ir_simple) = struct
     open Func
 
     let get_ty_table func =
-      let module Table = Ident.Table in
-      let open Table.Syntax in
-      let table = Table.create () in
+      let table = Temp.Table.create () in
       begin
         let@: block = iter_blocks func in
         let@: instr = Block.iter_fwd block in
         let@: def, ty = Instr.iter_defs_with_ty instr.i in
-        if not (Table.mem table def)
+        if not (Temp.Table.mem table def)
         then begin
-          table.!(def) <- ty
+          table.Temp.Table.Syntax.!(def) <- ty
         end
         else begin
-          assert (Ty.equal table.!(def) ty)
+          assert (Ty.equal table.Temp.Table.Syntax.!(def) ty)
         end
       end;
       table

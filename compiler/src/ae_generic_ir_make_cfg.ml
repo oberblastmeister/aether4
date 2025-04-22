@@ -1,15 +1,10 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
-  module Ident = Entity.Ident
-  module Label_entity = Ae_label_entity
-  module Label = Label_entity.Ident
-  module Entity_graph_utils = Ae_entity_graph_utils
+  module Label = Ae_label
   module Dominators = Ae_dominators
   module Stack_slot_entity = Ae_stack_slot_entity
   module Stack_slot = Stack_slot_entity.Ident
-  module Id_gen = Entity.Id_gen
   module Graph = Ae_data_graph_std
 end
 
@@ -58,6 +53,67 @@ module Make
        val blocks : t -> Block.t Label.Map.t
        val set_blocks : t -> Block.t Label.Map.t -> t
      end) : Make_cfg_S(Block)(Func).S = struct
+  module Entity_graph_utils = struct
+    module Table = Label.Table
+
+    let get_pred_table ({ succs; all_nodes } : _ Graph.t) =
+      let open Label.Table.Syntax in
+      let preds = Label.Table.create () in
+      Iter.iter all_nodes ~f:(fun n ->
+        (* make sure to initialize to empty *)
+        if not (Label.Table.mem preds n) then preds.!(n) <- [];
+        succs n
+        |> Iter.iter ~f:(fun succ ->
+          Label.Table.update preds succ ~f:(fun o ->
+            Option.value_map ~default:[ n ] ~f:(List.cons n) o)));
+      preds
+    ;;
+
+    let graph_of_adj_map map =
+      Graph.
+        { succs =
+            (fun n -> Map.find map n |> Option.value_map ~default:Iter.empty ~f:List.iter)
+        ; all_nodes = Map.iter_keys map
+        }
+    ;;
+
+    let graph_of_adj_table table =
+      Graph.
+        { succs =
+            (fun n ->
+              Label.Table.find table n
+              |> Option.value_map ~default:Iter.empty ~f:List.iter)
+        ; all_nodes = Label.Table.iter_keys table
+        }
+    ;;
+
+    let bi_graph_of_adj_table ~succ_table ~pred_table =
+      Graph.Bi.
+        { succs =
+            (fun n ->
+              Label.Table.find succ_table n
+              |> Option.value_map ~default:Iter.empty ~f:List.iter)
+        ; preds =
+            (fun n ->
+              Label.Table.find pred_table n
+              |> Option.value_map ~default:Iter.empty ~f:List.iter)
+        ; all_nodes = Label.Table.iter_keys succ_table
+        }
+    ;;
+
+    let to_bi g =
+      let pred_table = get_pred_table g in
+      Graph.Bi.
+        { succs = g.succs
+        ; preds =
+            (fun n ->
+              Label.Table.find pred_table n
+              |> Option.value_map ~default:Iter.empty ~f:List.iter)
+        ; all_nodes = g.all_nodes
+        }
+    ;;
+  end
+
   module Adj_map = struct
     type t = Label.t list Label.Map.t
   end
@@ -72,21 +128,21 @@ module Make
     let start_block func =
       let start = Func.start func in
       let blocks = Func.blocks func in
-      Entity.Ident.Map.find blocks start
+      Map.find blocks start
       |> Option.value_or_thunk ~default:(fun () ->
         raise_s [%message "invariant broken: start block did not exist" (start : Label.t)])
     ;;
 
-    let find_block_exn func label = Entity.Ident.Map.find_exn (Func.blocks func) label
-    let succ_map func = Func.blocks func |> Entity.Ident.Map.map ~f:Block.get_succ
+    let find_block_exn func label = Map.find_exn (Func.blocks func) label
+    let succ_map func = Func.blocks func |> Map.map ~f:Block.get_succ
 
     let succ_list func =
       Func.blocks func
-      |> Entity.Ident.Map.to_alist
+      |> Map.to_alist
       |> List.map ~f:(fun (lab, b) -> lab, Block.get_succ b)
     ;;
 
-    let succ_table func = succ_list func |> Entity.Ident.Table.of_list
+    let succ_table func = succ_list func |> Label.Table.of_list
 
     let pred_table_of_succ succ =
       Entity_graph_utils.(get_pred_table (graph_of_adj_table succ))
@@ -107,14 +163,14 @@ module Make
       Dominators.Tree.of_immediate idoms
     ;;
 
-    let iter_blocks t = Func.blocks t |> Ident.Map.iter
+    let iter_blocks t = Func.blocks t |> Map.iter
 
     let labels_reverse_postorder func =
-      Label_entity.Dfs.reverse_postorder ~start:[ Func.start func ] (graph func)
+      Label.Dfs.reverse_postorder ~start:[ Func.start func ] (graph func)
     ;;
 
     let labels_postorder func =
-      Label_entity.Dfs.postorder ~start:[ Func.start func ] (graph func)
+      Label.Dfs.postorder ~start:[ Func.start func ] (graph func)
     ;;
   end
 end

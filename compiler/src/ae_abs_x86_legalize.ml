@@ -17,7 +17,7 @@ let legalize_block ~edit ~temp_gen block =
       (match src1 with
        | Reg _ -> ()
        | _ ->
-         let temp = Ident.fresh ~name:"legalize" temp_gen in
+         let temp = Temp.fresh ~name:"legalize" temp_gen in
          Multi_edit.add_insert
            edit
            block.label
@@ -32,7 +32,7 @@ let legalize_block ~edit ~temp_gen block =
       (match dst with
        | Reg _ -> ()
        | _ ->
-         let temp = Ident.fresh ~name:"legalize" temp_gen in
+         let temp = Temp.fresh ~name:"legalize" temp_gen in
          Multi_edit.add_replace
            edit
            block.label

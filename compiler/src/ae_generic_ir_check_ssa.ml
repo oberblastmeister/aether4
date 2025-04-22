@@ -5,24 +5,22 @@ module Make (Ir : Ir) = struct
   open Ir
 
   let check_all_temps_unique func =
-    let module Table = Ident.Table in
-    let open Table.Syntax in
     let errors = Stack.create () in
-    let defines = Table.create () in
+    let defines = Temp.Table.create () in
     begin
       let@: block = Func.iter_blocks func in
       let@: instr = Block.iter_fwd block in
       begin
         let@: def = Instr.iter_defs instr.i in
         begin
-          if Table.mem defines def
+          if Temp.Table.mem defines def
           then begin
             Stack.push
               errors
               (Error.create "Temp was defined more than once" def Temp.sexp_of_t)
           end
           else begin
-            defines.!(def) <- ()
+            defines.Temp.Table.Syntax.!(def) <- ()
           end
         end
       end
@@ -37,13 +35,13 @@ module Make (Ir : Ir) = struct
     let start = Func.start func in
     let errors = Stack.create () in
     let rec go scope label =
-      let block = Ident.Map.find_exn (Func.blocks func) label in
+      let block = Map.find_exn (Func.blocks func) label in
       let scope = ref scope in
       begin
         let@: instr = Block.iter_fwd block in
         begin
           let@: use = Instr.iter_uses instr.i in
-          if not (Ident.Set.mem !scope use)
+          if not (Set.mem !scope use)
           then begin
             Stack.push errors
             @@ Error.create "A use was not dominated by a define" use Temp.sexp_of_t
@@ -51,7 +49,7 @@ module Make (Ir : Ir) = struct
         end;
         begin
           let@: def = Instr.iter_defs instr.i in
-          scope := Ident.Set.add !scope def
+          scope := Set.add !scope def
         end
       end;
       begin
@@ -59,7 +57,7 @@ module Make (Ir : Ir) = struct
         go !scope next_label
       end
     in
-    go Ident.Set.empty start;
+    go Temp.Set.empty start;
     if Stack.is_empty errors
     then Ok ()
     else Stack.to_list errors |> Error.of_list |> Error

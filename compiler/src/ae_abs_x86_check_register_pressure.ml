@@ -24,7 +24,7 @@ let check_block ~num_regs ~live_out (block : Block.t) =
     let live_out = !live_out_ref in
     let live_in = Liveness.backwards_transfer instr live_out in
     let live_through =
-      Ident.Set.iter live_in |> Iter.filter ~f:(Ident.Set.mem live_out) |> Iter.to_list
+      Set.iter live_in |> Iter.filter ~f:(Set.mem live_out) |> Iter.to_list
     in
     let defs = Instr.iter_defs instr |> Iter.to_list in
     let clobbers = Instr.iter_clobbers instr |> Iter.to_list in

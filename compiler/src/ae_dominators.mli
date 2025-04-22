@@ -1,9 +1,6 @@
 open Std
-module Entity := Ae_entity_std
-module Table := Entity.Ident.Table
-module Label_entity := Ae_label_entity
-module Label := Label_entity.Ident
 module Graph := Ae_data_graph_std
+module Label := Ae_label
 
 type t [@@deriving sexp_of]
 

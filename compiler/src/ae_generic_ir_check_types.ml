@@ -1,6 +1,7 @@
 open Std
 module Entity = Ae_entity_std
-module Label = Ae_label_entity.Ident
+module Label = Ae_label
+module Temp = Ae_temp
 open Ae_generic_ir_sigs
 
 (* TODO: check calls when we add those *)
@@ -12,8 +13,7 @@ module Make (Ir : Ir) = struct
   let throw_s s = raise (Exn (Error.create_s s))
 
   let check_temp_ty ty_table temp ty =
-    let open Entity.Ident.Table.Syntax in
-    let temp_ty = ty_table.!(temp) in
+    let temp_ty = ty_table.Temp.Table.Syntax.!(temp) in
     if not (Ty.equal temp_ty ty)
     then throw_s [%message "Type mismatch" (temp : Temp.t) (temp_ty : Ty.t) (ty : Ty.t)]
   ;;

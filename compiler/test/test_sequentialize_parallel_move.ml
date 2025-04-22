@@ -3,7 +3,7 @@ open Aether4
 module Tir = Ae_tir_std
 open Tir
 module Entity = Ae_entity_std
-module Temp_intern = Entity.Intern.String_to_name.Make_global (Tir.Temp_entity.Witness) ()
+module Temp_intern = Temp.Intern.Make_global ()
 module Generic_ir = Ae_generic_ir_std
 
 let temp = Temp_intern.intern

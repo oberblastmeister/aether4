@@ -6,10 +6,8 @@ open struct
 end
 
 module Ty = Ae_x86_ty
-module Temp_entity = Ae_abs_asm_temp_entity
-module Temp = Temp_entity.Ident
-module Label_entity = Ae_label_entity
-module Label = Label_entity.Ident
+module Temp = Ae_temp
+module Label = Ae_label
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot_entity = Ae_stack_slot_entity
 module Stack_slot = Stack_slot_entity.Ident
@@ -520,17 +518,17 @@ end
 module Mach_reg_gen = struct
   type t =
     { table : (Mach_reg.t, Temp.t) Hashtbl.t
-    ; mutable temp_gen : Temp_entity.Id.t
+    ; mutable id : int
     ; allocation : int Temp.Table.t option
     }
 
   let get t mach_reg =
     let open Entity.Ident.Table.Syntax in
     Hashtbl.find_or_add t.table mach_reg ~default:(fun () ->
-      let ident = Entity.Ident.create (Mach_reg.to_string mach_reg) t.temp_gen in
+      let ident = Temp.create (Mach_reg.to_string mach_reg) t.id in
       Option.iter t.allocation ~f:(fun allocation ->
-        allocation.!(ident) <- Mach_reg.to_enum mach_reg);
-      t.temp_gen <- Entity.Id.succ t.temp_gen;
+        allocation.Temp.Table.Syntax.!(ident) <- Mach_reg.to_enum mach_reg);
+      t.id <- t.id + 1;
       ident)
   ;;
 end

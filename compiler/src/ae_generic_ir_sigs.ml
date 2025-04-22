@@ -2,17 +2,16 @@ open Std
 
 open struct
   module Entity = Ae_entity_std
-  module Label_entity = Ae_label_entity
   module Stack_slot_entity = Ae_stack_slot_entity
-  module Label = Label_entity.Ident
+  module Label = Ae_label
+  module Temp = Ae_temp
   module Dominators = Ae_dominators
   module Graph = Ae_data_graph_std
+  module Id_gen = Ae_id_gen
 end
 
+(* TODO: make everything here abstract *)
 module type Instr_S = sig
-  module Temp_entity : Entity.S
-  module Temp : module type of Temp_entity.Ident
-
   module Location : sig
     type t [@@deriving sexp_of]
 
@@ -93,9 +92,6 @@ module type Ir_simple = sig
     val map : t -> f:(Instr.t -> Instr.t) -> t
     val create : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> int -> t
     val create_unindexed : ?ann:Ann.t -> ?info:Info.t -> Instr.t -> t
-
-    module Table : Entity.Table.S with type 'w Key.t = t
-    module Map : Entity.Map.S with type 'w Key.t = t
   end
 
   module Block : sig
@@ -113,9 +109,6 @@ module type Ir_simple = sig
     val find_block_params : t -> Instr'.t
     val create : Label.t -> (Instr'.t, [> read ]) Arrayp.t -> t
     val create_id : Label.t -> Instr'.t iarray -> t
-
-    module Table : Entity.Table.S with type 'w Key.t = t
-    module Map : Entity.Map.S with type 'w Key.t = t
   end
 
   module Adj_map : sig
@@ -153,10 +146,10 @@ module type Ir_simple = sig
     val blocks : t -> Block.t Label.Map.t
     val set_blocks : t -> Block.t Label.Map.t -> t
     val apply_multi_edit : ?no_sort:unit -> Multi_edit.t -> t -> t
-    val create_temp_gen : t -> Temp_entity.Witness.t Entity.Id_gen.t
-    val apply_temp_gen : Temp_entity.Witness.t Entity.Id_gen.t -> t -> t
-    val create_label_gen : t -> Label_entity.Witness.t Entity.Id_gen.t
-    val apply_label_gen : Label_entity.Witness.t Entity.Id_gen.t -> t -> t
+    val create_temp_gen : t -> Temp.Id_gen.t
+    val apply_temp_gen : ?renumber:unit -> Temp.Id_gen.t -> t -> t
+    val create_label_gen : t -> Label.Id_gen.t
+    val apply_label_gen : ?renumber:unit -> Label.Id_gen.t -> t -> t
     val start_block : t -> Block.t
     val succ_map : t -> Adj_map.t
     val iter_blocks : t -> Block.t Iter.t
@@ -176,7 +169,6 @@ end
 (* using make ir_extnsion *)
 module type Ir = sig
   include Ir_simple
-  module Temp := Temp_entity.Ident
 
   module Func : sig
     include module type of Func

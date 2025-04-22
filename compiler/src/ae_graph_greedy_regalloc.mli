@@ -1,6 +1,5 @@
 open Std
-module Entity := Ae_entity_std
-module Temp := Ae_abs_asm_temp_entity.Ident
+module Temp := Ae_temp
 
 (*
    All Temp.t must be added to the interference graph,

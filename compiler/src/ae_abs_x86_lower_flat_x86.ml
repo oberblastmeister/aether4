@@ -10,12 +10,12 @@ module Flat_x86 = Ae_flat_x86_types
 module Bag = Ae_data_bag
 module Regalloc = Ae_abs_x86_regalloc
 module Mach_reg = Ae_x86_mach_reg
-module Label_entity = Ae_label_entity
-module Label = Ae_label_entity.Ident
+module Label = Ae_label
 module Condition_code = Ae_x86_condition_code
 module Frame_layout = Ae_abs_x86_frame_layout
 module Address = Ae_x86_address
 module Call_conv = Ae_x86_call_conv
+module Temp = Ae_temp
 
 let ins ?info i = Flat_x86.Line.Instr { i; info }
 let empty = Bag.empty
@@ -30,7 +30,7 @@ type st =
 
 let get_temp t (temp : Abs_x86.Temp.t) =
   let open Entity.Ident.Table.Syntax in
-  Mach_reg.of_enum_exn t.allocation.!(temp)
+  Mach_reg.of_enum_exn t.allocation.Temp.Table.Syntax.!(temp)
 ;;
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
@@ -72,7 +72,7 @@ let epilogue_without_base ?info stack_size =
 ;;
 
 let label_to_string (st : st) (label : Label.t) =
-  [%string ".L%{label.name}_%{st.func_index#Int}_%{label.id#Entity.Id}"]
+  [%string ".L%{label.name}_%{st.func_index#Int}_%{label.id#Int}"]
 ;;
 
 let lower_cmp ?info (cc : Condition_code.t) size ~dst ~src1 ~src2 =
@@ -227,7 +227,7 @@ let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Line.t Bag.t =
 let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
   let labels =
     (* fold from left for reverse postorder *)
-    Label_entity.Dfs.postorder ~start:[ func.start ] (Abs_x86.Func.graph func)
+    Label.Dfs.postorder ~start:[ func.start ] (Abs_x86.Func.graph func)
     |> Vec.fold ~init:[] ~f:(Fn.flip List.cons)
   in
   let instrs =

@@ -6,7 +6,8 @@ module Abs_x86 = Ae_abs_x86_std
 module Bag = Ae_data_bag
 module Table = Entity.Ident.Table
 module Ident = Entity.Ident
-module Label_entity = Ae_label_entity
+module Label = Ae_label
+module Temp = Ae_temp
 module X86_call_conv = Ae_x86_call_conv
 open Ae_trace
 
@@ -16,28 +17,16 @@ let ins = Abs_x86.Instr'.create_unindexed
 open Bag.Syntax
 
 type st =
-  { temp_gen : Abs_x86.Temp_entity.Witness.t Id_gen.t
-  ; label_gen : Label_entity.Witness.t Id_gen.t
-  ; lir_to_abs_x86 : Abs_x86.Temp.t Lir.Temp.Table.t
+  { temp_gen : Temp.Id_gen.t
+  ; label_gen : Label.Id_gen.t
   }
 
 let create_state func =
-  { temp_gen = Id_gen.create ()
-  ; lir_to_abs_x86 = Entity.Ident.Table.create ()
-  ; label_gen = Id_gen.of_id func.Lir.Func.next_label_id
-  }
+  { temp_gen = Lir.Func.create_temp_gen func; label_gen = Lir.Func.create_label_gen func }
 ;;
 
-let fresh_temp ?name ?info st : Abs_x86.Temp.t =
-  Entity.Ident.fresh ?name ?info st.temp_gen
-;;
-
-let get_temp st temp =
-  Table.find_or_add st.lir_to_abs_x86 temp ~default:(fun () ->
-    fresh_temp ~name:temp.name ?info:temp.info st)
-;;
-
-let get_operand st temp = Abs_x86.Operand.Reg (get_temp st temp)
+let fresh_temp ?name ?info st : Abs_x86.Temp.t = Temp.fresh ?name ?info st.temp_gen
+let get_operand _st temp = Abs_x86.Operand.Reg temp
 let fresh_operand ?name ?info st = Abs_x86.Operand.Reg (fresh_temp ?name ?info st)
 
 let lower_ty (ty : Lir.Ty.t) : Abs_x86.Ty.t =
@@ -46,10 +35,8 @@ let lower_ty (ty : Lir.Ty.t) : Abs_x86.Ty.t =
   | I1 -> Byte
 ;;
 
-let lower_block_call st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
-  { label = b.label
-  ; args = List.map b.args ~f:(fun temp -> Abs_x86.Location.Temp (get_temp st temp))
-  }
+let lower_block_call _st (b : Lir.Block_call.t) : Abs_x86.Block_call.t =
+  { label = b.label; args = List.map b.args ~f:(fun temp -> Abs_x86.Location.Temp temp) }
 ;;
 
 let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
@@ -59,17 +46,15 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   | Call { dst; func; ty; args } ->
     if List.length args > X86_call_conv.num_arguments_in_registers then todol [%here];
     let ty = lower_ty ty in
-    let dst = get_temp st dst in
-    let args = List.map args ~f:(Tuple2.map_both ~f1:(get_temp st) ~f2:lower_ty) in
+    let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
     empty +> [ ins (Call { dst; func; size = ty; args }) ]
   | Block_params params ->
     empty
     +> [ ins
            (Block_params
               (List.map params ~f:(fun param ->
-                 let temp = get_temp st param.Lir.Block_param.param in
                  let ty = lower_ty param.Lir.Block_param.ty in
-                 { Abs_x86.Block_param.param = Temp temp; ty })))
+                 { Abs_x86.Block_param.param = Temp param.param; ty })))
        ]
   | Nop -> empty +> [ ins Nop ]
   | Jump b ->
@@ -142,9 +127,9 @@ let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =
 let lower_func (func : Lir.Func.t) : Abs_x86.Func.t =
   let st = create_state func in
   let name = func.name in
-  let blocks = Ident.Map.map func.blocks ~f:(lower_block st) in
+  let blocks = Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
-  let next_temp_id = Id_gen.next st.temp_gen in
+  let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_stack_slot_id = Id_gen.next (Id_gen.create ()) in
   { name
   ; blocks
