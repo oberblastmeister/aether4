@@ -8,7 +8,7 @@ end
 module Mach_reg = Ae_x86_mach_reg
 
 module Address = struct
-  type t = Mach_reg.t Ae_x86_address.t [@@deriving sexp_of]
+  type t = Mach_reg.t Ae_x86_address.t [@@deriving sexp_of, equal]
 end
 
 module Ty = Ae_x86_ty
@@ -18,7 +18,7 @@ module Operand = struct
     | Imm of Int32.t
     | Reg of Mach_reg.t
     | Mem of Address.t
-  [@@deriving sexp_of, variants]
+  [@@deriving sexp_of, equal, variants]
 end
 
 module Instr = struct

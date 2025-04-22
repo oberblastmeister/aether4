@@ -7,14 +7,14 @@ module Index = struct
     { index : 'r
     ; scale : int
     }
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, equal]
 
   let create index scale = { index; scale }
   let iter_regs { index; scale = _ } ~f = f index
 end
 
 module Base = struct
-  type 'r t = Reg of 'r [@@deriving sexp_of, variants]
+  type 'r t = Reg of 'r [@@deriving sexp_of, variants, equal]
 
   let iter_regs base ~f =
     match base with
@@ -27,7 +27,7 @@ type 'r t =
   ; index : 'r Index.t option
   ; offset : int
   }
-[@@deriving sexp_of]
+[@@deriving sexp_of, equal]
 
 let create base ?index offset = { base = Base.reg base; index; offset }
 

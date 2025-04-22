@@ -1,0 +1,25 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int error () {
+  return (1/0);
+}
+
+int main () {
+  int t1;
+  int t2;
+  int f;
+  f = 0;
+  t1 = 3;
+  t2 = 7;
+  if (!((f != 0) && (error() != 0)))
+    if ((t1 != 0) || (error() != 0))
+      if (((t1 != 0) && (t2 != 0)) == true)
+	return 0;
+  return -1;
+}
+----
+0

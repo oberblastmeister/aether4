@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int div (int x, int y) {
+  int q;
+  while (true) {
+    if (x < y) {}
+    q += 1;
+    x -= y;
+    x -= y;
+  }
+  return q; 			/* uninitialied variable! */
+}
+
+int main () {
+  return div(127,3);
+}
+----
+("Variable was used before initialized" (var q@2))

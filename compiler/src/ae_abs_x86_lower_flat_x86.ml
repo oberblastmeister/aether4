@@ -126,7 +126,9 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
   | Mov { src; dst; size } ->
     let src = lower_operand st src in
     let dst = lower_operand st dst in
-    empty +> [ ins (Mov { dst; src; size }) ]
+    if Flat_x86.Operand.equal dst src
+    then empty
+    else empty +> [ ins (Mov { dst; src; size }) ]
   | Mov_abs { dst; src } ->
     let dst = lower_operand st dst in
     Flat_x86.Instr.(empty +> [ ins (Mov_abs { dst; src }) ])

@@ -1,0 +1,18 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int add(int x, int y) {
+    if (x == 0) {
+        return y;
+    }
+    return add(x - 1, y + 1);
+}
+
+int main() {
+    return add(10, 4);
+}
+----
+14

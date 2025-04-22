@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int main () {
+  int x145;
+  bool break = false;
+  while (!break && true) {
+    break = true;
+    x144 = 2;
+  }
+  return x145;
+}
+----
+("Variable not found" (var ((t x144) (span 12:5-9))))

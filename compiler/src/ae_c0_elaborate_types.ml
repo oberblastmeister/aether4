@@ -62,7 +62,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
   | Call { func; args; ty = _; span } ->
     let func_sig = Map.find_exn st.declared_funcs func in
-    let args, rem = List.zip_with_remainder args func_sig.params in
+    let args_with_params, rem = List.zip_with_remainder args func_sig.params in
     if Option.is_some rem
     then
       throw_s
@@ -70,7 +70,9 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
           "Invalid number of arguments"
             ~expected:(List.length func_sig.params : int)
             ~actual:(List.length args : int)];
-    let args = List.map args ~f:(fun (arg, param) -> check_expr st arg param.ty) in
+    let args =
+      List.map args_with_params ~f:(fun (arg, param) -> check_expr st arg param.ty)
+    in
     Call { func; args; ty = Some func_sig.ty; span }
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =

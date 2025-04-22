@@ -19,7 +19,7 @@ type 'r t =
   ; index : 'r Index.t option
   ; offset : int
   }
-[@@deriving sexp_of]
+[@@deriving sexp_of, equal]
 
 val create : 'r -> ?index:'r Index.t -> int -> 'r t
 val iter_regs : 'r t -> 'r Iter.t

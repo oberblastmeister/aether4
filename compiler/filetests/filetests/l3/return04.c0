@@ -1,0 +1,72 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int pi1 (int n) {
+  int w;
+  int d;
+  w = 0;
+  d = 0;
+  while (w < n) {
+    d = d+1;
+    w = w+d;
+  }
+  return w-n-1;
+}
+  
+int pi2 (int n) {
+  int w;
+  int d;
+  w = 0;
+  d = 0;
+  while (w < n) {
+    d = d+1;
+    w = w+d;
+  }
+  return d-(w-n);
+}
+
+int pair (int x, int y) {
+  int w;
+  w = x+y;
+  return w*(w+1)/2+y;
+}
+
+int gcd (int x, int y) {
+  /* x,y >= 0 */
+  int r;
+  while (y != 0) {
+    r = x%y;
+    x = y;
+    y = r;
+  }
+  return x;
+}
+
+int fraction (int x, int y) {
+  int g;
+  g = gcd(x,y);
+  return pair(x/g,y/g);
+}
+
+int add (int n, int m) {
+  int x1;
+  int x2;
+  int y1;
+  int y2;
+  x1 = pi1(n);
+  x2 = pi2(n);
+  y1 = pi1(m);
+  y2 = pi2(m);
+  return fraction(x1*y2+x2*y1, y1*y2);
+}
+
+int main () {
+  int n;
+  n = add(fraction(2,4),fraction(2,3)); /* 1/2 + 2/3 = 7/6 */
+  return (pi1(n) == 7 && pi2(n) == 6) ? 1 : 0;
+}
+----
+1

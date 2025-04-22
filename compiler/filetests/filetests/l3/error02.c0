@@ -1,0 +1,11 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int main() {
+  if (true) return 1; else {}
+}
+----
+("Function does not return on all control flow paths" (func.name main@0))

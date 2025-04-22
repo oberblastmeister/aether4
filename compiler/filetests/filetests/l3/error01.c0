@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int plus (int x, int y) {
+  return x+y;
+}
+
+int main (int x) {
+  return x+x;
+}
+----
+("Parameters had unequal lengths" (name main@1))

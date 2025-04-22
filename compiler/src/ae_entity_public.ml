@@ -1,3 +1,4 @@
+(* TODO: probably should rewrite this code, it kinda sucks *)
 open Std
 module Id = Ae_entity_id
 module Ident = Ae_entity_ident

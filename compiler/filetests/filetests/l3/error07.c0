@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int multiply(int x, int y, int z) {
+  return x * y * z;
+}
+
+int main () {
+  return multiply(4,5);
+}
+----
+("Invalid number of arguments" (expected 3) (actual 2))

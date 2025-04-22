@@ -1,0 +1,43 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int fib_rec (int n) {
+  if (n == 0)
+    return 1;
+  else if (n == 1)
+    return 1;
+  else
+    return fib_rec(n-1) + fib_reC(n-2);
+}
+
+int fib_loop (int n) {
+  int i;
+  int fib0;
+  int fib1;
+  int fib2;
+  fib0 = 1; if (n == 0) return fib0;
+  fib1 = 1; if (n == 1) return fib1;
+  i = 1;
+  while (i < n) {
+    fib2 = fib0 + fib1;
+    fib0 = fib1;
+    fib1 = fib2;
+    i += 1;
+  }
+  return fib1;
+}
+
+int main () {
+  int n;
+  int result;
+  n = 10;
+  result = fib_loop(n);
+  if (result == fib_rec(n))
+    return result;
+  return 0;
+}
+----
+("Function variable not found" (func_var ((t fib_reC) (span 13:27-34))))

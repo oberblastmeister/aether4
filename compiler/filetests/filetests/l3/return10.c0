@@ -1,0 +1,21 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int fac(int n) {
+  int k;
+  k = 1;
+  while (n > 1) {
+    k *= n;
+    n -= 1;
+  }
+  return k;
+}
+
+int main () {
+  return fac(5);
+}
+----
+120

@@ -278,7 +278,8 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
        let op = elab_bin_op op in
        Bin { lhs; op; rhs; ty = None; span })
   | Call { func; args; span } ->
-    if Map.mem st.context func.t then throw_s [%message "Cannot call local variable"];
+    if Map.mem st.context func.t
+    then throw_s [%message "Cannot call local variable" (span : Span.t)];
     let func = elab_func_var st func in
     let args = List.map args ~f:(elab_expr st) in
     Call { func; args; span; ty = None }

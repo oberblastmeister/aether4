@@ -104,7 +104,11 @@ let compute_frontier idoms (graph : Label.t Graph.Bi.t) =
         (* Table.mem idoms node means that the node is reachable from the start node *)
         graph.preds node |> Iter.length |> is_join_point && Table.mem idoms node)
     in
-    let@: pred = graph.preds node in
+    let@: pred =
+      graph.preds node
+      (* it is possible that node is reachable, but some predecessor isn't *)
+      |> Iter.filter ~f:(Table.mem idoms)
+    in
     add_until node (Table.find_exn idoms node).idom pred;
     ()
   end;

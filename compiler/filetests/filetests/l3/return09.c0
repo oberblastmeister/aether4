@@ -1,0 +1,30 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int exp(int x, int y) {
+  int r;
+  r = 1;
+  if (y == 0) return 1;
+  while (y > 1) {
+    if (y%2 != 0) {
+      /* y is odd */
+      r *= x;
+      x *= x;
+    } else {
+      /* y is even */
+      x *= x;
+    }
+    y /= 2;
+  }
+  /* y == 1 */
+  return x * r;
+}
+
+int main () {
+  return exp(2, 31);
+}
+----
+2147483648
