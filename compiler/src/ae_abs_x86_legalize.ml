@@ -4,9 +4,6 @@
 *)
 open Std
 open Ae_abs_x86_types
-module Entity = Ae_entity_std
-module Id_gen = Entity.Id_gen
-module Ident = Entity.Ident
 
 (* TODO: legalize sal and sar *)
 let legalize_block ~edit ~temp_gen block =

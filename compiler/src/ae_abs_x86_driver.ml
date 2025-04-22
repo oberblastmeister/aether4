@@ -1,7 +1,6 @@
 open Std
 module C0 = Ae_c0_std
 module Lower_flat_x86 = Ae_abs_x86_lower_flat_x86
-module Entity = Ae_entity_std
 module Legalize = Ae_abs_x86_legalize
 module Regalloc = Ae_abs_x86_regalloc
 module Regalloc_treescan = Ae_abs_x86_regalloc_treescan
@@ -15,13 +14,6 @@ module Check_register_pressure = Ae_abs_x86_check_register_pressure
 open Ae_abs_x86_types
 open Ae_trace
 
-let mach_reg_id off mach_reg = Entity.Id.offset off (Mach_reg.to_enum mach_reg)
-
-let mach_reg_ident ?info off mach_reg =
-  let id = mach_reg_id off mach_reg in
-  Entity.Ident.create ?info (Mach_reg.to_string mach_reg) id
-;;
-
 let trace_allocation allocation =
   let allocation =
     Temp.Table.to_list allocation |> (List.map & Tuple2.map_snd) ~f:Mach_reg.of_enum_exn
@@ -30,8 +22,6 @@ let trace_allocation allocation =
 ;;
 
 let convert ~func_index func =
-  let module Table = Entity.Ident.Table in
-  let open Table.Syntax in
   let func = Legalize.legalize_func func in
   let func = Pre_spill.spill_func ~num_regs:Call_conv.num_regs func in
   Check_register_pressure.check_func ~num_regs:Call_conv.num_regs func;

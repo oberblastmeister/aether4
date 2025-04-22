@@ -1,7 +1,7 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
+  
   module Condition_code = Ae_x86_condition_code
 end
 

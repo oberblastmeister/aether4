@@ -1,6 +1,8 @@
-open Std
+(* TODO: fix this code *)
+
+(* open Std
 module Temp_entity = Ae_abs_asm_temp_entity
-module Entity = Ae_entity_std
+
 module Id = Entity.Id
 module Temp = Temp_entity.Ident
 module Bitvec = Ae_data_bitvec
@@ -39,4 +41,4 @@ let iter_neighbors t v ~f =
   for i = t.size * k to (t.size * k) + t.size - 1 do
     if Bitvec.mem t.matrix i then f (Id.unchecked_of_int (i - (t.size * k)))
   done
-;;
+;; *)

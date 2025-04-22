@@ -1,15 +1,14 @@
-(* TODO: fix these tests *)
+(* TODO: fix this module *)
 open Std
 open Aether4
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
-module Temp_entity = Ae_abs_asm_temp_entity
+
+(* module Temp_entity = Ae_abs_asm_temp_entity
 module Temp = Ae_abs_asm_temp_entity.Ident
 module Intern = Entity.Intern.String_to_name.Make_global (Temp_entity.Witness) ()
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
 
-let temp = Intern.intern
+let temp = Intern.intern *)
 
 (* let%expect_test "simple no conflicts" =
   let graph = Graph.create () in

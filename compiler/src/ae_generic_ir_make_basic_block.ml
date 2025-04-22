@@ -7,13 +7,12 @@ open struct
   module Intf = Ae_generic_ir_make_intf
   module Label = Ae_label
 
-  (* module Entity = Ae_entity_std
-  module Ident = Entity.Ident
+  (* 
+  
   module Entity_graph_utils = Ae_entity_graph_utils
   module Label = Ae_label *)
   module Dominators = Ae_dominators
-  module Stack_slot_entity = Ae_stack_slot_entity
-  module Stack_slot = Stack_slot_entity.Ident
+  module Stack_slot = Ae_stack_slot
   (* module Id_gen = Entity.Id_gen *)
 end
 

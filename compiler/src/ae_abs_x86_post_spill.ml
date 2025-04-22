@@ -1,9 +1,5 @@
 open Std
 open Ae_abs_x86_types
-module Entity = Ae_entity_std
-module Id = Entity.Id
-module Ident = Entity.Ident
-module Int_table = Entity.Table.Int_table
 module Bitvec = Ae_data_bitvec
 module Regalloc = Ae_graph_greedy_regalloc
 module Graph = Regalloc.Graph
@@ -20,8 +16,6 @@ let spill_regular_instr
       ~get_evicted_temp_and_slot_for_mach_reg
       ~(instr : Instr'.t)
   =
-  let module Table = Ident.Table in
-  let open Table.Syntax in
   let evicted_temps = ref [] in
   let used_non_spilled_colors =
     Instr.iter_defs instr.i
@@ -209,14 +203,12 @@ let spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color (instr' : In
    every thing that is not spilled must be present in allocation.
 *)
 let spill_func ~mach_reg_gen ~get_temp_color ~spilled_colors (func : Func.t) =
-  let module Table = Ident.Table in
-  let open Table.Syntax in
   let stack_builder = Func.create_stack_builder func in
   let spilled_temp_to_slot =
-    let spilled_color_to_slot = Int_table.create () in
+    let spilled_color_to_slot = Int.Table.create () in
     begin
       let@: spilled_color = Set.iter spilled_colors in
-      Int_table.set
+      Hashtbl.set
         spilled_color_to_slot
         ~key:spilled_color
         ~data:
@@ -225,7 +217,7 @@ let spill_func ~mach_reg_gen ~get_temp_color ~spilled_colors (func : Func.t) =
              stack_builder
              Qword)
     end;
-    fun temp -> Int_table.find_exn spilled_color_to_slot (get_temp_color temp)
+    fun temp -> Hashtbl.find_exn spilled_color_to_slot (get_temp_color temp)
   in
   let mach_reg_to_evicted_temp = Hashtbl.create (module Int) in
   let edit = Multi_edit.create () in
@@ -238,7 +230,6 @@ let spill_func ~mach_reg_gen ~get_temp_color ~spilled_colors (func : Func.t) =
       Multi_edit.add_replace edit block.label instr
     end
     else begin
-      let open Ident.Table.Syntax in
       let instrs_before, new_instr, instrs_after =
         let get_evicted_temp_and_slot_for_mach_reg mach_reg =
           Hashtbl.find_or_add mach_reg_to_evicted_temp mach_reg ~default:(fun () ->

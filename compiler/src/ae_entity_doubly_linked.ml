@@ -1,4 +1,6 @@
-module Entity = Ae_entity_public
+(* TODO: fix this code *)
+
+(* module Entity = Ae_entity_public
 module Id = Entity.Id
 module Table = Entity.Id.Table
 open Table.Syntax
@@ -66,4 +68,4 @@ module Make (Arg : Arg) = struct
        ());
     ()
   ;;
-end
+end *)

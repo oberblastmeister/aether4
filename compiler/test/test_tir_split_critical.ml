@@ -3,8 +3,8 @@ open Aether4
 module Trace = Ae_trace
 module Tir = Ae_tir_std
 open Tir
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
+
+
 module Label = Ae_label
 module Label_intern = Label.Intern.Make_global ()
 module Temp_intern = Temp.Intern.Make_global ()

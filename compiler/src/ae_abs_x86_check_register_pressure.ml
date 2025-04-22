@@ -13,8 +13,8 @@
 open Std
 open Ae_abs_x86_types
 open Ae_trace
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
+
+
 
 let check_block ~num_regs ~live_out (block : Block.t) =
   let live_out_ref = ref live_out in

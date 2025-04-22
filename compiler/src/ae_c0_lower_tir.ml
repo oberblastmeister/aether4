@@ -2,9 +2,7 @@ open Std
 module Label = Ae_label
 module Ast = Ae_c0_ast
 module Tir = Ae_tir_types
-module Entity = Ae_entity_std
 module Temp = Tir.Temp
-module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
 module Span = Ae_span
 open Bag.Syntax

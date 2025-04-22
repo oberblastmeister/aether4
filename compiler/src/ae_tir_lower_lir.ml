@@ -1,9 +1,8 @@
 open Std
 module Tir = Ae_tir_types
-module Entity = Ae_entity_std
+
 module Label = Ae_label
 module Temp = Ae_temp
-module Id_gen = Entity.Id_gen
 module Bag = Ae_data_bag
 module Lir = Ae_lir_types
 open Bag.Syntax

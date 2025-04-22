@@ -1,9 +1,8 @@
 open Test_abs_x86_import
 open Make_intern ()
-module Int_table = Entity.Table.Int_table
 
 (* let check coloring instr =
-  let module Table = Ident.Table in
+  let  in
   let open Table.Syntax in
   let frame_builder = Frame.Builder.create () in
   let slot () = Frame.Builder.alloc ~name:"spilled_color" frame_builder Qword in

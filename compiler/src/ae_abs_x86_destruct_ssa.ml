@@ -1,7 +1,5 @@
 (* TODO: integrate this into the lower_flat_x86 pass *)
 open Std
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
 open Ae_abs_x86_types
 
 module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
@@ -10,13 +8,6 @@ module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (stru
   end)
 
 open Sequentialize_parallel_moves
-
-let mach_reg_id off mach_reg = Entity.Id.offset off (Mach_reg.to_enum mach_reg)
-
-let mach_reg_ident ?info off mach_reg =
-  let id = mach_reg_id off mach_reg in
-  Ident.create ?info (Mach_reg.to_string mach_reg) id
-;;
 
 let destruct ~mach_reg_gen ~in_same_reg ~get_scratch (func : Func.t) =
   let edit = Multi_edit.create () in

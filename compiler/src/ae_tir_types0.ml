@@ -5,7 +5,7 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
+  
   module Generic_ir = Ae_generic_ir_std
 end
 

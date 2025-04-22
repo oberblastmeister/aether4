@@ -1,4 +1,6 @@
-module Temp_entity := Ae_abs_asm_temp_entity
+(* TODO: fix this code *)
+
+(* module Temp_entity := Ae_abs_asm_temp_entity
 module Temp_id := Temp_entity.Id
 
 (* weights must be monotonically increasing, so can only increase by positive amount *)
@@ -15,4 +17,4 @@ val remove_exn : t -> Temp_id.t -> unit
 
 (* precondition, id must be on the heap. amount must be positive *)
 val increase_exn : t -> Temp_id.t -> int -> unit
-val mem : t -> Temp_id.t -> bool
+val mem : t -> Temp_id.t -> bool *)

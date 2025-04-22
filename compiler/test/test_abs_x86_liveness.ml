@@ -2,8 +2,8 @@ open Std
 open Aether4
 open Ae_abs_x86_std
 module Label = Ae_label
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
+
+
 module Label_entity = Ae_label_entity
 module Label_intern = Label.Intern.Make_global ()
 module Temp_intern = Temp.Intern.Make_global ()

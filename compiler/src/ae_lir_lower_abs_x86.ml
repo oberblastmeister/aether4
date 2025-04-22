@@ -1,11 +1,7 @@
 open Std
 module Lir = Ae_lir_types
-module Entity = Ae_entity_std
-module Id_gen = Entity.Id_gen
 module Abs_x86 = Ae_abs_x86_std
 module Bag = Ae_data_bag
-module Table = Entity.Ident.Table
-module Ident = Entity.Ident
 module Label = Ae_label
 module Temp = Ae_temp
 module X86_call_conv = Ae_x86_call_conv
@@ -130,13 +126,12 @@ let lower_func (func : Lir.Func.t) : Abs_x86.Func.t =
   let blocks = Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
-  let next_stack_slot_id = Id_gen.next (Id_gen.create ()) in
   { name
   ; blocks
   ; start
   ; next_temp_id
   ; next_label_id = func.next_label_id
-  ; next_stack_slot_id
+  ; next_stack_slot_id = 0
   ; stack_slots = []
   }
 ;;

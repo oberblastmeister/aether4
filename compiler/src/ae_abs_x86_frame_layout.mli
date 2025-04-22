@@ -1,7 +1,6 @@
 open Std
 open Ae_abs_x86_types
-module Stack_slot_entity := Ae_stack_slot_entity
-module Stack_slot := Stack_slot_entity.Ident
+module Stack_slot := Ae_stack_slot
 
 type t [@@deriving sexp_of]
 

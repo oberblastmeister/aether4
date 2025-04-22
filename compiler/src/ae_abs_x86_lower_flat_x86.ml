@@ -4,8 +4,6 @@
 *)
 open Std
 module Abs_x86 = Ae_abs_x86_types
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
 module Flat_x86 = Ae_flat_x86_types
 module Bag = Ae_data_bag
 module Regalloc = Ae_abs_x86_regalloc
@@ -29,7 +27,6 @@ type st =
   }
 
 let get_temp t (temp : Abs_x86.Temp.t) =
-  let open Entity.Ident.Table.Syntax in
   Mach_reg.of_enum_exn t.allocation.Temp.Table.Syntax.!(temp)
 ;;
 

@@ -15,7 +15,6 @@ open Std
 open Ae_abs_x86_types
 module Label = Ae_label
 module Temp = Ae_temp
-module Stack_slot = Ae_stack_slot_entity.Ident
 open Ae_trace
 
 let sort_temps_by_ascending_next_use next_use temps =

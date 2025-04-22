@@ -16,11 +16,6 @@ module Make (Ir : Sigs.Ir_simple) = struct
   end
 
   module Func_ext = struct
-    open struct
-      module Entity = Ae_entity_std
-      module Ident = Entity.Ident
-    end
-
     open Func
 
     let get_ty_table func =

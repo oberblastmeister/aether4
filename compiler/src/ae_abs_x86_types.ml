@@ -1,7 +1,6 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
   module Generic_ir = Ae_generic_ir_std
 end
 
@@ -24,7 +23,7 @@ module T0 = struct
         ; start : Label.t
         ; next_temp_id : int
         ; next_label_id : int
-        ; next_stack_slot_id : Stack_slot_entity.Id.t
+        ; next_stack_slot_id : int
         ; stack_slots : (Stack_slot.t * Ty.t) list
         }
       [@@deriving sexp_of, fields ~getters ~setters]
@@ -58,11 +57,13 @@ module T0 = struct
     let create_stack_builder func =
       { Stack_builder.stack_slot_gen = func.next_stack_slot_id
       ; stack_slots = func.stack_slots
+      ; first_id = func.next_stack_slot_id
       }
     ;;
 
     let apply_stack_builder (stack_builder : Stack_builder.t) func =
-      let next_stack_slot_id = stack_builder.stack_slot_gen in
+      assert (stack_builder.first_id = func.next_stack_slot_id);
+      let next_stack_slot_id = stack_builder.stack_slot_gen + 1 in
       let stack_slots = stack_builder.stack_slots in
       { func with next_stack_slot_id; stack_slots }
     ;;

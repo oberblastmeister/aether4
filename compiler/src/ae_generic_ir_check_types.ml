@@ -1,5 +1,5 @@
 open Std
-module Entity = Ae_entity_std
+
 module Label = Ae_label
 module Temp = Ae_temp
 open Ae_generic_ir_sigs

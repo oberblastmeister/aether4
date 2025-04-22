@@ -1,7 +1,7 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
+  
   module Stack_slot_entity = Ae_stack_slot_entity
   module Label = Ae_label
   module Temp = Ae_temp

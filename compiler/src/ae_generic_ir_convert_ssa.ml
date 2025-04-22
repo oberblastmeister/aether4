@@ -1,8 +1,5 @@
 open Std
 open Ae_generic_ir_import
-module Entity_graph_utils = Ae_entity_graph_utils
-module Table = Entity.Ident.Table
-open Table.Syntax
 
 module Make (Ir : Ir) = struct
   open Ir

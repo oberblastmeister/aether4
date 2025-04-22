@@ -8,8 +8,8 @@ module Tir = Ae_tir_std
 open Tir
 module Dominators = Ae_dominators
 module Label = Ae_label
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
+
+
 module Label_intern = Label.Intern.Make_global ()
 module Temp_intern = Temp.Intern.Make_global ()
 

@@ -1,10 +1,6 @@
 open Std
 open Ae_abs_x86_types
-module Stack_slot_entity = Ae_stack_slot_entity
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
-module Table = Ident.Table
-module Stack_slot = Stack_slot_entity.Ident
+module Stack_slot = Ae_stack_slot
 open Ae_trace
 
 type t =
@@ -14,21 +10,16 @@ type t =
   }
 [@@deriving sexp_of]
 
-let resolve_frame_base_offset t slot =
-  let open Table.Syntax in
-  t.table.!(slot)
-;;
-
+let resolve_frame_base_offset t slot = t.table.Stack_slot.Table.Syntax.!(slot)
 let frame_size t = t.frame_size
 
 let compute (func : Func.t) =
-  let open Table.Syntax in
   let offset = ref 0 in
-  let layout_table = Table.create () in
+  let layout_table = Stack_slot.Table.create () in
   begin
     let@: slot, size = List.iter (List.rev func.stack_slots) in
     offset := !offset - Int.round_up ~to_multiple_of:8 (Ty.to_bytes size);
-    layout_table.!(slot) <- !offset
+    layout_table.Stack_slot.Table.Syntax.!(slot) <- !offset
   end;
   (* since the stack is 16 byte aligned before the call,
      it is 16 byte aligned inside the call,

@@ -1,7 +1,6 @@
 open Std
 
 open struct
-  module Entity = Ae_entity_std
   module Generic_ir = Ae_generic_ir_std
 end
 
@@ -9,8 +8,7 @@ module Ty = Ae_x86_ty
 module Temp = Ae_temp
 module Label = Ae_label
 module Mach_reg = Ae_x86_mach_reg
-module Stack_slot_entity = Ae_stack_slot_entity
-module Stack_slot = Stack_slot_entity.Ident
+module Stack_slot = Ae_stack_slot
 module Call_conv = Ae_x86_call_conv
 
 module Address = struct
@@ -503,13 +501,14 @@ end
 
 module Stack_builder = struct
   type t =
-    { mutable stack_slot_gen : Stack_slot_entity.Id.t
+    { mutable stack_slot_gen : int
     ; mutable stack_slots : (Stack_slot.t * Ty.t) list
+    ; first_id : int
     }
 
   let alloc ?(name = "stack_slot") ?info t ty =
-    let ident = Entity.Ident.create ?info name t.stack_slot_gen in
-    t.stack_slot_gen <- Entity.Id.succ t.stack_slot_gen;
+    let ident = Stack_slot.create ?info name t.stack_slot_gen in
+    t.stack_slot_gen <- t.stack_slot_gen + 1;
     t.stack_slots <- (ident, ty) :: t.stack_slots;
     ident
   ;;
@@ -523,7 +522,6 @@ module Mach_reg_gen = struct
     }
 
   let get t mach_reg =
-    let open Entity.Ident.Table.Syntax in
     Hashtbl.find_or_add t.table mach_reg ~default:(fun () ->
       let ident = Temp.create (Mach_reg.to_string mach_reg) t.id in
       Option.iter t.allocation ~f:(fun allocation ->

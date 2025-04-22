@@ -2,8 +2,8 @@
 open Std
 open Aether4
 module Dominators = Ae_dominators
-module Entity = Ae_entity_std
-module Ident = Entity.Ident
+
+
 module Label = Ae_label
 module Graph = Ae_data_graph_std
 module Intern = Label.Intern.Make_global ()

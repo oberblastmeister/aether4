@@ -1,5 +1,7 @@
+(* TODO: fix this code *)
 open Std
-module Entity = Ae_entity_std
+
+(* 
 module Id = Entity.Id
 module Temp_entity = Ae_abs_asm_temp_entity
 module Temp_id = Temp_entity.Id
@@ -114,4 +116,4 @@ let increase_exn t temp by =
   ()
 ;;
 
-let mem t temp = Id.Table.mem t.links temp && t.links.!(temp).weight <> -1
+let mem t temp = Id.Table.mem t.links temp && t.links.!(temp).weight <> -1 *)

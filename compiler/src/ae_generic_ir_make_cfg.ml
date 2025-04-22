@@ -3,8 +3,6 @@ open Std
 open struct
   module Label = Ae_label
   module Dominators = Ae_dominators
-  module Stack_slot_entity = Ae_stack_slot_entity
-  module Stack_slot = Stack_slot_entity.Ident
   module Graph = Ae_data_graph_std
 end
 
