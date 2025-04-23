@@ -15,18 +15,26 @@ module Address = struct
   type t = Temp.t Ae_x86_address.t [@@deriving sexp_of]
 end
 
+module Stack_address = struct
+  type t =
+    | Slot of Stack_slot.t
+    | Previous_frame of int32
+    | Current_frame of int32
+  [@@deriving sexp_of, variants, equal]
+end
+
 module Operand = struct
   type t =
     | Imm of Int32.t
     | Reg of Temp.t
     | Mem of Address.t
-    | Stack_slot of Stack_slot.t
+    | Stack of Stack_address.t
   [@@deriving sexp_of, variants]
 
   let iter_mem_regs (o : t) ~f =
     match o with
     | Reg _ -> ()
-    | Stack_slot _ | Imm _ -> ()
+    | Stack _ | Imm _ -> ()
     | Mem _addr -> todol [%here]
   ;;
 
@@ -35,7 +43,7 @@ module Operand = struct
     | Reg r ->
       f r;
       ()
-    | Stack_slot _ | Imm _ -> ()
+    | Stack _ | Imm _ -> ()
     | Mem _addr -> todol [%here]
   ;;
 
@@ -44,7 +52,7 @@ module Operand = struct
     | Reg r ->
       f r;
       ()
-    | Stack_slot _ | Imm _ | Mem _ -> ()
+    | Stack _ | Imm _ | Mem _ -> ()
   ;;
 
   let map_reg o ~f =
@@ -78,35 +86,35 @@ end
 module Location = struct
   type t =
     | Temp of Temp.t
-    | Slot of Stack_slot.t
-  [@@deriving sexp_of, variants]
+    | Stack of Stack_address.t
+  [@@deriving sexp_of, variants, equal]
 
   let to_either t =
     match t with
     | Temp temp -> Either.First temp
-    | Slot slot -> Either.Second slot
+    | Stack slot -> Either.Second slot
   ;;
 
   let temp_val = function
     | Temp temp -> Some temp
-    | Slot _ -> None
+    | Stack _ -> None
   ;;
 
   let iter_temp t ~f =
     match t with
     | Temp temp -> f temp
-    | Slot _ -> ()
+    | Stack _ -> ()
   ;;
 
   let map_temp t ~f =
     match t with
     | Temp temp -> Temp (f temp)
-    | Slot _ -> t
+    | Stack _ -> t
   ;;
 
   let to_operand = function
     | Temp v -> Operand.Reg v
-    | Slot s -> Operand.Stack_slot s
+    | Stack s -> Operand.Stack s
   ;;
 
   let of_temp t = Temp t
@@ -176,11 +184,15 @@ module Instr = struct
         { src : Operand.t
         ; size : Ty.t
         }
+    (*
+       TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
+      The other args should be spilled be the instruction selector
+    *)
     | Call of
         { dst : Temp.t
         ; size : Ty.t
         ; func : string
-        ; args : (Temp.t * Ty.t) list
+        ; args : (Location.t * Ty.t) list
         }
     | Unreachable
   [@@deriving sexp_of, variants]
@@ -210,7 +222,8 @@ module Instr = struct
       ()
     | Call { dst; size; func = _; args } ->
       on_def (Operand.Reg dst, size);
-      (List.iter @> Fold.of_fn fst) args ~f:(fun temp -> on_use (Operand.Reg temp))
+      (List.iter @> Fold.of_fn fst @> Location.iter_temp) args ~f:(fun temp ->
+        on_use (Operand.Reg temp))
     | Block_params params ->
       List.iter params ~f:(fun param ->
         Location.iter_temp param.param ~f:(fun temp ->
@@ -251,6 +264,8 @@ module Instr = struct
     | Unreachable -> ()
   ;;
 
+  let iter_operands t ~f = iter_operand_use_defs t ~on_def:(fun (x, _) -> f x) ~on_use:f
+
   let map_operand_use_defs (instr : t) ~on_def ~on_use =
     let map_temp temp ~f =
       f (Operand.Reg temp)
@@ -267,7 +282,9 @@ module Instr = struct
       Pop { dst; size }
     | Call p ->
       let dst = (map_temp ~f:on_def) p.dst in
-      let args = (List.map & Tuple2.map_fst) p.args ~f:(map_temp ~f:on_use) in
+      let args =
+        (List.map & Tuple2.map_fst & Location.map_temp) p.args ~f:(map_temp ~f:on_use)
+      in
       Call { p with dst; args }
     | Block_params params ->
       let mapper =
@@ -345,8 +362,8 @@ module Instr = struct
         | Some (First _) -> raise_s [%message "Don't support stack arguments yet" [%here]]
         | _ -> ()
       end;
-      List.iter zipped ~f;
-      ()
+      List.iter zipped ~f:(fun (loc, ty) ->
+        Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
     | Bin { dst = _; op; src1; src2 } -> begin
       match op with
       | Lshift | Rshift -> begin
@@ -394,8 +411,10 @@ module Instr = struct
   let iter_uses_with_known_ty t ~f =
     match t with
     | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ -> ()
-    | Call { dst = _; func = _; args; size = _ } -> List.iter args ~f
     | Push { src; size } -> f (src, size)
+    | Call { dst = _; func = _; args; size = _ } ->
+      List.iter args ~f:(fun (loc, ty) ->
+        Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
     | Mov { dst = _; src; size } ->
       Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))
     | Mov_abs { dst = _; src = _ } -> ()
@@ -422,6 +441,12 @@ module Instr = struct
       t
       ~on_def:(fun (o, ty) -> Operand.iter_reg_val o ~f:(fun temp -> f (temp, ty)))
       ~on_use:(Fn.const ())
+  ;;
+
+  let iter_temps t ~f =
+    iter_uses t ~f;
+    iter_defs t ~f;
+    ()
   ;;
 
   let iter_mach_reg_defs (instr : t) ~f =
@@ -505,6 +530,7 @@ module Stack_builder = struct
     ; mutable stack_slots : (Stack_slot.t * Ty.t) list
     ; first_id : int
     }
+  [@@deriving sexp_of]
 
   let alloc ?(name = "stack_slot") ?info t ty =
     let ident = Stack_slot.create ?info name t.stack_slot_gen in

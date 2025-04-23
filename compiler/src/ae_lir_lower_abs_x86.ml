@@ -5,6 +5,7 @@ module Bag = Ae_data_bag
 module Label = Ae_label
 module Temp = Ae_temp
 module X86_call_conv = Ae_x86_call_conv
+module Call_conv = Ae_x86_call_conv
 open Ae_trace
 
 let empty = Bag.empty
@@ -40,10 +41,24 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
   | Call { dst; func; ty; args } ->
-    if List.length args > X86_call_conv.num_arguments_in_registers then todol [%here];
     let ty = lower_ty ty in
-    let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
-    empty +> [ ins (Call { dst; func; size = ty; args }) ]
+    let args_in_registers, args_on_stack =
+      List.split_n args Call_conv.num_arguments_in_registers
+    in
+    let moves =
+      List.mapi args_on_stack ~f:(fun i (temp, ty) ->
+        ins
+          (Mov
+             { dst = Stack (Current_frame Int32.(of_int_exn i * 8l))
+             ; src = Reg temp
+             ; size = lower_ty ty
+             }))
+    in
+    let args =
+      List.map args_in_registers ~f:(fun (arg, ty) ->
+        Abs_x86.Location.Temp arg, lower_ty ty)
+    in
+    empty +> moves +> [ ins (Call { dst; func; size = ty; args }) ]
   | Block_params params ->
     empty
     +> [ ins

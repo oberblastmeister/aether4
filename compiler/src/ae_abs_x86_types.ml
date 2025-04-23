@@ -56,7 +56,7 @@ module T0 = struct
 
     let create_stack_builder func =
       { Stack_builder.stack_slot_gen = func.next_stack_slot_id
-      ; stack_slots = func.stack_slots
+      ; stack_slots = []
       ; first_id = func.next_stack_slot_id
       }
     ;;
@@ -65,7 +65,10 @@ module T0 = struct
       assert (stack_builder.first_id = func.next_stack_slot_id);
       let next_stack_slot_id = stack_builder.stack_slot_gen + 1 in
       let stack_slots = stack_builder.stack_slots in
-      { func with next_stack_slot_id; stack_slots }
+      { func with
+        next_stack_slot_id
+      ; stack_slots = List.rev_append stack_slots func.stack_slots
+      }
     ;;
 
     let create_mach_reg_gen ?allocation func =

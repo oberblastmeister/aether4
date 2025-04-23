@@ -34,79 +34,41 @@ let alloc_block
   let deaths = Liveness.compute_deaths ~live_out block in
   begin
     let@: instr' = Block.iter_fwd block in
-    if is_start && instr'.index = 0
-    then begin
-      let params = Instr.block_params_val instr'.i |> Option.value_exn in
-      let params_with_mach_reg, rem =
-        List.zip_with_remainder params Call_conv.call_arguments
+    (* release dead uses *)
+    begin
+      let@: use =
+        Instr.iter_uses instr'.i
+        |> Iter.filter ~f:(fun temp -> Set.mem deaths.@(instr'.index) temp)
       in
-      begin
-        let params_slots =
-          List.drop_while params ~f:(fun param -> Location.is_temp param.param)
-        in
-        (* make sure the suffix is all slots *)
-        begin
-          let@: param_slot = List.iter params_slots in
-          assert (Location.is_slot param_slot.param)
-        end
-      end;
-      begin
-        match rem with
-        | Some (First _) ->
-          raise_s
-            [%message
-              "Should have spilled the excess function arguments onto the caller stack \
-               frame"]
-        | _ -> ()
-      end;
-      begin
-        let@: param, mach_reg = List.iter params_with_mach_reg in
-        begin
-          match param.param with
-          | Temp temp -> allocation.Temp.Table.Syntax.!(temp) <- Mach_reg.to_enum mach_reg
-          | _ -> todol [%here]
-        end
-      end
-    end
-    else begin
-      (* release dead uses *)
-      begin
-        let@: use =
-          Instr.iter_uses instr'.i
-          |> Iter.filter ~f:(fun temp -> Set.mem deaths.@(instr'.index) temp)
-        in
-        if Set.mem usable_colors allocation.Temp.Table.Syntax.!(use)
-        then
-          available_colors
-          := Set.add !available_colors allocation.Temp.Table.Syntax.!(use)
-      end;
-      (* allocate defs *)
-      (*
+      if Set.mem usable_colors allocation.Temp.Table.Syntax.!(use)
+      then
+        available_colors := Set.add !available_colors allocation.Temp.Table.Syntax.!(use)
+    end;
+    (* allocate defs *)
+    (*
       It is important that we do the defs first before releasing dead defs instead
       of just calculating the set different so we can check that we spilled properly
     *)
-      let defs = Instr.iter_defs instr'.i |> Iter.to_list in
-      begin
-        let@: def = List.iter defs in
-        let color =
-          Set.min_elt !available_colors
-          |> Option.value_exn ~message:"No colors left, but we should have pre spilled"
-        in
-        available_colors := Set.remove !available_colors color;
-        allocation.Temp.Table.Syntax.!(def) <- color
-      end;
-      (* release dead defs *)
-      (* TODO: maybe check that the color is in the usable ones *)
-      begin
-        let@: def =
-          List.iter defs
-          |> Iter.filter ~f:(fun def -> not (Temp.Table.mem use_locations def))
-        in
-        if Set.mem usable_colors allocation.Temp.Table.Syntax.!(def)
-        then
-          available_colors
-          := Set.add !available_colors allocation.Temp.Table.Syntax.!(def)
-      end
+    let defs = Instr.iter_defs instr'.i |> Iter.to_list in
+    begin
+      let@: def = List.iter defs in
+      let color =
+        Set.min_elt !available_colors
+        |> Option.value_exn ~message:"No colors left, but we should have pre spilled"
+      in
+      available_colors := Set.remove !available_colors color;
+      allocation.Temp.Table.Syntax.!(def) <- color
+    end;
+    (* release dead defs *)
+    (* TODO: maybe check that the color is in the usable ones *)
+    begin
+      let@: def =
+        List.iter defs
+        |> Iter.filter ~f:(fun def -> not (Temp.Table.mem use_locations def))
+      in
+      if Set.mem usable_colors allocation.Temp.Table.Syntax.!(def)
+      then
+        available_colors := Set.add !available_colors allocation.Temp.Table.Syntax.!(def)
     end
   end
 ;;

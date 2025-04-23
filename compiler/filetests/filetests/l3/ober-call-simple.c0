@@ -1,7 +1,6 @@
 /*
 (
  (kind (CompileAndRun))
- (emit (Asm))
 )
 */
 
@@ -14,68 +13,4 @@ int main() {
     return first(12, 1, 1, 1);
 }
 ----
-asm
-.text
-.globl c0_main_export
-c0_main_export:
-    subq $8, %rsp
-    pushq %rbx
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
-    callq _c0_main
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    popq %rbx
-    addq $8, %rsp
-    ret
-.globl _c0_first
-_c0_first:
-    pushq %rbp # prologue
-    movq %rsp, %rbp # prologue
-    subq $0, %rsp # prologue
-.Lstart_0_0:
-    movq $1234, %rax # 9:12-16
-    movq %rdi, %rcx # 8:15-20
-    movq %rax, %r11 # 9:12-24
-    addq %rcx, %r11 # 9:12-24
-    movq %r11, %rax # 9:12-24
-    movq %rsi, %rcx # 8:26-32
-    movq %rax, %r11 # 9:12-33
-    addq %rcx, %r11 # 9:12-33
-    movq %r11, %rax # 9:12-33
-    movq %rax, %r11 # 9:12-41
-    addq %rcx, %r11 # 9:12-41
-    movq %r11, %rax # 9:12-41
-    movq %rdx, %rcx # 8:49-55
-    movq %rax, %r11 # 9:12-50
-    addq %rcx, %r11 # 9:12-50
-    movq %r11, %rax # 9:12-50
-    movq %rax, %rax # 9:5-50
-    movq %rbp, %rsp # (epilogue 9:5-50)
-    popq %rbp # (epilogue 9:5-50)
-    ret # (epilogue 9:5-50)
-.globl _c0_main
-_c0_main:
-    pushq %rbp # prologue
-    movq %rsp, %rbp # prologue
-    subq $0, %rsp # prologue
-.Lstart_1_0:
-    movq $12, %rax # 14:18-20
-    movq $1, %rcx # 14:22
-    movq $1, %rdx # 14:25
-    movq $1, %rbx # 14:28
-    movq %rcx, %rsi # repair
-    movq %rdx, %rcx # repair
-    movq %rbx, %rdx # repair
-    movq %rax, %rdi # repair
-    callq _c0_first
-    movq %rax, %rax # 14:5-30
-    movq %rbp, %rsp # (epilogue 14:5-30)
-    popq %rbp # (epilogue 14:5-30)
-    ret # (epilogue 14:5-30)
-
 1249

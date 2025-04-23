@@ -17,6 +17,80 @@ module Label = Ae_label
 module Temp = Ae_temp
 open Ae_trace
 
+module Spiller : sig
+  type t [@@deriving sexp_of]
+
+  val create : Func.t -> t
+  val spill : ?is_block_param:unit -> t -> Temp.t -> Stack_address.t * Ty.t
+  val apply_func : t -> Func.t -> Func.t
+  val stack_slots : t -> (Stack_slot.t * Ty.t) list
+  val find : t -> Temp.t -> (Stack_address.t * Ty.t) option
+
+  (* was this a block param and was also spilled? *)
+  val did_spill_block_param : t -> Temp.t -> bool
+end = struct
+  type t =
+    { spilled : (Temp.t, Stack_address.t * Ty.t) Hashtbl.t
+    ; spilled_block_params : Temp.t Hash_set.t
+    ; stack_builder : Stack_builder.t
+    ; ty_table : Ty.t Temp.Table.t
+    }
+  [@@deriving sexp_of]
+
+  let find t temp = Hashtbl.find t.spilled temp
+
+  let create func =
+    let spilled = Hashtbl.create (module Temp) in
+    let ty_table = Func.get_ty_table func in
+    let spilled_block_params = Hash_set.create (module Temp) in
+    begin
+      let@: block = Func.iter_blocks func in
+      let is_start = Label.equal block.label func.start in
+      let@: instr' = Block.iter_fwd block in
+      let instr = instr'.i in
+      if is_start && instr'.index = 0
+      then begin
+        let locations_on_stack =
+          Instr.block_params_val instr
+          |> Option.value_exn
+          |> List.map ~f:Block_param.param
+          |> List.drop __ Call_conv.num_arguments_in_registers
+        in
+        begin
+          let@: i, loc = List.iteri locations_on_stack |> Iter.uncurry in
+          let@: temp = Location.temp_val loc |> Option.iter in
+          Hash_set.add spilled_block_params temp;
+          Hashtbl.add_exn
+            spilled
+            ~key:temp
+            ~data:
+              ( Stack_address.Previous_frame Int32.(of_int_exn i * 8l)
+              , ty_table.Temp.Table.Syntax.!(temp) )
+        end
+      end
+    end;
+    { ty_table
+    ; spilled
+    ; spilled_block_params
+    ; stack_builder = Func.create_stack_builder func
+    }
+  ;;
+
+  let spill ?is_block_param t temp =
+    Hashtbl.find_or_add t.spilled temp ~default:(fun () ->
+      if Option.is_some is_block_param then Hash_set.add t.spilled_block_params temp;
+      let ty = t.ty_table.Temp.Table.Syntax.!(temp) in
+      let stack_slot =
+        Stack_builder.alloc t.stack_builder ~name:("pre_spilled_" ^ temp.name) ty
+      in
+      Stack_address.Slot stack_slot, ty)
+  ;;
+
+  let apply_func t func = Func.apply_stack_builder t.stack_builder func
+  let stack_slots t = t.stack_builder.stack_slots
+  let did_spill_block_param t temp = Hash_set.mem t.spilled_block_params temp
+end
+
 let sort_temps_by_ascending_next_use next_use temps =
   List.map temps ~f:(fun temp ->
     temp, Map.find next_use temp |> Option.value ~default:Int.max_value)
@@ -60,7 +134,7 @@ let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
 ;;
 
 (* Make sure to set the active in table after running spill_block *)
-let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Block.t) =
+let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block.t) =
   let next_uses_at_point =
     let next_use = ref next_use_out in
     let next_uses = Array.create ~len:(Arrayp.length block.body + 1) !next_use in
@@ -82,6 +156,7 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
     begin
       match instr'.i with
       | Block_params params ->
+        (* TODO: spill these in the proper places *)
         let temps =
           List.filter_map params ~f:(fun param ->
             Location.temp_val param.Block_param.param)
@@ -91,15 +166,15 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
           List.split_n temps (num_regs - Set.length !active)
         in
         let temps_spilled =
-          List.map temps_spilled ~f:(fun temp -> temp, spill_temp temp)
+          List.map temps_spilled ~f:(fun temp -> temp, Spiller.spill spiller temp)
           |> Temp.Map.of_alist_exn
         in
         let new_params =
           (List.map & Traverse.of_field Block_param.Fields.param) params ~f:(function
-            | Slot slot -> Location.Slot slot
+            | Stack slot -> Location.Stack slot
             | Temp temp as loc ->
               Map.find temps_spilled temp
-              |> Option.value_map ~f:(Fn.compose Location.slot fst) ~default:loc)
+              |> Option.value_map ~f:(fun (slot, _) -> Stack slot) ~default:loc)
         in
         Multi_edit.add_replace
           edit
@@ -121,15 +196,15 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
               |> Iter.to_list
             in
             let temps_spilled =
-              List.map non_active_uses ~f:(fun temp -> temp, spill_temp temp)
+              List.map non_active_uses ~f:(fun temp -> temp, Spiller.spill spiller temp)
               |> Temp.Map.of_alist_exn
             in
             let new_args =
               List.map block_call.args ~f:(function
-                | Slot slot -> Location.Slot slot
+                | Stack slot -> Location.Stack slot
                 | Temp temp as loc ->
                   Map.find temps_spilled temp
-                  |> Option.value_map ~f:(Fn.compose Location.slot fst) ~default:loc)
+                  |> Option.value_map ~f:(fun (slot, _) -> Stack slot) ~default:loc)
             in
             { block_call with args = new_args }
           end
@@ -138,13 +213,14 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
         ()
       | instr ->
         let uses = Instr.iter_uses instr |> Iter.to_list in
-        assert (num_regs >= List.length uses);
+        (* TODO: this fails because we need to make Call take a location, and then spill it independently just like a block_call *)
+        assert (List.length uses <= num_regs);
         let non_active_uses =
           uses |> List.filter ~f:(fun temp -> not (Set.mem !active temp))
         in
         let defs = Instr.iter_defs instr |> Iter.to_list in
         (* make space for the uses *)
-        let active_list, dropped_temps =
+        let active_list, _dropped_temps =
           let sorted =
             Set.to_list !active |> sort_temps_by_ascending_next_use next_uses_here_in
           in
@@ -153,10 +229,8 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit (block : Bl
         (* insert reloads for the non_active_uses *)
         begin
           let@: temp = List.iter non_active_uses in
-          let stack_slot, ty = spill_temp temp in
-          let reload_instr =
-            Instr.Mov { dst = Reg temp; src = Stack_slot stack_slot; size = ty }
-          in
+          let stack, ty = Spiller.spill spiller temp in
+          let reload_instr = Instr.Mov { dst = Reg temp; src = Stack stack; size = ty } in
           Multi_edit.add_insert
             edit
             block.label
@@ -189,7 +263,7 @@ let fixup_edge
       ~dst_active_in
       ~src_block
       ~(dst_block : Block.t)
-      ~spill_temp
+      ~spiller
       ~dst_block_total_params
   =
   let need_to_reload temp =
@@ -199,7 +273,7 @@ let fixup_edge
     let new_args =
       List.map dst_block_total_params ~f:(fun temp ->
         if need_to_reload temp
-        then spill_temp temp |> fst |> Location.Slot
+        then Spiller.spill spiller temp |> fst |> Location.Stack
         else Location.Temp temp)
     in
     let control_instr = Block.find_control src_block in
@@ -234,7 +308,7 @@ let calculate_total_params_for_block
   Set.to_list !total_params
 ;;
 
-let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spill_temp func =
+let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spiller func =
   let edit = Multi_edit.create () in
   begin
     let@: dst_block = Func.iter_blocks func in
@@ -263,7 +337,7 @@ let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spill_t
         ~dst_active_in
         ~src_block
         ~dst_block
-        ~spill_temp
+        ~spiller
         ~dst_block_total_params
     end;
     let block_params = Block.find_block_params dst_block in
@@ -282,7 +356,8 @@ let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spill_t
   This is the place where the variable is still in a register and dominates all reloads, but is in the least nested loop.
 *)
 (* TODO: don't insert spills for BlockParams *)
-let insert_spills ~spilled func =
+let insert_spills ~spiller func =
+  (* TODO: use bitvec *)
   let edit = Multi_edit.create () in
   let labels = Func.labels_postorder func in
   (*
@@ -298,12 +373,14 @@ let insert_spills ~spilled func =
     let@: instr = Block.iter_fwd block in
     let@: def, (stack_slot, ty) =
       Instr.iter_defs instr.i
+      (* we skip block param defs because those were already spilled directly by replacing the def temp with a stack slot in the block param *)
+      |> Iter.filter ~f:(fun def -> not (Spiller.did_spill_block_param spiller def))
       |> Iter.filter_map ~f:(fun def ->
-        Hashtbl.find spilled def |> Option.map ~f:(Tuple2.create def))
+        Spiller.find spiller def |> Option.map ~f:(Tuple2.create def))
       |> Iter.filter ~f:(fun (def, _) -> not (Temp.Table.mem already_spilled def))
     in
     already_spilled.Temp.Table.Syntax.!(def) <- ();
-    let new_instr = Instr.Mov { dst = Stack_slot stack_slot; src = Reg def; size = ty } in
+    let new_instr = Instr.Mov { dst = Stack stack_slot; src = Reg def; size = ty } in
     Multi_edit.add_insert
       edit
       block.label
@@ -314,16 +391,7 @@ let insert_spills ~spilled func =
 
 let spill_func ~num_regs (func : Func.t) =
   let ty_table = Func.get_ty_table func in
-  let spilled = Hashtbl.create (module Temp) in
-  let stack_builder = Func.create_stack_builder func in
-  let spill_temp temp =
-    Hashtbl.find_or_add spilled temp ~default:(fun () ->
-      let ty = ty_table.Temp.Table.Syntax.!(temp) in
-      let stack_slot =
-        Stack_builder.alloc stack_builder ~name:("pre_spilled_" ^ temp.name) ty
-      in
-      stack_slot, ty)
-  in
+  let spiller = Spiller.create func in
   let pred_table = Func.pred_table func in
   let next_use_in_table, next_use_out_table =
     Liveness.compute_next_use_distance ~pred_table func
@@ -347,7 +415,7 @@ let spill_func ~num_regs (func : Func.t) =
       (* let active_in = Ident.Set.empty in *)
       let next_use_out = Liveness.Next_use_table.find next_use_out_table label in
       let active_out =
-        spill_block ~num_regs ~active_in ~next_use_out ~spill_temp ~edit block
+        spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit block
       in
       active_in_table.Label.Table.Syntax.!(label) <- active_in;
       active_out_table.Label.Table.Syntax.!(label) <- active_out
@@ -355,10 +423,10 @@ let spill_func ~num_regs (func : Func.t) =
     Func.apply_multi_edit edit func
   in
   let func =
-    fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spill_temp func
+    fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spiller func
   in
-  let func = Func.apply_stack_builder stack_builder func in
-  let func = insert_spills ~spilled func in
+  let func = Spiller.apply_func spiller func in
+  let func = insert_spills ~spiller func in
   let func = Convert_ssa.convert func in
   func
 ;;

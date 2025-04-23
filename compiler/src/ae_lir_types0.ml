@@ -2,7 +2,6 @@
 open Std
 
 open struct
-  
   module Generic_ir = Ae_generic_ir_std
 end
 

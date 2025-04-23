@@ -4,16 +4,17 @@ module Mach_reg = Ae_x86_mach_reg
 module Call_conv = Ae_x86_call_conv
 open Ae_trace
 
-module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
-    module Temp = Temp
-    module Ty = Ty
-  end)
-
 (*
    this works because we only duplicate a live through temporary when its color conflicts
   with a definition that is constrained
 *)
 let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr =
+  let module Sequentialize_parallel_moves =
+    Ae_sequentialize_parallel_moves.Make (struct
+      module Temp = Temp
+      module Ty = Ty
+    end)
+  in
   let constrained_uses = Instr.iter_constrained_uses_exn instr |> Iter.to_list in
   let constrained_defs = Instr.iter_constrained_defs_exn instr |> Iter.to_list in
   if List.is_empty constrained_uses && List.is_empty constrained_defs
@@ -188,24 +189,52 @@ let repair_block
       (* TODO: assert the the prefix of temps must be in the mach_reg, allocated in tree_scan *)
       (* Then perform moves into the stack slots *)
       let block_params = Instr.block_params_val instr'.i |> Option.value_exn in
-      let moves, moves_rem =
-        List.zip_with_remainder block_params Call_conv.call_arguments
+      let num_args_on_stack =
+        List.length block_params - Call_conv.num_arguments_in_registers
       in
+      let args_on_stack_location =
+        List.range 0 num_args_on_stack
+        |> List.map ~f:(fun i ->
+          Location.Stack (Previous_frame Int32.(of_int_exn i * 8l)))
+      in
+      let arg_locations =
+        List.map Call_conv.call_arguments ~f:(fun mach_reg ->
+          Location.Temp (Mach_reg_gen.get mach_reg_gen mach_reg))
+        |> List.append __ args_on_stack_location
+      in
+      let moves, moves_rem = List.zip_with_remainder block_params arg_locations in
       begin
         match moves_rem with
-        (* assert for now *)
-        | Some (First _) -> todol [%here]
+        | Some (First _) -> assert false
         | _ -> ()
       end;
-      (* let moves =
+      let module Sequentialize_parallel_moves =
+        Ae_sequentialize_parallel_moves.Make (struct
+          module Temp = Location
+          module Ty = Ty
+        end)
+      in
+      let moves =
         moves
-        |> List.map ~f:(fun (param, mach_reg) ->
+        |> List.map ~f:(fun (param, loc) ->
           { Sequentialize_parallel_moves.Move.dst = param.param
-          ; src = Mach_reg_gen.get mach_reg_gen mach_reg
+          ; src = loc
           ; ty = param.ty
           })
-      in *)
-      ()
+      in
+      let moves =
+        List.map moves ~f:(fun move ->
+          Instr.Mov
+            { dst = Location.to_operand move.dst
+            ; src = Location.to_operand move.src
+            ; size = move.ty
+            })
+      in
+      Multi_edit.add_remove edit block.label instr';
+      Multi_edit.add_inserts
+        edit
+        block.label
+        (List.map moves ~f:(Instr'.create __ instr'.index))
     end
     else begin
       let instr = instr'.i in

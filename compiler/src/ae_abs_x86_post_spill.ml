@@ -86,11 +86,11 @@ let spill_regular_instr
         instrs_before
         [ ins
             (Mov
-               { dst = Stack_slot evicted_temp_slot
+               { dst = Stack (Slot evicted_temp_slot)
                ; src = Reg evicted_temp
                ; size = Qword
                })
-        ; ins (Mov { dst = Reg evicted_temp; src = Stack_slot temp_slot; size = Qword })
+        ; ins (Mov { dst = Reg evicted_temp; src = Stack (Slot temp_slot); size = Qword })
         ]
     end;
     evicted_temp
@@ -120,14 +120,15 @@ let spill_regular_instr
         Instr.
           [ ins
               (Mov
-                 { dst = Stack_slot evicted_temp_slot
+                 { dst = Stack (Slot evicted_temp_slot)
                  ; src = Reg evicted_temp
                  ; size = Qword
                  })
           ];
       Lstack.append_list
         instrs_after
-        [ ins (Mov { dst = Stack_slot temp_slot; src = Reg evicted_temp; size = Qword }) ]
+        [ ins (Mov { dst = Stack (Slot temp_slot); src = Reg evicted_temp; size = Qword })
+        ]
     end;
     evicted_temp
   in
@@ -154,7 +155,10 @@ let spill_regular_instr
       instrs_after
       [ ins
           (Mov
-             { dst = Reg evicted_temp; src = Stack_slot evicted_temp_slot; size = Qword })
+             { dst = Reg evicted_temp
+             ; src = Stack (Slot evicted_temp_slot)
+             ; size = Qword
+             })
       ]
   end;
   ( Lstack.to_list instrs_before |> List.map ~f:(fun i -> { i with index = instr.index })
@@ -176,7 +180,7 @@ let spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color (instr' : In
         match location with
         | Temp temp when Set.mem spilled_colors (get_temp_color temp) ->
           let slot = spilled_temp_to_slot temp in
-          Slot slot
+          Stack (Slot slot)
         | _ -> location
       end
     in
@@ -187,7 +191,7 @@ let spill_ssa ~spilled_temp_to_slot ~spilled_colors ~get_temp_color (instr' : In
     (match location with
      | Temp temp when Set.mem spilled_colors (get_temp_color temp) ->
        let slot = spilled_temp_to_slot temp in
-       Slot slot
+       Stack (Slot slot)
      | _ -> location)
 ;;
 

@@ -49,17 +49,17 @@ let destruct ~mach_reg_gen ~in_same_reg ~get_scratch (func : Func.t) =
       let sequential_moves =
         List.concat_map sequential_moves ~f:(fun move ->
           match move.dst, move.src with
-          | Slot slot1, Slot slot2 when did_use_scratch ->
+          | Stack slot1, Stack slot2 when did_use_scratch ->
             let r10 = Mach_reg_gen.get mach_reg_gen R10 in
             [ Instr.Push { src = r10; size = Qword }
-            ; Instr.Mov { dst = Reg r10; src = Stack_slot slot2; size = move.ty }
-            ; Instr.Mov { dst = Stack_slot slot1; src = Reg r10; size = move.ty }
+            ; Instr.Mov { dst = Reg r10; src = Stack slot2; size = move.ty }
+            ; Instr.Mov { dst = Stack slot1; src = Reg r10; size = move.ty }
             ; Instr.Pop { dst = r10; size = Qword }
             ]
-          | Slot slot1, Slot slot2 ->
+          | Stack slot1, Stack slot2 ->
             let r11 = Mach_reg_gen.get mach_reg_gen R11 in
-            [ Instr.Mov { dst = Reg r11; src = Stack_slot slot2; size = move.ty }
-            ; Instr.Mov { dst = Stack_slot slot1; src = Reg r11; size = move.ty }
+            [ Instr.Mov { dst = Reg r11; src = Stack slot2; size = move.ty }
+            ; Instr.Mov { dst = Stack slot1; src = Reg r11; size = move.ty }
             ]
           | _ ->
             [ Instr.Mov

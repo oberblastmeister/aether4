@@ -13,6 +13,19 @@ type t =
 let resolve_frame_base_offset t slot = t.table.Stack_slot.Table.Syntax.!(slot)
 let frame_size t = t.frame_size
 
+let compute_bottom_size func =
+  let max_offset = ref (-8) in
+  begin
+    let@: block = Func.iter_blocks func in
+    let@: instr = Block.iter_fwd block in
+    let@: operand = Instr.iter_operands instr.i in
+    let@: stack_addr = Operand.stack_val operand |> Option.iter in
+    let@: offset = Stack_address.current_frame_val stack_addr |> Option.iter in
+    max_offset := max !max_offset (Int.of_int32_exn offset)
+  end;
+  Int.round_up ~to_multiple_of:8 (!max_offset + 8)
+;;
+
 let compute (func : Func.t) =
   let offset = ref 0 in
   let layout_table = Stack_slot.Table.create () in
@@ -29,6 +42,7 @@ let compute (func : Func.t) =
     assert (size % 8 = 0);
     if size % 16 = 8 then size + 8 else size
   in
-  let frame_size = align (Int.neg !offset) in
+  let bottom_size = compute_bottom_size func in
+  let frame_size = align (Int.neg !offset + bottom_size) in
   { table = layout_table; frame_size }
 ;;

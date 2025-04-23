@@ -42,7 +42,7 @@ let convert ~func_index func =
                ~first:(fun temp -> allocation.Temp.Table.Syntax.!(temp))
                ~second:Fn.id
         in
-        [%equal: (int, Stack_slot.t) Either.t] (conv t1) (conv t2))
+        [%equal: (int, Stack_address.t) Either.t] (conv t1) (conv t2))
       ~get_scratch:(fun () -> Temp (Mach_reg_gen.get mach_reg_gen R11))
       func
   in

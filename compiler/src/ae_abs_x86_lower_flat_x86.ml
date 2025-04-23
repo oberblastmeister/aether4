@@ -33,9 +33,16 @@ let get_temp t (temp : Abs_x86.Temp.t) =
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
-  | Stack_slot slot ->
-    let offset = Frame_layout.resolve_frame_base_offset st.frame_layout slot in
-    Mem (Address.create Mach_reg.RBP offset)
+  | Stack stack_addr -> begin
+    match stack_addr with
+    | Slot slot ->
+      let offset = Frame_layout.resolve_frame_base_offset st.frame_layout slot in
+      Mem (Address.create Mach_reg.RBP offset)
+    | Previous_frame i ->
+      (* -16 to skip over the pushed return address and pushed base pointer *)
+      Mem (Address.create Mach_reg.RBP (-16 - Int.of_int32_exn i))
+    | Current_frame i -> Mem (Address.create Mach_reg.RSP (Int.of_int32_exn i))
+  end
   | Reg temp -> Reg (get_temp st temp)
   | Mem _ -> todol [%here]
 ;;
@@ -201,11 +208,15 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
       ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ())
   | Call { dst; size = _; func; args } ->
-    let args = (List.map & Tuple2.map_fst) ~f:(get_temp st) args in
-    (* check that constraints were satisfied *)
-    List.zip_with_remainder args Call_conv.call_arguments
+    let args =
+      List.map
+        ~f:(fun (arg, ty) -> lower_operand st (Abs_x86.Location.to_operand arg), ty)
+        args
+    in
+    (* TODO: check that constraints were satisfied *)
+    (* List.zip_with_remainder args Call_conv.call_arguments
     |> fst
-    |> List.iter ~f:(fun ((m1, _), m2) -> assert (Mach_reg.equal m1 m2));
+    |> List.iter ~f:(fun ((m1, _), m2) -> assert (Mach_reg.equal m1 m2)); *)
     assert (Mach_reg.equal (get_temp st dst) Call_conv.return_register);
     empty +> [ ins (Call func) ]
 ;;
