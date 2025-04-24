@@ -2,7 +2,7 @@ const std = @import("std");
 
 extern fn c0_main_export() i64;
 
-export fn _runtime_c0_panic() void {
+export fn c0_panic() void {
     @panic("Panic!");
 }
 

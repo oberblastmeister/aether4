@@ -7,9 +7,17 @@
 )
 
 (rule
+ (targets libc0_test_utils.a)
+ (deps zig-out)
+ (action
+  (copy zig-out/lib/libc0_test_utils.a libc0_test_utils.a)
+ )
+)
+
+(rule
   (targets (dir zig-out) (dir .zig-cache))
   (mode promote)
-  (deps (source_tree .zig-cache) build.zig (source_tree src))
+  (deps build.zig (source_tree src) (source_tree test_utils))
   (action
     (progn
       (run zig build)

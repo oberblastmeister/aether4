@@ -14,7 +14,6 @@ pub fn build_lib(b: *std.Build, name: []const u8, root: []const u8, target: anyt
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    // running `zig build`).
     b.installArtifact(lib);
 }
 
@@ -34,6 +33,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     build_lib(b, "c0_runtime", "src/main.zig", target, optimize);
+
+    build_lib(b, "c0_test_utils", "test_utils/lib.zig", target, optimize);
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
