@@ -123,6 +123,7 @@ type param =
 type func_sig =
   { ty : ty
   ; params : param list
+  ; is_extern : bool (* Controls whether we use the c calling convention *)
   ; span : Span.t
   }
 [@@deriving sexp_of]
@@ -155,7 +156,10 @@ type global_decl =
 
 type program = global_decl list [@@deriving sexp_of]
 
-let func_defn_to_ty func = { ty = func.ty; params = func.params; span = func.span }
+let func_defn_to_ty func =
+  { ty = func.ty; params = func.params; span = func.span; is_extern = false }
+;;
+
 let bool_ty = Bool Span.none
 let int_ty = Int Span.none
 let void_ty = Void Span.none

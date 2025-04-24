@@ -63,11 +63,11 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
-  | Call { dst; ty; func; args } ->
+  | Call { dst; ty; func; args; is_extern } ->
     let func = mangle_func_name func in
     let ty = lower_ty ty in
     let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
-    let call_conv = X86_call_conv.c0 in
+    let call_conv = if is_extern then X86_call_conv.sysv else X86_call_conv.c0 in
     empty +> [ ins (Call { dst; ty; func; args; call_conv }) ]
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->

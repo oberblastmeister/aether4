@@ -402,14 +402,14 @@ let parse_params env : Cst.param list Spanned.t =
 ;;
 
 let parse_func env : Cst.global_decl =
-  let extern = Parser.optional (expect_eq_ Extern) env |> Option.is_some in
+  let is_extern = Parser.optional (expect_eq_ Extern) env |> Option.is_some in
   let ty = parse_ty env in
   let name = parse_ident env in
   let params = parse_params env in
   let body = (Option.some <$> parse_block <|> (None <$ expect_eq_ Semi)) env in
   let open Span.Syntax in
   Cst.Func
-    { extern
+    { is_extern
     ; ty
     ; name
     ; params = params.t

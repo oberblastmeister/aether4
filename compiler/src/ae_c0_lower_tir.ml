@@ -255,6 +255,7 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
                 ; args =
                     List.zip_exn arg_temps func_sig.params
                     |> List.map ~f:(fun (arg, param) -> arg, lower_ty param.ty)
+                ; is_extern = func_sig.is_extern
                 })
          ]
       ++ cont
@@ -293,7 +294,9 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
 
 let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
   match decl with
-  | Ast.Extern_func_defn _ -> todol [%here]
+  | Ast.Extern_func_defn { name; ty } ->
+    Hashtbl.set st.func_ty_map ~key:name ~data:ty;
+    None
   | Ast.Func_decl { name; ty } ->
     Hashtbl.set st.func_ty_map ~key:name ~data:ty;
     None

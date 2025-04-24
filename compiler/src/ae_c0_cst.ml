@@ -155,7 +155,7 @@ type param =
 [@@deriving sexp_of]
 
 type func =
-  { extern : bool
+  { is_extern : bool
   ; ty : ty
   ; name : var
   ; params : param list

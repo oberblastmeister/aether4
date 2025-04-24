@@ -21,7 +21,7 @@ let%expect_test "simple" =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:5-8)) (name ((t bruh) (span 2:9-13)))
+       ((is_extern false) (ty (Int 2:5-8)) (name ((t bruh) (span 2:9-13)))
         (params ()) (body (((block ()) (span [2,16]-[4,6])))) (span [2,5]-[4,6])))))
     |}]
 ;;
@@ -38,7 +38,7 @@ let%expect_test "simple decl" =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:5-8)) (name ((t first) (span 2:9-14)))
+       ((is_extern false) (ty (Int 2:5-8)) (name ((t first) (span 2:9-14)))
         (params ())
         (body
          (((block
@@ -86,7 +86,7 @@ let%expect_test "simple control flow" =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
+       ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
          (((block
@@ -118,7 +118,7 @@ let%expect_test "simple assign" =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:7-10)) (name ((t first) (span 2:11-16)))
+       ((is_extern false) (ty (Int 2:7-10)) (name ((t first) (span 2:11-16)))
         (params ())
         (body
          (((block
@@ -153,7 +153,7 @@ let%expect_test "bool" =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
+       ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
          (((block
@@ -201,7 +201,7 @@ let%expect_test "typedef" =
       (Typedef (ty (Int 4:19-22)) (name ((t another) (span 4:11-18)))
        (span 4:3-18))
       (Func
-       ((extern false) (ty (Ty_var ((t testing) (span 6:3-10))))
+       ((is_extern false) (ty (Ty_var ((t testing) (span 6:3-10))))
         (name ((t main) (span 6:11-15))) (params ())
         (body
          (((block
@@ -220,7 +220,7 @@ let%expect_test "typedef" =
            (span [6,18]-[9,4]))))
         (span [6,3]-[9,4])))
       (Func
-       ((extern false) (ty (Ty_var ((t testing) (span 11:3-10))))
+       ((is_extern false) (ty (Ty_var ((t testing) (span 11:3-10))))
         (name ((t another) (span 11:11-18))) (params ())
         (body
          (((block
@@ -230,11 +230,11 @@ let%expect_test "typedef" =
            (span [11,21]-[13,4]))))
         (span [11,3]-[13,4])))
       (Func
-       ((extern false) (ty (Ty_var ((t testing) (span 15:3-10))))
+       ((is_extern false) (ty (Ty_var ((t testing) (span 15:3-10))))
         (name ((t another) (span 15:11-18))) (params ()) (body ())
         (span 15:3-20)))
       (Func
-       ((extern true) (ty (Ty_var ((t testing) (span 17:10-17))))
+       ((is_extern true) (ty (Ty_var ((t testing) (span 17:10-17))))
         (name ((t another) (span 17:18-25))) (params ()) (body ())
         (span 17:10-27)))))
     |}]
@@ -252,7 +252,7 @@ let%expect_test _ =
     {|
     (Ok
      ((Func
-       ((extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
+       ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
          (((block

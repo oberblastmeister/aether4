@@ -330,7 +330,7 @@ let elab_decl_param st (param : Cst.param) : Ast.param =
 let elab_decl_param st (func : Cst.func) : Ast.func_sig =
   let ty = elab_ty st func.ty in
   let params = List.map ~f:(elab_decl_param st) func.params in
-  { ty; params; span = func.span }
+  { ty; params; span = func.span; is_extern = false }
 ;;
 
 let elab_defn_param st (param : Cst.param) : Ast.param * st =
@@ -357,13 +357,13 @@ let elab_defn_params st params =
 let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
   match decl with
   | Cst.Func func ->
-    if func.extern
+    if func.is_extern
     then begin
       if Option.is_some func.body
       then throw_s [%message "Extern function must have no body"];
       let name, st' = declare_func_var st func.name in
       let func_sig = elab_decl_param st' func in
-      Extern_func_defn { name; ty = func_sig }, st'
+      Extern_func_defn { name; ty = { func_sig with is_extern = true } }, st'
     end
     else begin
       match func.body with
@@ -395,7 +395,10 @@ let elab_program st (prog : Cst.program) : Ast.program =
   let st = !st in
   let main, st = declare_func_var st { t = "main"; span = Span.none } in
   let main_decl =
-    Ast.Func_decl { name = main; ty = { ty = Ast.int_ty; params = []; span = Span.none } }
+    Ast.Func_decl
+      { name = main
+      ; ty = { ty = Ast.int_ty; params = []; span = Span.none; is_extern = false }
+      }
   in
   (* let panic, _st = declare_func_var st { t = "_runtime_c0_panic"; span = Span.none } in
   let panic_decl =
