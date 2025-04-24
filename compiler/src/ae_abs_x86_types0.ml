@@ -354,14 +354,9 @@ module Instr = struct
       | _ -> ()
     end
     | Call { dst = _; args; func = _; size = _ } ->
-      let zipped, rem =
+      let zipped, _rem =
         List.zip_with_remainder (List.map args ~f:fst) Call_conv.call_arguments
       in
-      begin
-        match rem with
-        | Some (First _) -> raise_s [%message "Don't support stack arguments yet" [%here]]
-        | _ -> ()
-      end;
       List.iter zipped ~f:(fun (loc, ty) ->
         Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
     | Bin { dst = _; op; src1; src2 } -> begin

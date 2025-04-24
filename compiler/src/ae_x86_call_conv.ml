@@ -9,7 +9,7 @@ let args = [ RDI; RSI; RDX; RCX; R8; R9 ]
 let ret = RAX
 
 let regalloc_usable_mach_regs =
-  List.take [ RAX; RCX; RDX; RBX; RSI; RDI; R8; R9; R10; R12; R13; R14; R15 ] 4
+  [ RAX; RCX; RDX; RBX; RSI; RDI; R8; R9; R10; R12; R13; R14; R15 ]
 ;;
 
 let regalloc_usable_colors =
@@ -25,6 +25,8 @@ let return_register = RAX
 let call_clobbers =
   List.filter regalloc_usable_mach_regs ~f:(fun r -> not (equal return_register r))
 ;;
+
+let num_call_clobbers = List.length call_clobbers
 
 (* this is in order of argument number *)
 let call_arguments = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ]

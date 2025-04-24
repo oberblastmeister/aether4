@@ -38,9 +38,7 @@ let convert ~func_index func =
       ~in_same_reg:(fun t1 t2 ->
         let conv t =
           Location.to_either t
-          |> Either.map
-               ~first:(fun temp -> allocation.Temp.!(temp))
-               ~second:Fn.id
+          |> Either.map ~first:(fun temp -> allocation.Temp.!(temp)) ~second:Fn.id
         in
         [%equal: (int, Stack_address.t) Either.t] (conv t1) (conv t2))
       ~get_scratch:(fun () -> Temp (Mach_reg_gen.get mach_reg_gen R11))

@@ -1,4 +1,10 @@
 (* TODO: add stack allocator to share stack slots better *)
+(*
+  TODO: optimization, for instructions that can take stack slots as arguments,
+  we currently just add all inactive arguments as stack slots.
+  We should try to reload as many inactive arguments as we can,
+  and the put the remaining arguments as stack slots.
+*)
 (* 
   preconditions for instructions before pre_spill is
   
@@ -133,6 +139,22 @@ let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
   in_all_preds |> List.append __ in_some_pred |> List.take __ num_regs |> Temp.Set.of_list
 ;;
 
+(*
+   We make sure that if adding the non active temporaries to the active list
+would exceed the number of registers that we have, then we evict some registers from the active list
+*)
+let add_to_active_list
+      ?(num_virtual_non_active = 0)
+      ~num_regs
+      ~active_list
+      ~next_uses
+      non_active
+  =
+  sort_temps_by_ascending_next_use next_uses active_list
+  |> List.take __ (num_regs - (List.length non_active + num_virtual_non_active))
+  |> List.append __ non_active
+;;
+
 (* Make sure to set the active in table after running spill_block *)
 let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block.t) =
   let next_uses_at_point =
@@ -166,7 +188,8 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
           List.split_n temps (num_regs - Set.length !active)
         in
         let temps_spilled =
-          List.map temps_spilled ~f:(fun temp -> temp, Spiller.spill spiller temp)
+          List.map temps_spilled ~f:(fun temp ->
+            temp, Spiller.spill ~is_block_param:() spiller temp)
           |> Temp.Map.of_alist_exn
         in
         let new_params =
@@ -185,6 +208,38 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
         in
         active := List.fold_left non_dead_temps_in_reg ~init:!active ~f:Set.add;
         ()
+      | instr when Instr.is_call instr ->
+        let non_active_uses =
+          Instr.iter_uses instr
+          |> Iter.filter ~f:(fun temp -> not (Set.mem !active temp))
+          |> Iter.to_list
+        in
+        let temps_spilled =
+          List.map non_active_uses ~f:(fun temp -> temp, Spiller.spill spiller temp)
+          |> Temp.Map.of_alist_exn
+        in
+        let `dst dst, `size size, `func func, `args args =
+          Instr.call_val instr |> Option.value_exn
+        in
+        let new_args =
+          (List.map & Tuple2.map_fst) args ~f:(function
+            | Stack slot -> Location.Stack slot
+            | Temp temp as loc ->
+              Map.find temps_spilled temp
+              |> Option.value_map ~f:(fun (slot, _) -> Stack slot) ~default:loc)
+        in
+        let new_instr = Instr.Call { dst; size; func; args = new_args } in
+        Multi_edit.add_replace edit block.label { instr' with i = new_instr };
+        let active_list = Set.to_list !active in
+        let active_list =
+          add_to_active_list
+            ~num_regs
+            ~active_list
+            ~next_uses:next_uses_here_out
+            ~num_virtual_non_active:Call_conv.num_call_clobbers
+            [ dst ]
+        in
+        active := Temp.Set.of_list active_list
       | instr when Instr.is_control instr ->
         (* for control instructions, set each non active temp to be a slot in the block_call *)
         let instr =
@@ -220,11 +275,12 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
         in
         let defs = Instr.iter_defs instr |> Iter.to_list in
         (* make space for the uses *)
-        let active_list, _dropped_temps =
-          let sorted =
-            Set.to_list !active |> sort_temps_by_ascending_next_use next_uses_here_in
-          in
-          sorted |> List.split_n __ (num_regs - List.length non_active_uses)
+        let active_list =
+          add_to_active_list
+            ~num_regs
+            ~active_list:(Set.to_list !active)
+            ~next_uses:next_uses_here_in
+            non_active_uses
         in
         (* insert reloads for the non_active_uses *)
         begin
@@ -241,15 +297,15 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
         end;
         (* make spaces for the definitions, including clobbers *)
         let num_clobbers = Instr.iter_clobbers instr |> Iter.length in
-        assert (num_regs >= List.length defs + num_clobbers);
+        assert (List.length defs + num_clobbers <= num_regs);
         let active_list =
-          active_list @ non_active_uses
-          (* use out so that dead uses get removed first *)
-          |> sort_temps_by_ascending_next_use next_uses_here_out
-          (* first make space *)
-          |> List.take __ (num_regs - (List.length defs + num_clobbers))
-          (* then add *)
-          |> List.append __ defs
+          add_to_active_list
+            ~num_regs
+            ~active_list
+              (* it is important that we use next_uses_here_out so that dead uses get removed first *)
+            ~next_uses:next_uses_here_out
+            ~num_virtual_non_active:num_clobbers
+            defs
         in
         active := Temp.Set.of_list active_list
     end
@@ -321,9 +377,7 @@ let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spiller
     in
     let dst_block_total_params_with_ty =
       List.map dst_block_total_params ~f:(fun temp ->
-        { Block_param.param = Location.Temp temp
-        ; ty = ty_table.Temp.!(temp)
-        })
+        { Block_param.param = Location.Temp temp; ty = ty_table.Temp.!(temp) })
     in
     let dst_active_in = active_in_table.Label.!(dst_block.label) in
     begin
@@ -357,7 +411,6 @@ let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spiller
 *)
 (* TODO: don't insert spills for BlockParams *)
 let insert_spills ~spiller func =
-  (* TODO: use bitvec *)
   let edit = Multi_edit.create () in
   let labels = Func.labels_postorder func in
   (*

@@ -18,6 +18,15 @@ let compute_bottom_size func =
   begin
     let@: block = Func.iter_blocks func in
     let@: instr = Block.iter_fwd block in
+    begin
+      match instr.i with
+      | Call { args; _ } ->
+        let num_on_stack =
+          List.length args - Call_conv.num_arguments_in_registers |> max 0
+        in
+        max_offset := max !max_offset (num_on_stack * 8)
+      | _ -> ()
+    end;
     let@: operand = Instr.iter_operands instr.i in
     let@: stack_addr = Operand.stack_val operand |> Option.iter in
     let@: offset = Stack_address.current_frame_val stack_addr |> Option.iter in
@@ -44,5 +53,6 @@ let compute (func : Func.t) =
   in
   let bottom_size = compute_bottom_size func in
   let frame_size = align (Int.neg !offset + bottom_size) in
+  trace_s [%message (offset : int ref) (bottom_size : int) (frame_size : int)];
   { table = layout_table; frame_size }
 ;;

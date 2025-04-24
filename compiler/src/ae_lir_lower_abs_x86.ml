@@ -42,23 +42,10 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   | Unreachable -> empty +> [ ins Unreachable ]
   | Call { dst; func; ty; args } ->
     let ty = lower_ty ty in
-    let args_in_registers, args_on_stack =
-      List.split_n args Call_conv.num_arguments_in_registers
-    in
-    let moves =
-      List.mapi args_on_stack ~f:(fun i (temp, ty) ->
-        ins
-          (Mov
-             { dst = Stack (Current_frame Int32.(of_int_exn i * 8l))
-             ; src = Reg temp
-             ; size = lower_ty ty
-             }))
-    in
     let args =
-      List.map args_in_registers ~f:(fun (arg, ty) ->
-        Abs_x86.Location.Temp arg, lower_ty ty)
+      List.map args ~f:(Tuple2.map_both ~f1:Abs_x86.Location.temp ~f2:lower_ty)
     in
-    empty +> moves +> [ ins (Call { dst; func; size = ty; args }) ]
+    empty +> [ ins (Call { dst; func; size = ty; args }) ]
   | Block_params params ->
     empty
     +> [ ins

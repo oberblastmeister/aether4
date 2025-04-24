@@ -86,8 +86,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         end
       | None ->
         let mach_reg = alloc_register available_mach_regs live_through in
-        (* TODO: maybe use add_exn here *)
-        allocation := Map.set !allocation ~key:live_through ~data:mach_reg;
+        allocation := Map.add_exn !allocation ~key:live_through ~data:mach_reg;
         Lstack.push parallel_moves_before (mach_reg, live_through)
     end;
     (* then allocate all used temps that died here *)
