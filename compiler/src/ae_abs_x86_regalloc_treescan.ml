@@ -40,9 +40,9 @@ let alloc_block
         Instr.iter_uses instr'.i
         |> Iter.filter ~f:(fun temp -> Set.mem deaths.@(instr'.index) temp)
       in
-      if Set.mem usable_colors allocation.Temp.Table.Syntax.!(use)
+      if Set.mem usable_colors allocation.Temp.!(use)
       then
-        available_colors := Set.add !available_colors allocation.Temp.Table.Syntax.!(use)
+        available_colors := Set.add !available_colors allocation.Temp.!(use)
     end;
     (* allocate defs *)
     (*
@@ -57,7 +57,7 @@ let alloc_block
         |> Option.value_exn ~message:"No colors left, but we should have pre spilled"
       in
       available_colors := Set.remove !available_colors color;
-      allocation.Temp.Table.Syntax.!(def) <- color
+      allocation.Temp.!(def) <- color
     end;
     (* release dead defs *)
     (* TODO: maybe check that the color is in the usable ones *)
@@ -66,9 +66,9 @@ let alloc_block
         List.iter defs
         |> Iter.filter ~f:(fun def -> not (Temp.Table.mem use_locations def))
       in
-      if Set.mem usable_colors allocation.Temp.Table.Syntax.!(def)
+      if Set.mem usable_colors allocation.Temp.!(def)
       then
-        available_colors := Set.add !available_colors allocation.Temp.Table.Syntax.!(def)
+        available_colors := Set.add !available_colors allocation.Temp.!(def)
     end
   end
 ;;

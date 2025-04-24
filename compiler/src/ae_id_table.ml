@@ -38,6 +38,7 @@ module type S = sig
 
   module Syntax : sig
     val ( .!() ) : 'a t -> Key.t -> 'a
+    val ( .!?() ) : 'a t -> Key.t -> 'a option
     val ( .!()<- ) : 'a t -> Key.t -> 'a -> unit
   end
 end
@@ -208,6 +209,7 @@ module Make (Key : Intable) : S with module Key = Key = struct
   ;;
 
   module Syntax = struct
+    let ( .!?() ) = find
     let ( .!() ) = find_exn
     let ( .!()<- ) t key data = set t ~key ~data
   end

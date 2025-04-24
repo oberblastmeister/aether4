@@ -65,7 +65,7 @@ end = struct
             ~key:temp
             ~data:
               ( Stack_address.Previous_frame Int32.(of_int_exn i * 8l)
-              , ty_table.Temp.Table.Syntax.!(temp) )
+              , ty_table.Temp.!(temp) )
         end
       end
     end;
@@ -79,7 +79,7 @@ end = struct
   let spill ?is_block_param t temp =
     Hashtbl.find_or_add t.spilled temp ~default:(fun () ->
       if Option.is_some is_block_param then Hash_set.add t.spilled_block_params temp;
-      let ty = t.ty_table.Temp.Table.Syntax.!(temp) in
+      let ty = t.ty_table.Temp.!(temp) in
       let stack_slot =
         Stack_builder.alloc t.stack_builder ~name:("pre_spilled_" ^ temp.name) ty
       in
@@ -114,10 +114,10 @@ let init_usual ~num_regs ~preds ~next_use_in ~active_out_table =
         (* removing this somehow breaks the ssa conversion *)
         |> Iter.filter ~f:(Map.mem next_use_in)
       in
-      temp_freq.Temp.Table.Syntax.!(temp)
+      temp_freq.Temp.!(temp)
       <- Temp.Table.find_or_add temp_freq temp ~default:(Fn.const 0) + 1;
       in_some_pred := Set.add !in_some_pred temp;
-      if temp_freq.Temp.Table.Syntax.!(temp) = preds_num
+      if temp_freq.Temp.!(temp) = preds_num
       then begin
         in_some_pred := Set.remove !in_some_pred temp;
         in_all_preds := Set.add !in_all_preds temp
@@ -299,9 +299,9 @@ let calculate_total_params_for_block
   =
   let total_params = ref Temp.Set.empty in
   begin
-    let@: pred = List.iter pred_table.Label.Table.Syntax.!(block.label) in
-    let src_active_out = active_out_table.Label.Table.Syntax.!(pred) in
-    let dst_active_in = active_in_table.Label.Table.Syntax.!(block.label) in
+    let@: pred = List.iter pred_table.Label.!(block.label) in
+    let src_active_out = active_out_table.Label.!(pred) in
+    let dst_active_in = active_in_table.Label.!(block.label) in
     let need_to_reload = Set.fold ~init:dst_active_in ~f:Set.remove src_active_out in
     total_params := Set.union !total_params need_to_reload
   end;
@@ -322,15 +322,15 @@ let fixup_func ~ty_table ~pred_table ~active_in_table ~active_out_table ~spiller
     let dst_block_total_params_with_ty =
       List.map dst_block_total_params ~f:(fun temp ->
         { Block_param.param = Location.Temp temp
-        ; ty = ty_table.Temp.Table.Syntax.!(temp)
+        ; ty = ty_table.Temp.!(temp)
         })
     in
-    let dst_active_in = active_in_table.Label.Table.Syntax.!(dst_block.label) in
+    let dst_active_in = active_in_table.Label.!(dst_block.label) in
     begin
-      let@: pred = List.iter pred_table.Label.Table.Syntax.!(dst_block.label) in
+      let@: pred = List.iter pred_table.Label.!(dst_block.label) in
       let src_block = Func.find_block_exn func pred in
       (* every block should be computed, so table lookup can't panic *)
-      let src_active_out = active_out_table.Label.Table.Syntax.!(src_block.label) in
+      let src_active_out = active_out_table.Label.!(src_block.label) in
       fixup_edge
         ~edit
         ~src_active_out
@@ -379,7 +379,7 @@ let insert_spills ~spiller func =
         Spiller.find spiller def |> Option.map ~f:(Tuple2.create def))
       |> Iter.filter ~f:(fun (def, _) -> not (Temp.Table.mem already_spilled def))
     in
-    already_spilled.Temp.Table.Syntax.!(def) <- ();
+    already_spilled.Temp.!(def) <- ();
     let new_instr = Instr.Mov { dst = Stack stack_slot; src = Reg def; size = ty } in
     Multi_edit.add_insert
       edit
@@ -407,7 +407,7 @@ let spill_func ~num_regs (func : Func.t) =
       let active_in =
         init_usual
           ~num_regs
-          ~preds:pred_table.Label.Table.Syntax.!(label)
+          ~preds:pred_table.Label.!(label)
           ~next_use_in:(Liveness.Next_use_table.find next_use_in_table label)
           ~active_out_table
       in
@@ -417,8 +417,8 @@ let spill_func ~num_regs (func : Func.t) =
       let active_out =
         spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit block
       in
-      active_in_table.Label.Table.Syntax.!(label) <- active_in;
-      active_out_table.Label.Table.Syntax.!(label) <- active_out
+      active_in_table.Label.!(label) <- active_in;
+      active_out_table.Label.!(label) <- active_out
     end;
     Func.apply_multi_edit edit func
   in

@@ -13,7 +13,7 @@ module Make (Ir : Ir) = struct
   let throw_s s = raise (Exn (Error.create_s s))
 
   let check_temp_ty ty_table temp ty =
-    let temp_ty = ty_table.Temp.Table.Syntax.!(temp) in
+    let temp_ty = ty_table.Temp.!(temp) in
     if not (Ty.equal temp_ty ty)
     then throw_s [%message "Type mismatch" (temp : Temp.t) (temp_ty : Ty.t) (ty : Ty.t)]
   ;;

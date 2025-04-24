@@ -27,7 +27,7 @@ type st =
   }
 
 let get_temp t (temp : Abs_x86.Temp.t) =
-  Mach_reg.of_enum_exn t.allocation.Temp.Table.Syntax.!(temp)
+  Mach_reg.of_enum_exn t.allocation.Temp.!(temp)
 ;;
 
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =

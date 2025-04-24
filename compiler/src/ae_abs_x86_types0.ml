@@ -551,7 +551,7 @@ module Mach_reg_gen = struct
     Hashtbl.find_or_add t.table mach_reg ~default:(fun () ->
       let ident = Temp.create (Mach_reg.to_string mach_reg) t.id in
       Option.iter t.allocation ~f:(fun allocation ->
-        allocation.Temp.Table.Syntax.!(ident) <- Mach_reg.to_enum mach_reg);
+        allocation.Temp.!(ident) <- Mach_reg.to_enum mach_reg);
       t.id <- t.id + 1;
       ident)
   ;;

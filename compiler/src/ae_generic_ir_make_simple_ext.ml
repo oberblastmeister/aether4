@@ -26,10 +26,10 @@ module Make (Ir : Sigs.Ir_simple) = struct
         let@: def, ty = Instr.iter_defs_with_ty instr.i in
         if not (Temp.Table.mem table def)
         then begin
-          table.Temp.Table.Syntax.!(def) <- ty
+          table.Temp.!(def) <- ty
         end
         else begin
-          assert (Ty.equal table.Temp.Table.Syntax.!(def) ty)
+          assert (Ty.equal table.Temp.!(def) ty)
         end
       end;
       table

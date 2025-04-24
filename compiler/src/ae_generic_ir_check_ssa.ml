@@ -20,7 +20,7 @@ module Make (Ir : Ir) = struct
               (Error.create "Temp was defined more than once" def Temp.sexp_of_t)
           end
           else begin
-            defines.Temp.Table.Syntax.!(def) <- ()
+            defines.Temp.!(def) <- ()
           end
         end
       end

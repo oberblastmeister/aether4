@@ -75,7 +75,7 @@ module Make (Ir : Ir) = struct
       let@: instr = Block.iter_fwd block in
       begin
         let@: def = Instr.iter_defs instr.i in
-        defs.Temp.Table.Syntax.!(def) <- block.label
+        defs.Temp.!(def) <- block.label
       end;
       begin
         let@: use = Instr.iter_uses instr.i in
@@ -109,7 +109,7 @@ module Make (Ir : Ir) = struct
       then ()
       else begin
         add_multi_set live_out ~key:label ~data:temp;
-        live_out_top.Label.Table.Syntax.!(label) <- temp
+        live_out_top.Label.!(label) <- temp
       end;
       if
         let killed_in_block =
@@ -125,8 +125,8 @@ module Make (Ir : Ir) = struct
       then ()
       else begin
         add_multi_set live_in ~key:label ~data:temp;
-        live_in_top.Label.Table.Syntax.!(label) <- temp;
-        let@: pred = List.iter pred_table.Label.Table.Syntax.!(label) in
+        live_in_top.Label.!(label) <- temp;
+        let@: pred = List.iter pred_table.Label.!(label) in
         up_and_mark pred temp
       end
     in
@@ -135,7 +135,7 @@ module Make (Ir : Ir) = struct
       let upward_exposed = Temp.Table.find_multi upward_exposed_table temp in
       begin
         let@: def_in_label = List.iter def_in_labels in
-        block_mark.Label.Table.Syntax.!(def_in_label) <- temp
+        block_mark.Label.!(def_in_label) <- temp
       end;
       begin
         let@: label = List.iter upward_exposed in
@@ -148,9 +148,9 @@ module Make (Ir : Ir) = struct
           not_propagated_yet
         then begin
           add_multi_set live_in ~key:label ~data:temp;
-          live_in_top.Label.Table.Syntax.!(label) <- temp;
+          live_in_top.Label.!(label) <- temp;
           begin
-            let@: pred = List.iter pred_table.Label.Table.Syntax.!(label) in
+            let@: pred = List.iter pred_table.Label.!(label) in
             up_and_mark pred temp
           end
         end
@@ -167,22 +167,22 @@ module Make (Ir : Ir) = struct
     let live_out = Label.Table.create () in
     let live_out_top = Label.Table.create () in
     let rec up_and_mark label temp =
-      if Label.equal label def_to_label.Temp.Table.Syntax.!(temp)
+      if Label.equal label def_to_label.Temp.!(temp)
       then ()
       else if Label.Table.find live_in_top label |> [%equal: Temp.t option] (Some temp)
       then ()
       else begin
         add_multi_set live_in ~key:label ~data:temp;
-        live_in_top.Label.Table.Syntax.!(label) <- temp;
+        live_in_top.Label.!(label) <- temp;
         begin
-          let@: pred = List.iter pred_table.Label.Table.Syntax.!(label) in
+          let@: pred = List.iter pred_table.Label.!(label) in
           if
             Label.Table.find live_out_top pred
             |> [%equal: Temp.t option] (Some temp)
             |> not
           then begin
             add_multi_set live_out ~key:pred ~data:temp;
-            live_out_top.Label.Table.Syntax.!(pred) <- temp;
+            live_out_top.Label.!(pred) <- temp;
             up_and_mark pred temp
           end
         end
@@ -230,22 +230,21 @@ module Make (Ir : Ir) = struct
         Map.find label_to_first_use block.label
         |> Option.map ~f:__.Instr'.index
         |> Option.value_or_thunk ~default:(fun () ->
-          Arrayp.length block.Block.body
-          + Map.find_exn live_out.Label.Table.Syntax.!(block.label) temp)
+          Arrayp.length block.Block.body + Map.find_exn live_out.Label.!(block.label) temp)
       in
-      if Label.equal block.label def_to_label.Temp.Table.Syntax.!(temp)
+      if Label.equal block.label def_to_label.Temp.!(temp)
       then ()
       else if not (did_change live_in_top ~label:block.label ~temp ~next_use_distance)
       then ()
       else begin
         merge_info live_in ~label:block.label ~temp ~next_use_distance;
-        live_in_top.Label.Table.Syntax.!(block.label) <- temp, next_use_distance;
+        live_in_top.Label.!(block.label) <- temp, next_use_distance;
         begin
-          let@: pred = List.iter pred_table.Label.Table.Syntax.!(block.label) in
+          let@: pred = List.iter pred_table.Label.!(block.label) in
           if did_change live_out_top ~label:pred ~temp ~next_use_distance
           then begin
             merge_info live_out ~label:pred ~temp ~next_use_distance;
-            live_out_top.Label.Table.Syntax.!(pred) <- temp, next_use_distance;
+            live_out_top.Label.!(pred) <- temp, next_use_distance;
             up_and_mark label_to_first_use (Func.find_block_exn func pred) temp
           end
         end

@@ -36,7 +36,7 @@ let simplicial_elimination_order (graph : Graph.t) (precolored : int Temp.Map.t)
   |> Iter.filter ~f:(fun temp -> not (Map.mem precolored temp))
   |> Iter.iter ~f:(fun (temp : Temp.t) -> Bounded_heap.add_exn heap temp.id 0);
   let increase_neighbor_weights temp =
-    Set.iter graph.Temp.Table.Syntax.!(temp) ~f:(fun neighbor ->
+    Set.iter graph.Temp.!(temp) ~f:(fun neighbor ->
       if Bounded_heap.mem heap neighbor.id
       then Bounded_heap.increase_exn heap neighbor.id 1;
       ());

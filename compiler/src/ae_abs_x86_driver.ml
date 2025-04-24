@@ -39,7 +39,7 @@ let convert ~func_index func =
         let conv t =
           Location.to_either t
           |> Either.map
-               ~first:(fun temp -> allocation.Temp.Table.Syntax.!(temp))
+               ~first:(fun temp -> allocation.Temp.!(temp))
                ~second:Fn.id
         in
         [%equal: (int, Stack_address.t) Either.t] (conv t1) (conv t2))

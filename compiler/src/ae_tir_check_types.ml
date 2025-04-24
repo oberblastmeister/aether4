@@ -6,7 +6,7 @@ exception Exn of Error.t
 let throw_s s = raise (Exn (Error.create_s s))
 
 let check_temp_ty ty_table temp ty =
-  if not (Ty.equal ty_table.Temp.Table.Syntax.!(temp) ty)
+  if not (Ty.equal ty_table.Temp.!(temp) ty)
   then throw_s [%message "Type mismatch" (temp : Temp.t) (ty : Ty.t)]
 ;;
 

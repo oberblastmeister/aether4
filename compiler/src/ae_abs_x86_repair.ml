@@ -141,7 +141,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         List.map parallel_moves_before ~f:(fun (mach_reg, temp) ->
           { Sequentialize_parallel_moves.Move.dst = Mach_reg_gen.get mach_reg_gen mach_reg
           ; src = temp
-          ; ty = ty_table.Temp.Table.Syntax.!(temp)
+          ; ty = ty_table.Temp.!(temp)
           })
       in
       sequentialize parallel_moves_before
@@ -151,7 +151,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         List.map parallel_moves_after ~f:(fun (temp, mach_reg) ->
           { Sequentialize_parallel_moves.Move.dst = temp
           ; src = Mach_reg_gen.get mach_reg_gen mach_reg
-          ; ty = ty_table.Temp.Table.Syntax.!(temp)
+          ; ty = ty_table.Temp.!(temp)
           })
       in
       sequentialize parallel_moves_after

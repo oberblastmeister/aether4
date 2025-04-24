@@ -55,7 +55,7 @@ module Make
     module Table = Label.Table
 
     let get_pred_table ({ succs; all_nodes } : _ Graph.t) =
-      let open Label.Table.Syntax in
+      let open Label in
       let preds = Label.Table.create () in
       Iter.iter all_nodes ~f:(fun n ->
         (* make sure to initialize to empty *)

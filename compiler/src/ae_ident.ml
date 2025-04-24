@@ -19,6 +19,8 @@ module type S = sig
     val create : int -> t
     val get : t -> int
   end
+
+  include module type of Table.Syntax
 end
 
 module Make (Id : Intable) = struct
@@ -35,6 +37,7 @@ module Make (Id : Intable) = struct
   include Comparable.Make_plain (T)
   include Hashable.Make_plain (T)
   module Table = Id_table.Make (T)
+  include Table.Syntax
 end
 
 module type S_with_name_info_plain = sig

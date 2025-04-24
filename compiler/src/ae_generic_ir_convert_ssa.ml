@@ -94,7 +94,7 @@ module Make (Ir : Ir) = struct
                 params
                 @ List.map phis ~f:(fun temp ->
                   { Block_param.param = Location.of_temp temp
-                  ; ty = def_to_ty.Temp.Table.Syntax.!(temp)
+                  ; ty = def_to_ty.Temp.!(temp)
                   })
               in
               Instr.block_params params
@@ -111,7 +111,7 @@ module Make (Ir : Ir) = struct
                  keep the same name for temporaries that are already ssa,
                 these can't possibly create any new phis
               *)
-              if Option.is_some renumber || num_definitions.Temp.Table.Syntax.!(temp) > 1
+              if Option.is_some renumber || num_definitions.Temp.!(temp) > 1
               then Temp.freshen temp_gen temp
               else temp
             in
