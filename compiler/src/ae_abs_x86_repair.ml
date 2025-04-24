@@ -1,7 +1,8 @@
 open Std
 open Ae_abs_x86_types
 module Mach_reg = Ae_x86_mach_reg
-module Call_conv = Ae_x86_call_conv
+module X86_call_conv = Ae_x86_call_conv
+module Call_conv = Ae_call_conv
 open Ae_trace
 
 (*
@@ -55,7 +56,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
       end
     in
     let available_mach_regs =
-      Set.of_list (module Mach_reg) Call_conv.regalloc_usable_mach_regs
+      Set.of_list (module Mach_reg) X86_call_conv.regalloc_usable_mach_regs
       |> Set.diff __ defined_mach_regs
       |> Set.diff __ used_mach_regs
       |> ref
@@ -172,6 +173,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
 ;;
 
 let repair_block
+      ~(func_call_conv : Call_conv.t)
       ~is_start
       ~edit
       ~mach_reg_gen
@@ -189,7 +191,7 @@ let repair_block
       (* Then perform moves into the stack slots *)
       let block_params = Instr.block_params_val instr'.i |> Option.value_exn in
       let num_args_on_stack =
-        List.length block_params - Call_conv.num_arguments_in_registers
+        List.length block_params - func_call_conv.num_args_in_regs
       in
       let args_on_stack_location =
         List.range 0 num_args_on_stack
@@ -197,7 +199,7 @@ let repair_block
           Location.Stack (Previous_frame Int32.(of_int_exn i * 8l)))
       in
       let arg_locations =
-        List.map Call_conv.call_arguments ~f:(fun mach_reg ->
+        List.map func_call_conv.call_args ~f:(fun mach_reg ->
           Location.Temp (Mach_reg_gen.get mach_reg_gen mach_reg))
         |> List.append __ args_on_stack_location
       in
@@ -275,6 +277,7 @@ let repair_func ~allocation ~mach_reg_gen func =
     let live_out = Liveness.Live_set.find live_out_table block.label in
     let is_start = Label.equal block.label func.start in
     repair_block
+      ~func_call_conv:func.call_conv
       ~is_start
       ~edit
       ~ty_table

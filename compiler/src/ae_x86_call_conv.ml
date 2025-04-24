@@ -1,12 +1,9 @@
 open Std
 open Ae_x86_mach_reg
 
-let caller_saved_without_r11 = [ RAX; RDI; RSI; RDX; RCX; R8; R9; R10 ]
-let caller_saved = caller_saved_without_r11 @ [ R11 ]
-let callee_saved_without_stack = [ RBX; R12; R13; R14; R15 ]
-let callee_saved = [ RSP; RBP ] @ callee_saved_without_stack
-let args = [ RDI; RSI; RDX; RCX; R8; R9 ]
-let ret = RAX
+open struct
+  module Call_conv = Ae_call_conv
+end
 
 let regalloc_usable_mach_regs =
   [ RAX; RCX; RDX; RBX; RSI; RDI; R8; R9; R10; R12; R13; R14; R15 ]
@@ -18,16 +15,31 @@ let regalloc_usable_colors =
 
 let num_regs = List.length regalloc_usable_mach_regs
 
-(* Make sure R11 is not present in any of these lists below *)
-(* our current calling convention *)
-let return_register = RAX
+(* not including R11 *)
+let caller_saved = [ RAX; RDI; RSI; RDX; RCX; R8; R9; R10 ]
 
-let call_clobbers =
-  List.filter regalloc_usable_mach_regs ~f:(fun r -> not (equal return_register r))
+(* not including RBP and RSP *)
+let callee_saved = [ RBX; R12; R13; R14; R15 ]
+
+let c0 =
+  let return_reg = RAX in
+  let call_clobbers =
+    List.filter regalloc_usable_mach_regs ~f:(fun r -> not (equal return_reg r))
+  in
+  let num_call_clobbers = List.length call_clobbers in
+  let call_args = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ] in
+  let num_args_in_regs = List.length call_args in
+  { Call_conv.return_reg; call_args; num_args_in_regs; call_clobbers; num_call_clobbers }
 ;;
 
-let num_call_clobbers = List.length call_clobbers
-
-(* this is in order of argument number *)
-let call_arguments = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ]
-let num_arguments_in_registers = List.length call_arguments
+let sysv =
+  let call_args = [ RDI; RSI; RDX; RCX; R8; R9 ] in
+  let return_reg = RAX in
+  let call_clobbers =
+    List.filter caller_saved ~f:(fun r ->
+      (not (equal return_reg r)) && List.mem ~equal regalloc_usable_mach_regs r)
+  in
+  let num_call_clobbers = List.length call_clobbers in
+  let num_args_in_regs = List.length call_args in
+  { Call_conv.return_reg; call_args; num_args_in_regs; call_clobbers; num_call_clobbers }
+;;

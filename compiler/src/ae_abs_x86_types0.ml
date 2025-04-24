@@ -2,6 +2,7 @@ open Std
 
 open struct
   module Generic_ir = Ae_generic_ir_std
+  module Call_conv = Ae_call_conv
 end
 
 module Ty = Ae_x86_ty
@@ -9,7 +10,6 @@ module Temp = Ae_temp
 module Label = Ae_label
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot = Ae_stack_slot
-module Call_conv = Ae_x86_call_conv
 
 module Address = struct
   type t = Temp.t Ae_x86_address.t [@@deriving sexp_of]
@@ -193,6 +193,7 @@ module Instr = struct
         ; size : Ty.t
         ; func : string
         ; args : (Location.t * Ty.t) list
+        ; call_conv : Call_conv.t
         }
     | Unreachable
   [@@deriving sexp_of, variants]
@@ -220,7 +221,7 @@ module Instr = struct
     | Pop { dst; size } ->
       on_def (Operand.Reg dst, size);
       ()
-    | Call { dst; size; func = _; args } ->
+    | Call { dst; size; func = _; args; call_conv = _ } ->
       on_def (Operand.Reg dst, size);
       (List.iter @> Fold.of_fn fst @> Location.iter_temp) args ~f:(fun temp ->
         on_use (Operand.Reg temp))
@@ -353,9 +354,9 @@ module Instr = struct
       | Reg src -> f (src, Mach_reg.RAX)
       | _ -> ()
     end
-    | Call { dst = _; args; func = _; size = _ } ->
+    | Call { dst = _; args; func = _; size = _; call_conv } ->
       let zipped, _rem =
-        List.zip_with_remainder (List.map args ~f:fst) Call_conv.call_arguments
+        List.zip_with_remainder (List.map args ~f:fst) call_conv.call_args
       in
       List.iter zipped ~f:(fun (loc, ty) ->
         Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
@@ -380,7 +381,7 @@ module Instr = struct
 
   let iter_constrained_defs_exn t ~f =
     match t with
-    | Call { dst; _ } -> f (dst, Call_conv.return_register)
+    | Call { dst; call_conv; _ } -> f (dst, call_conv.return_reg)
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
@@ -396,7 +397,7 @@ module Instr = struct
 
   let iter_clobbers t ~f =
     match t with
-    | Call _ -> List.iter Call_conv.call_clobbers ~f
+    | Call { call_conv; _ } -> List.iter call_conv.call_clobbers ~f
     | Bin { op = Idiv | Imod; _ } ->
       f Mach_reg.RDX;
       ()
@@ -407,7 +408,7 @@ module Instr = struct
     match t with
     | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ -> ()
     | Push { src; size } -> f (src, size)
-    | Call { dst = _; func = _; args; size = _ } ->
+    | Call { args; _ } ->
       List.iter args ~f:(fun (loc, ty) ->
         Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
     | Mov { dst = _; src; size } ->
@@ -456,8 +457,10 @@ module Instr = struct
          f Mach_reg.RAX;
          f Mach_reg.RDX;
          ())
-    | Call _ ->
-      List.iter Call_conv.caller_saved_without_r11 ~f;
+    | Call { call_conv; _ } ->
+      List.iter call_conv.call_clobbers ~f;
+      f call_conv.return_reg;
+      List.iter call_conv.call_args ~f;
       ()
     | Push _ | Pop _ | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ ->
       ()

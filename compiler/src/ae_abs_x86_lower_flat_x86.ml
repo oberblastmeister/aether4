@@ -12,7 +12,8 @@ module Label = Ae_label
 module Condition_code = Ae_x86_condition_code
 module Frame_layout = Ae_abs_x86_frame_layout
 module Address = Ae_x86_address
-module Call_conv = Ae_x86_call_conv
+module Call_conv = Ae_call_conv
+module X86_call_conv = Ae_x86_call_conv
 module Temp = Ae_temp
 
 let ins ?info i = Flat_x86.Line.Instr { i; info }
@@ -216,10 +217,8 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       empty
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]
       ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ())
-  | Call { dst; size = _; func; args } ->
-    let args_in_registers, args_rem =
-      List.zip_with_remainder args Call_conv.call_arguments
-    in
+  | Call { dst; size = _; func; args; call_conv } ->
+    let args_in_registers, args_rem = List.zip_with_remainder args call_conv.call_args in
     let reg_moves =
       List.map args_in_registers ~f:(fun ((arg, ty), reg_expected) ->
         match arg with
@@ -238,7 +237,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
              ])
       |> Bag.concat
     in
-    assert (Mach_reg.equal (get_temp st dst) Call_conv.return_register);
+    assert (Mach_reg.equal (get_temp st dst) call_conv.return_reg);
     let stack_moves =
       match args_rem with
       | Some (First args_on_stack) ->
@@ -289,14 +288,14 @@ let lower_func st (func : Abs_x86.Func.t) : Flat_x86.Program.t =
 ;;
 
 let push_callee_saved =
-  Call_conv.callee_saved_without_stack
+  X86_call_conv.callee_saved
   |> List.map ~f:(fun reg ->
     Flat_x86.Line.Instr
       { i = Flat_x86.Instr.Push { src = Reg reg; size = Qword }; info = None })
 ;;
 
 let pop_callee_saved =
-  Call_conv.callee_saved_without_stack
+  X86_call_conv.callee_saved
   |> List.rev
   |> List.map ~f:(fun reg ->
     Flat_x86.Line.Instr

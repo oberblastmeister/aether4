@@ -40,12 +40,12 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
-  | Call { dst; func; ty; args } ->
+  | Call { dst; func; ty; args; call_conv } ->
     let ty = lower_ty ty in
     let args =
       List.map args ~f:(Tuple2.map_both ~f1:Abs_x86.Location.temp ~f2:lower_ty)
     in
-    empty +> [ ins (Call { dst; func; size = ty; args }) ]
+    empty +> [ ins (Call { dst; func; size = ty; args; call_conv }) ]
   | Block_params params ->
     empty
     +> [ ins
@@ -128,6 +128,7 @@ let lower_func (func : Lir.Func.t) : Abs_x86.Func.t =
   let blocks = Map.map func.blocks ~f:(lower_block st) in
   let start = func.start in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
+  let call_conv = func.call_conv in
   { name
   ; blocks
   ; start
@@ -135,6 +136,7 @@ let lower_func (func : Lir.Func.t) : Abs_x86.Func.t =
   ; next_label_id = func.next_label_id
   ; next_stack_slot_id = 0
   ; stack_slots = []
+  ; call_conv
   }
 ;;
 

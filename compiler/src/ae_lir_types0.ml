@@ -3,6 +3,7 @@ open Std
 
 open struct
   module Generic_ir = Ae_generic_ir_std
+  module Call_conv = Ae_call_conv
 end
 
 module Temp = Ae_temp
@@ -99,6 +100,7 @@ module Instr = struct
         ; ty : Ty.t
         ; func : string
         ; args : (Temp.t * Ty.t) list
+        ; call_conv : Call_conv.t
         }
     | Unreachable
   [@@deriving sexp_of, variants]

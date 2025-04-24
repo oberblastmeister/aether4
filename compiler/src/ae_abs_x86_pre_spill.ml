@@ -60,7 +60,7 @@ end = struct
           Instr.block_params_val instr
           |> Option.value_exn
           |> List.map ~f:Block_param.param
-          |> List.drop __ Call_conv.num_arguments_in_registers
+          |> List.drop __ func.call_conv.num_args_in_regs
         in
         begin
           let@: i, loc = List.iteri locations_on_stack |> Iter.uncurry in
@@ -218,7 +218,7 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
           List.map non_active_uses ~f:(fun temp -> temp, Spiller.spill spiller temp)
           |> Temp.Map.of_alist_exn
         in
-        let `dst dst, `size size, `func func, `args args =
+        let `dst dst, `size size, `func func, `args args, `call_conv call_conv =
           Instr.call_val instr |> Option.value_exn
         in
         let new_args =
@@ -228,7 +228,7 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
               Map.find temps_spilled temp
               |> Option.value_map ~f:(fun (slot, _) -> Stack slot) ~default:loc)
         in
-        let new_instr = Instr.Call { dst; size; func; args = new_args } in
+        let new_instr = Instr.Call { dst; size; func; args = new_args; call_conv } in
         Multi_edit.add_replace edit block.label { instr' with i = new_instr };
         let active_list = Set.to_list !active in
         let active_list =
@@ -236,7 +236,7 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
             ~num_regs
             ~active_list
             ~next_uses:next_uses_here_out
-            ~num_virtual_non_active:Call_conv.num_call_clobbers
+            ~num_virtual_non_active:call_conv.num_call_clobbers
             [ dst ]
         in
         active := Temp.Set.of_list active_list

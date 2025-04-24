@@ -1,10 +1,10 @@
 open Std
 module Tir = Ae_tir_types
-
 module Label = Ae_label
 module Temp = Ae_temp
 module Bag = Ae_data_bag
 module Lir = Ae_lir_types
+module X86_call_conv = Ae_x86_call_conv
 open Bag.Syntax
 
 let empty = Bag.empty
@@ -67,7 +67,8 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
     let func = mangle_func_name func in
     let ty = lower_ty ty in
     let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
-    empty +> [ ins (Call { dst; ty; func; args }) ]
+    let call_conv = X86_call_conv.c0 in
+    empty +> [ ins (Call { dst; ty; func; args; call_conv }) ]
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call b in
@@ -126,7 +127,8 @@ let lower_func (func : Tir.Func.t) : Lir.Func.t =
   let start = func.start in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in
-  { name; blocks; start; next_temp_id; next_label_id }
+  let call_conv = X86_call_conv.c0 in
+  { name; blocks; start; next_temp_id; next_label_id; call_conv }
 ;;
 
 let lower_program (program : Tir.Program.t) : Lir.Program.t =

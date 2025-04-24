@@ -1,8 +1,8 @@
 open Std
 
 open struct
-  
   module Generic_ir = Ae_generic_ir_std
+  module Call_conv = Ae_call_conv
 end
 
 module T0 = struct
@@ -17,6 +17,7 @@ module T0 = struct
         ; start : Label.t
         ; next_temp_id : int
         ; next_label_id : int
+        ; call_conv : Call_conv.t
         }
       [@@deriving sexp_of, fields ~getters ~setters]
 

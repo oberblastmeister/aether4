@@ -11,6 +11,7 @@ module Post_spill = Ae_abs_x86_post_spill
 module Destruct_ssa = Ae_abs_x86_destruct_ssa
 module Repair = Ae_abs_x86_repair
 module Check_register_pressure = Ae_abs_x86_check_register_pressure
+module X86_call_conv = Ae_x86_call_conv
 open Ae_abs_x86_types
 open Ae_trace
 
@@ -23,11 +24,11 @@ let trace_allocation allocation =
 
 let convert ~func_index func =
   let func = Legalize.legalize_func func in
-  let func = Pre_spill.spill_func ~num_regs:Call_conv.num_regs func in
-  Check_register_pressure.check_func ~num_regs:Call_conv.num_regs func;
+  let func = Pre_spill.spill_func ~num_regs:X86_call_conv.num_regs func in
+  Check_register_pressure.check_func ~num_regs:X86_call_conv.num_regs func;
   Check.check func |> Or_error.ok_exn;
   let allocation =
-    Regalloc_treescan.alloc_func ~colors:Call_conv.regalloc_usable_colors func
+    Regalloc_treescan.alloc_func ~colors:X86_call_conv.regalloc_usable_colors func
   in
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in

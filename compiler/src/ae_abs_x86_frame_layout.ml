@@ -20,10 +20,8 @@ let compute_bottom_size func =
     let@: instr = Block.iter_fwd block in
     begin
       match instr.i with
-      | Call { args; _ } ->
-        let num_on_stack =
-          List.length args - Call_conv.num_arguments_in_registers |> max 0
-        in
+      | Call { args; call_conv; _ } ->
+        let num_on_stack = List.length args - call_conv.num_args_in_regs |> max 0 in
         max_offset := max !max_offset (num_on_stack * 8)
       | _ -> ()
     end;
