@@ -1,7 +1,6 @@
 open Std
 
 open struct
-  
   module Label = Ae_label
   module Temp = Ae_temp
   module Dominators = Ae_dominators
@@ -129,7 +128,7 @@ module type Ir_simple = sig
   module Multi_edit : sig
     type t [@@deriving sexp_of]
 
-    val create : unit -> t
+    val create : ?rev:unit -> unit -> t
     val add_insert : t -> Label.t -> Instr'.t -> unit
     val add_inserts : t -> Label.t -> Instr'.t list -> unit
     val add_remove : t -> Label.t -> Instr'.t -> unit

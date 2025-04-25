@@ -25,11 +25,13 @@ let trace_allocation allocation =
 let convert ~func_index func =
   let func = Legalize.legalize_func func in
   let func = Pre_spill.spill_func ~num_regs:X86_call_conv.num_regs func in
+  trace_ls [%lazy_message (func : Func.t)];
   Check_register_pressure.check_func ~num_regs:X86_call_conv.num_regs func;
   Check.check func |> Or_error.ok_exn;
   let allocation =
     Regalloc_treescan.alloc_func ~colors:X86_call_conv.regalloc_usable_colors func
   in
+  trace_allocation allocation;
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
   let func = Split_critical.split func in

@@ -5,7 +5,8 @@ open struct
 end
 
 type t =
-  { return_reg : Mach_reg.t
+  { name : string
+  ; return_reg : Mach_reg.t
   ; call_args : Mach_reg.t list
   ; num_args_in_regs : int
   ; call_clobbers : Mach_reg.t list

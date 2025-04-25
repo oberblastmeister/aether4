@@ -7,9 +7,8 @@ open struct
   module Intf = Ae_generic_ir_make_intf
   module Label = Ae_label
 
-  (* 
-  
-  module Entity_graph_utils = Ae_entity_graph_utils
+  (*
+     module Entity_graph_utils = Ae_entity_graph_utils
   module Label = Ae_label *)
   module Dominators = Ae_dominators
   module Stack_slot = Ae_stack_slot
@@ -149,37 +148,41 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
   end
 
   module Multi_edit = struct
-    type t = Edit.t list Label.Table.t [@@deriving sexp_of]
+    type t =
+      { edits : Edit.t list Label.Table.t
+      ; rev : bool
+      }
+    [@@deriving sexp_of]
 
-    let create () = Label.Table.create ()
+    let create ?rev () = { edits = Label.Table.create (); rev = Option.is_some rev }
 
     let add_insert t label instr =
-      Label.Table.add_multi t ~key:label ~data:(Edit.insert instr);
+      Label.Table.add_multi t.edits ~key:label ~data:(Edit.insert instr);
       ()
     ;;
 
     let add_edits t label edits =
-      Label.Table.update t label ~f:(function
-        | None -> List.rev edits
-        | Some es -> List.rev_append edits es)
+      Label.Table.update t.edits label ~f:(function
+        | None -> if t.rev then edits else List.rev edits
+        | Some es -> if t.rev then List.append edits es else List.rev_append edits es)
     ;;
 
     let add_inserts t label inserts = add_edits t label @@ List.map inserts ~f:Edit.insert
 
     let add_remove t label instr =
-      Label.Table.add_multi t ~key:label ~data:(Edit.remove instr);
+      Label.Table.add_multi t.edits ~key:label ~data:(Edit.remove instr);
       ()
     ;;
 
     let add_replace t label instr =
-      Label.Table.add_multi t ~key:label ~data:(Edit.replace instr);
+      Label.Table.add_multi t.edits ~key:label ~data:(Edit.replace instr);
       ()
     ;;
 
     let apply_blocks ?no_sort t blocks =
-      Label.Table.iteri t
+      Label.Table.iteri t.edits
       |> Iter.fold ~init:blocks ~f:(fun blocks (label, edits) ->
-        let edits = List.rev edits in
+        let edits = if t.rev then edits else List.rev edits in
         let block =
           Map.find blocks label
           |> Option.value_or_thunk ~default:(fun () ->

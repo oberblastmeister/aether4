@@ -35,6 +35,13 @@ let repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr =
     let defined_mach_regs =
       List.map ~f:snd constrained_defs @ clobbers |> Set.of_list (module Mach_reg)
     in
+    trace_s
+      [%message
+        (instr : Instr.t)
+          (uses : Temp.t list)
+          (defs : Temp.t list)
+          (live_through : Temp.t list)
+          (clobbers : Mach_reg.t list)];
     let alloc_register available_mach_regs temp =
       (* first try to assign it to the register we already have *)
       let mach_reg = Mach_reg.of_enum_exn allocation.Temp.!(temp) in
@@ -256,6 +263,7 @@ let repair_block
       let moves_before, new_instr, moves_after =
         repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr
       in
+      trace_s [%message (moves_before : Instr.t list) (moves_after : Instr.t list)];
       Multi_edit.add_inserts
         edit
         block.label
@@ -280,7 +288,7 @@ let repair_func ~allocation ~mach_reg_gen func =
   let ty_table = Func.get_ty_table func in
   let pred_table = Func.pred_table func in
   let _live_in_table, live_out_table = Liveness.compute ~pred_table func in
-  let edit = Multi_edit.create () in
+  let edit = Multi_edit.create ~rev:() () in
   begin
     let@: block = Func.iter_blocks func in
     let live_out = Liveness.Live_set.find live_out_table block.label in
