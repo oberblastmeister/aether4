@@ -118,6 +118,13 @@ module Location = struct
   ;;
 
   let of_temp t = Temp t
+
+  let equal_allocated allocation t1 t2 =
+    match t1, t2 with
+    | Temp t1, Temp t2 -> allocation.Temp.!(t1) = allocation.Temp.!(t2)
+    | Stack s1, Stack s2 -> Stack_address.equal s1 s2
+    | _ -> false
+  ;;
 end
 
 module Block_call = struct

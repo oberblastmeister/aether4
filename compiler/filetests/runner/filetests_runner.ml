@@ -93,6 +93,8 @@ let run_test env path =
           []
       in
       let status = Process.await proc in
+      let output = Buffer.contents buf in
+      print_string output;
       let%bind () =
         match expected_status, status with
         | Some expected_status, status when not (Poly.equal expected_status status) ->
@@ -108,8 +110,6 @@ let run_test env path =
               "Process did not exit normally" (status : Test_options.Exit_status.t)]
         | _ -> Ok ()
       in
-      let output = Buffer.contents buf in
-      print_string output;
       Ok ()
     | Error e, CompileFail _ ->
       Error.to_string_hum e |> print_string;

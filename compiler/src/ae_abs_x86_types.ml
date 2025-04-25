@@ -110,6 +110,45 @@ module Check_well_formed = Generic_ir.Check_well_formed.Make (T)
 module Check_types = Generic_ir.Check_types.Make (T)
 module Convert_ssa = Generic_ir.Convert_ssa.Make (T)
 
+module Sequentialize_location = struct
+  include Ae_sequentialize_parallel_moves.Make (struct
+      module Temp = Location
+      module Ty = Ty
+    end)
+
+  let run ~allocation ~mach_reg_gen par_moves =
+    let in_same_reg = Location.equal_allocated allocation in
+    let get_scratch = fun () -> Location.Temp (Mach_reg_gen.get mach_reg_gen R11) in
+    let sequential_moves, did_use_scratch =
+      sequentialize ~in_same_reg ~get_scratch par_moves
+    in
+    let sequential_moves =
+      List.concat_map sequential_moves ~f:(fun move ->
+        match move.dst, move.src with
+        | Stack slot1, Stack slot2 when did_use_scratch ->
+          let r10 = Mach_reg_gen.get mach_reg_gen R10 in
+          [ Instr.Push { src = r10; size = Qword }
+          ; Instr.Mov { dst = Reg r10; src = Stack slot2; size = move.ty }
+          ; Instr.Mov { dst = Stack slot1; src = Reg r10; size = move.ty }
+          ; Instr.Pop { dst = r10; size = Qword }
+          ]
+        | Stack slot1, Stack slot2 ->
+          let r11 = Mach_reg_gen.get mach_reg_gen R11 in
+          [ Instr.Mov { dst = Reg r11; src = Stack slot2; size = move.ty }
+          ; Instr.Mov { dst = Stack slot1; src = Reg r11; size = move.ty }
+          ]
+        | _ ->
+          [ Instr.Mov
+              { dst = Location.to_operand move.dst
+              ; src = Location.to_operand move.src
+              ; size = move.ty
+              }
+          ])
+    in
+    sequential_moves
+  ;;
+end
+
 module Check = struct
   let check func =
     let open Or_error.Let_syntax in

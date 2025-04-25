@@ -27,6 +27,7 @@ let c0 =
     List.filter regalloc_usable_mach_regs ~f:(fun r -> not (equal return_reg r))
   in
   let num_call_clobbers = List.length call_clobbers in
+  (* 13 call arguments *)
   let call_args = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ] in
   let num_args_in_regs = List.length call_args in
   { Call_conv.return_reg; call_args; num_args_in_regs; call_clobbers; num_call_clobbers }

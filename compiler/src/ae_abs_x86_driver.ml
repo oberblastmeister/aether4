@@ -33,18 +33,7 @@ let convert ~func_index func =
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
   let func = Split_critical.split func in
-  let func =
-    Destruct_ssa.destruct
-      ~mach_reg_gen
-      ~in_same_reg:(fun t1 t2 ->
-        let conv t =
-          Location.to_either t
-          |> Either.map ~first:(fun temp -> allocation.Temp.!(temp)) ~second:Fn.id
-        in
-        [%equal: (int, Stack_address.t) Either.t] (conv t1) (conv t2))
-      ~get_scratch:(fun () -> Temp (Mach_reg_gen.get mach_reg_gen R11))
-      func
-  in
+  let func = Destruct_ssa.destruct ~mach_reg_gen ~allocation func in
   let frame_layout = Frame_layout.compute func in
   let func = Lower_flat_x86.lower ~frame_layout ~allocation ~func_index func in
   func

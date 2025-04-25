@@ -9,7 +9,7 @@ open Ae_trace
    this works because we only duplicate a live through temporary when its color conflicts
   with a definition that is constrained
 *)
-let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr =
+let repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr =
   let module Sequentialize_parallel_moves =
     Ae_sequentialize_parallel_moves.Make (struct
       module Temp = Temp
@@ -37,7 +37,7 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     in
     let alloc_register available_mach_regs temp =
       (* first try to assign it to the register we already have *)
-      let mach_reg = get_temp_mach_reg temp in
+      let mach_reg = Mach_reg.of_enum_exn allocation.Temp.!(temp) in
       if Set.mem !available_mach_regs mach_reg
       then begin
         available_mach_regs := Set.remove !available_mach_regs mach_reg;
@@ -63,31 +63,32 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     in
     let parallel_moves_before = Lstack.create () in
     (* first allocate constrained uses *)
-    let allocation = ref Temp.Map.empty in
+    let local_allocation = ref Temp.Map.empty in
     List.iter constrained_uses ~f:(fun (temp, mach_reg) ->
-      allocation := Map.add_exn !allocation ~key:temp ~data:mach_reg;
+      local_allocation := Map.add_exn !local_allocation ~key:temp ~data:mach_reg;
       Lstack.push parallel_moves_before (mach_reg, temp));
     (* then allocate live through temps **)
     begin
       let@: live_through = List.iter live_through in
       match Map.find constrained_uses_map live_through with
       | Some constrained_to ->
-        assert (Map.mem !allocation live_through);
+        assert (Map.mem !local_allocation live_through);
         if Set.mem defined_mach_regs constrained_to
         then begin
           (* now duplicate *)
           let mach_reg = alloc_register available_mach_regs live_through in
           (* overwrite the allocation to a copy *)
-          allocation := Map.set !allocation ~key:live_through ~data:mach_reg;
+          local_allocation := Map.set !local_allocation ~key:live_through ~data:mach_reg;
           Lstack.push parallel_moves_before (mach_reg, live_through)
         end
         else begin
           (* don't need to move it, because we already moved all constrained uses above *)
-          assert (Mach_reg.equal (Map.find_exn !allocation live_through) constrained_to)
+          assert (
+            Mach_reg.equal (Map.find_exn !local_allocation live_through) constrained_to)
         end
       | None ->
         let mach_reg = alloc_register available_mach_regs live_through in
-        allocation := Map.add_exn !allocation ~key:live_through ~data:mach_reg;
+        local_allocation := Map.add_exn !local_allocation ~key:live_through ~data:mach_reg;
         Lstack.push parallel_moves_before (mach_reg, live_through)
     end;
     (* then allocate all used temps that died here *)
@@ -101,37 +102,35 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
         |> ref
       in
       let@: last_use =
-        List.iter uses |> Iter.filter ~f:(fun use -> not (Map.mem !allocation use))
+        List.iter uses |> Iter.filter ~f:(fun use -> not (Map.mem !local_allocation use))
       in
       assert (not (Set.mem live_out last_use));
       assert (not (Map.mem constrained_uses_map last_use));
       let mach_reg = alloc_register available_mach_regs last_use in
-      allocation := Map.add_exn !allocation ~key:last_use ~data:mach_reg;
+      local_allocation := Map.add_exn !local_allocation ~key:last_use ~data:mach_reg;
       Lstack.push parallel_moves_before (mach_reg, last_use)
     end;
     let parallel_moves_before = Lstack.to_list_rev parallel_moves_before in
     List.iter constrained_defs ~f:(fun (def, mach_reg) ->
-      allocation := Map.add_exn !allocation ~key:def ~data:mach_reg);
+      local_allocation := Map.add_exn !local_allocation ~key:def ~data:mach_reg);
     begin
       let@: def =
         List.iter defs
         |> Iter.filter ~f:(fun def -> not (Map.mem constrained_defs_map def))
       in
       let mach_reg = alloc_register available_mach_regs def in
-      allocation := Map.add_exn !allocation ~key:def ~data:mach_reg
+      local_allocation := Map.add_exn !local_allocation ~key:def ~data:mach_reg
     end;
-    let allocation = !allocation in
+    let local_allocation = !local_allocation in
     let parallel_moves_after =
-      Map.to_alist allocation
+      Map.to_alist local_allocation
       (* very important!
       We must do this because uses that die here have registers that are reused by the register allocation with some def.
       This would cause a parallel move to have duplicate move destinations, which is incorrect.
       *)
       |> List.filter ~f:(fun (temp, _) -> Set.mem live_out temp)
     in
-    let in_same_reg t1 t2 =
-      Mach_reg.equal (get_temp_mach_reg t1) (get_temp_mach_reg t2)
-    in
+    let in_same_reg t1 t2 = allocation.Temp.!(t1) = allocation.Temp.!(t2) in
     let get_scratch () = Mach_reg_gen.get mach_reg_gen R11 in
     let sequentialize =
       Sequentialize_parallel_moves.sequentialize ~in_same_reg ~get_scratch
@@ -162,11 +161,11 @@ let repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out i
     in
     let new_instr =
       let@: temp = Instr.map_uses instr in
-      Mach_reg_gen.get mach_reg_gen (Map.find_exn allocation temp)
+      Mach_reg_gen.get mach_reg_gen (Map.find_exn local_allocation temp)
     in
     let new_instr =
       let@: temp = Instr.map_defs new_instr in
-      Mach_reg_gen.get mach_reg_gen (Map.find_exn allocation temp)
+      Mach_reg_gen.get mach_reg_gen (Map.find_exn local_allocation temp)
     in
     convert sequential_moves_before, new_instr, convert sequential_moves_after
   end
@@ -178,7 +177,7 @@ let repair_block
       ~edit
       ~mach_reg_gen
       ~ty_table
-      ~get_temp_mach_reg
+      ~allocation
       ~live_out
       block
   =
@@ -204,6 +203,7 @@ let repair_block
         |> List.append __ args_on_stack_location
       in
       let moves, moves_rem = List.zip_with_remainder block_params arg_locations in
+      trace_ls [%lazy_message (moves : (Block_param.t * Location.t) list)];
       begin
         match moves_rem with
         | Some (First _) -> assert false
@@ -223,6 +223,12 @@ let repair_block
           ; ty = param.ty
           })
       in
+      let moves, _ =
+        Sequentialize_parallel_moves.sequentialize
+          ~in_same_reg:(Location.equal_allocated allocation)
+          ~get_scratch:(fun () -> Location.Temp (Mach_reg_gen.get mach_reg_gen R11))
+          moves
+      in
       let moves =
         List.map moves ~f:(fun move ->
           Instr.Mov
@@ -235,14 +241,20 @@ let repair_block
       Multi_edit.add_inserts
         edit
         block.label
-        (List.map moves ~f:(Instr'.create __ instr'.index))
+        (List.map
+           moves
+           ~f:
+             (Instr'.create
+                ~info:(Info.create_s [%message "func_params"])
+                __
+                instr'.index))
     end
     else begin
       let instr = instr'.i in
       let live_out = !live_out_ref in
       let live_in = Liveness.backwards_transfer instr live_out in
       let moves_before, new_instr, moves_after =
-        repair_instr ~mach_reg_gen ~ty_table ~get_temp_mach_reg ~live_in ~live_out instr
+        repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr
       in
       Multi_edit.add_inserts
         edit
@@ -269,9 +281,6 @@ let repair_func ~allocation ~mach_reg_gen func =
   let pred_table = Func.pred_table func in
   let _live_in_table, live_out_table = Liveness.compute ~pred_table func in
   let edit = Multi_edit.create () in
-  let get_temp_mach_reg temp =
-    Temp.Table.find_exn allocation temp |> Mach_reg.of_enum_exn
-  in
   begin
     let@: block = Func.iter_blocks func in
     let live_out = Liveness.Live_set.find live_out_table block.label in
@@ -282,7 +291,7 @@ let repair_func ~allocation ~mach_reg_gen func =
       ~edit
       ~ty_table
       ~mach_reg_gen
-      ~get_temp_mach_reg
+      ~allocation
       ~live_out
       block;
     ()

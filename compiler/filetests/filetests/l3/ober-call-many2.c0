@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int arrmulsum(int n0, int n1, int n2, int n3, int n4, int n5, int n6, int n7,
+              int m0, int m1, int m2, int m3, int m4, int m5, int m6, int m7,
+              int len)
+{
+    assert (m4 == 4);
+	return 0;
+}
+
+int main()
+{
+	return arrmulsum(1, 2, 3, 4, 5, 6, 7, 8,
+	                 8, 7, 6, 5, 4, 3, 2, 1,
+	                 8);
+}
+----
+0

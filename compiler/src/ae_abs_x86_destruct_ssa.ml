@@ -2,14 +2,7 @@
 open Std
 open Ae_abs_x86_types
 
-module Sequentialize_parallel_moves = Ae_sequentialize_parallel_moves.Make (struct
-    module Temp = Location
-    module Ty = Ty
-  end)
-
-open Sequentialize_parallel_moves
-
-let destruct ~mach_reg_gen ~in_same_reg ~get_scratch (func : Func.t) =
+let destruct ~mach_reg_gen ~allocation (func : Func.t) =
   let edit = Multi_edit.create () in
   begin
     let@: block = Func.iter_blocks func in
@@ -26,48 +19,13 @@ let destruct ~mach_reg_gen ~in_same_reg ~get_scratch (func : Func.t) =
       let dst_block_params =
         Instr.block_params_val dst_block_params_instr.i |> Option.value_exn
       in
-      let module M = struct
-        type ('d, 's) t =
-          { dst : 'd
-          ; src : 's
-          ; size : Ty.t
-          }
-      end
-      in
       let parallel_moves =
         List.zip_exn dst_block_params block_call.args
         |> List.map ~f:(fun (param, src) ->
-          ({ dst = param.param; src; size = param.ty } : _ M.t))
-      in
-      let sequential_moves, did_use_scratch =
-        Sequentialize_parallel_moves.sequentialize
-          ~in_same_reg
-          ~get_scratch
-          (List.map parallel_moves ~f:(fun { dst; src; size } ->
-             { Move.dst; src; ty = size }))
+          ({ dst = param.param; src; ty = param.ty } : Sequentialize_location.Move.t))
       in
       let sequential_moves =
-        List.concat_map sequential_moves ~f:(fun move ->
-          match move.dst, move.src with
-          | Stack slot1, Stack slot2 when did_use_scratch ->
-            let r10 = Mach_reg_gen.get mach_reg_gen R10 in
-            [ Instr.Push { src = r10; size = Qword }
-            ; Instr.Mov { dst = Reg r10; src = Stack slot2; size = move.ty }
-            ; Instr.Mov { dst = Stack slot1; src = Reg r10; size = move.ty }
-            ; Instr.Pop { dst = r10; size = Qword }
-            ]
-          | Stack slot1, Stack slot2 ->
-            let r11 = Mach_reg_gen.get mach_reg_gen R11 in
-            [ Instr.Mov { dst = Reg r11; src = Stack slot2; size = move.ty }
-            ; Instr.Mov { dst = Stack slot1; src = Reg r11; size = move.ty }
-            ]
-          | _ ->
-            [ Instr.Mov
-                { dst = Location.to_operand move.dst
-                ; src = Location.to_operand move.src
-                ; size = move.ty
-                }
-            ])
+        Sequentialize_location.run ~allocation ~mach_reg_gen parallel_moves
       in
       (* TODO: test both of these cases *)
       if num_block_calls = 1
