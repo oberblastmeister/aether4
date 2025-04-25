@@ -112,6 +112,10 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
   | Unreachable ->
     (* TODO: lower this to a panic in debug mode *)
     empty
+  | Undefined { dst; size } ->
+    let dst = lower_operand st dst in
+    (* just for safety, remove this in performance mode *)
+    empty +> [ ins (Mov { dst; src = Imm 0xAAAAAAAAl; size }) ]
   | Block_params _ -> empty
   | Push { src; size } ->
     let src = get_temp st src in
@@ -304,17 +308,9 @@ let pop_callee_saved =
 
 let c0_main_export_instructions =
   Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
-  (* for alignment *)
-  @ [ Flat_x86.Line.Instr
-        { i = Sub { dst = Reg RSP; src = Imm 8l; size = Qword }; info = None }
-    ]
   @ push_callee_saved
   @ [ Flat_x86.Line.Instr { i = Call "_c0_main"; info = None } ]
   @ pop_callee_saved
-  (* for alignment *)
-  @ [ Flat_x86.Line.Instr
-        { i = Add { dst = Reg RSP; src = Imm 8l; size = Qword }; info = None }
-    ]
   @ [ Flat_x86.Line.Instr { i = Ret; info = None } ]
 ;;
 

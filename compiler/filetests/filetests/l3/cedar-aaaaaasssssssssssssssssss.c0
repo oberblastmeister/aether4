@@ -1,0 +1,11 @@
+/*
+(
+ (kind (CompileAndRun (status (Signaled SIGSEGV))))
+)
+*/
+
+int main()
+{
+	return 1 + main();
+}
+----

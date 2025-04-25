@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+void bruh() {
+    return 1;
+}
+
+int main() {
+    bruh();
+    return 0;
+}
+----
+"Cannot return expression, return type is void"

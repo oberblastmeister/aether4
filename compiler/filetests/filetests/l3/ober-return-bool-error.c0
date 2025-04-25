@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+bool return_bool() {
+    return 1;
+}
+
+int main() {
+    return return_bool() ? 1 : 0;
+}
+----
+("Types were not equal" (span 8:12) (ty (Bool 7:1-5)) (ty' (Int -1:-1)))

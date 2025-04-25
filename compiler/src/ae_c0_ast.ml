@@ -48,7 +48,7 @@ type stmt =
       }
   | Effect of expr
   | Return of
-      { expr : expr
+      { expr : expr option
       ; span : Span.t
       }
   | Declare of

@@ -63,19 +63,24 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
     let b1 = lower_block_call st b1 in
     let b2 = lower_block_call st b2 in
     empty +> [ ins (Cond_jump { cond = Op cond; b1; b2 }) ]
-  | Nullary { dst; op } ->
-    (match op with
-     | Int_const { const; ty = I1 } ->
-       let dst = get_operand st dst in
-       if Int64.(const <> 0L && const <> 1L)
-       then raise_s [%message "const was not I1" (const : int64)];
-       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Byte }) ]
-     | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
-       let dst = get_operand st dst in
-       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword }) ]
-     | Int_const { const; ty = I64 } ->
-       let dst = get_operand st dst in
-       empty +> [ ins (Mov_abs { dst; src = const }) ])
+  | Nullary { dst; op } -> begin
+    match op with
+    | Int_const { const; ty = I1 } ->
+      let dst = get_operand st dst in
+      if Int64.(const <> 0L && const <> 1L)
+      then raise_s [%message "const was not I1" (const : int64)];
+      empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Byte }) ]
+    | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
+      let dst = get_operand st dst in
+      empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword }) ]
+    | Int_const { const; ty = I64 } ->
+      let dst = get_operand st dst in
+      empty +> [ ins (Mov_abs { dst; src = const }) ]
+    | Undefined ty ->
+      let dst = get_operand st dst in
+      let ty = lower_ty ty in
+      empty +> [ ins (Undefined { dst; size = ty }) ]
+  end
   | Unary { dst; op; src } ->
     (match op with
      | Copy ty ->

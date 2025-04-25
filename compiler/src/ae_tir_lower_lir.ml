@@ -32,6 +32,7 @@ let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
   match ty with
   | Int -> I64
   | Bool -> I1
+  | Void -> I64
 ;;
 
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
@@ -64,7 +65,7 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   match instr.i with
   | Nop -> empty
   | Call { dst; ty; func; args; is_extern } ->
-    let func = mangle_func_name func in
+    let func = if is_extern then func else mangle_func_name func in
     let ty = lower_ty ty in
     let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
     let call_conv = if is_extern then X86_call_conv.sysv else X86_call_conv.c0 in
@@ -87,17 +88,19 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
                    { Lir.Block_param.param; ty })
                  temps))
        ]
-  | Nullary { dst; op } ->
-    (match op with
-     | Int_const const ->
-       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I64 } }) ]
-     | Bool_const const ->
-       let const =
-         match const with
-         | true -> 1L
-         | false -> 0L
-       in
-       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ])
+  | Nullary { dst; op } -> begin
+    match op with
+    | Int_const const ->
+      empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I64 } }) ]
+    | Bool_const const ->
+      let const =
+        match const with
+        | true -> 1L
+        | false -> 0L
+      in
+      empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
+    | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
+  end
   | Unary { dst; op; src } ->
     (match op with
      | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ])

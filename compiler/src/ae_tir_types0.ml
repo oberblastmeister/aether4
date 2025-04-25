@@ -15,6 +15,7 @@ module Ty = struct
   type t =
     | Int
     | Bool
+    | Void
   [@@deriving sexp_of, equal, compare]
 end
 
@@ -46,6 +47,7 @@ module Nullary_op = struct
   type t =
     | Int_const of int64
     | Bool_const of bool
+    | Void_const
   [@@deriving sexp_of]
 end
 
@@ -206,7 +208,8 @@ module Instr = struct
     | Nullary { dst; op } ->
       (match op with
        | Int_const _ -> f (dst, Int)
-       | Bool_const _ -> f (dst, Bool));
+       | Bool_const _ -> f (dst, Bool)
+       | Void_const -> f (dst, Void));
       ()
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;

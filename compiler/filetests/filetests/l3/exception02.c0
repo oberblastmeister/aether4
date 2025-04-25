@@ -1,0 +1,27 @@
+/*
+(
+ (kind (CompileAndRun ))
+)
+*/
+
+extern int c0_to_float(int x);
+extern int c0_fdiv(int x, int y);
+extern int c0_print_float(int x);
+extern int c0_print_hex(int n);
+extern int c0_print_char(int c);
+
+int main() {
+  int x;
+  x = c0_fdiv(c0_to_float(1), c0_to_float(0));
+  int _ = c0_print_float(x); _ = c0_print_char(10);
+  _ = c0_print_hex(x); _ = c0_print_char(10);
+  return 0;
+}
+----
+-nan
+
+
+fff8000000000000
+
+
+0

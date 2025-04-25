@@ -53,7 +53,7 @@ and check_stmt live (stmt : Ast.stmt) =
   | Effect expr -> Set.union live (expr_uses_set expr)
   | Return { expr; span = _ } ->
     (* just discard the live set, because nothing is live before it *)
-    expr_uses_set expr
+    Option.value_map ~f:expr_uses_set ~default:Ast.Var.Set.empty expr
   | Declare { ty = _; var; span = _ } ->
     if Set.mem live var
     then throw_s [%message "Variable was used before initialized" (var : Ast.var)]

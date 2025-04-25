@@ -33,7 +33,7 @@ and stmt =
       ; span : Span.t
       }
   | Return of
-      { expr : expr
+      { expr : expr option
       ; span : Span.t
       }
   | Assert of

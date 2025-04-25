@@ -165,8 +165,8 @@ let%expect_test "bool" =
               (expr ((Bool_const ((t true) (span 5:24-28))))) (span 5:11-28))
              (Return
               (expr
-               (Bin (lhs (Var ((t first) (span 6:18-23)))) (op Add)
-                (rhs (Var ((t second) (span 6:26-32)))) (span 6:18-32)))
+               ((Bin (lhs (Var ((t first) (span 6:18-23)))) (op Add)
+                 (rhs (Var ((t second) (span 6:26-32)))) (span 6:18-32))))
               (span 6:11-32))))
            (span [2,16]-[7,10]))))
         (span [2,5]-[7,10])))))
@@ -192,6 +192,8 @@ let%expect_test "typedef" =
   testing another();
   
   extern testing another();
+  
+  extern void print_char(char c);
   |};
   [%expect
     {|
@@ -236,7 +238,14 @@ let%expect_test "typedef" =
       (Func
        ((is_extern true) (ty (Ty_var ((t testing) (span 17:10-17))))
         (name ((t another) (span 17:18-25))) (params ()) (body ())
-        (span 17:10-27)))))
+        (span 17:10-27)))
+      (Func
+       ((is_extern true) (ty (Void 19:10-14))
+        (name ((t print_char) (span 19:15-25)))
+        (params
+         (((var ((t c) (span 19:31))) (ty (Ty_var ((t char) (span 19:26-30))))
+           (span 19:26-32))))
+        (body ()) (span 19:10-33)))))
     |}]
 ;;
 

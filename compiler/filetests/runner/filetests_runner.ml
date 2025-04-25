@@ -65,7 +65,11 @@ let run_test env path =
   let emit = test.options.emit in
   let env = Driver.Env.create ~emit env Path.(Stdenv.fs env / path) in
   let res =
-    try Driver.compile_source_to_a_out env test.source with
+    try
+      Driver.compile_source_to_a_out
+        env
+        [ test.source; Filename.concat (Driver.find_runtime_dir ()) "libc0_test_utils.a" ]
+    with
     | exn ->
       print_endline (Exn.to_string exn);
       print_endline (Printexc.get_backtrace ());

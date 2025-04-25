@@ -51,8 +51,8 @@ let%expect_test "smoke" =
            (span 5:13-30))
           (Return
            (expr
-            (Bin (lhs (Var (var first@0) (ty ()))) (op Add)
-             (rhs (Var (var second@2) (ty ()))) (ty ()) (span 6:20-34)))
+            ((Bin (lhs (Var (var first@0) (ty ()))) (op Add)
+              (rhs (Var (var second@2) (ty ()))) (ty ()) (span 6:20-34))))
            (span 6:13-34))))
         (span [2,3]-[7,12])))))
     |}]

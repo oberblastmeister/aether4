@@ -156,6 +156,10 @@ module Instr = struct
         ; src : Operand.t
         ; size : Ty.t
         }
+    | Undefined of
+        { dst : Operand.t
+        ; size : Ty.t
+        }
     | Push of
         { src : Temp.t
         ; size : Ty.t
@@ -221,6 +225,7 @@ module Instr = struct
     | Pop { dst; size } ->
       on_def (Operand.Reg dst, size);
       ()
+    | Undefined { dst; size } -> on_def (dst, size)
     | Call { dst; size; func = _; args; call_conv = _ } ->
       on_def (Operand.Reg dst, size);
       (List.iter @> Fold.of_fn fst @> Location.iter_temp) args ~f:(fun temp ->
@@ -275,6 +280,7 @@ module Instr = struct
     in
     match instr with
     | Nop -> instr
+    | Undefined { dst; size } -> Undefined { dst = on_def dst; size }
     | Push { src; size } ->
       let src = map_temp src ~f:on_use in
       Push { src; size }
@@ -406,7 +412,8 @@ module Instr = struct
 
   let iter_uses_with_known_ty t ~f =
     match t with
-    | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ -> ()
+    | Undefined _ | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ ->
+      ()
     | Push { src; size } -> f (src, size)
     | Call { args; _ } ->
       List.iter args ~f:(fun (loc, ty) ->
@@ -462,8 +469,15 @@ module Instr = struct
       f call_conv.return_reg;
       List.iter call_conv.call_args ~f;
       ()
-    | Push _ | Pop _ | Nop | Block_params _ | Jump _ | Cond_jump _ | Mov _ | Mov_abs _ ->
-      ()
+    | Undefined _
+    | Push _
+    | Pop _
+    | Nop
+    | Block_params _
+    | Jump _
+    | Cond_jump _
+    | Mov _
+    | Mov_abs _ -> ()
     | Ret _ -> f Mach_reg.RAX
     | Unreachable -> ()
   ;;

@@ -47,6 +47,7 @@ module Nullary_op = struct
         { const : int64
         ; ty : Ty.t
         }
+    | Undefined of Ty.t
   [@@deriving sexp_of]
 end
 
@@ -179,7 +180,7 @@ module Instr = struct
     | Block_params params ->
       List.iter params ~f:(fun param -> f (Block_param.param param, Block_param.ty param))
     | Nop -> ()
-    | Call { dst; func = _; ty; args = _ } ->
+    | Call { dst; ty; _ } ->
       f (dst, ty);
       ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
@@ -194,7 +195,7 @@ module Instr = struct
       (match op with
        | Copy ty -> f (dst, ty));
       ()
-    | Nullary { dst; op = Int_const { const = _; ty } } ->
+    | Nullary { dst; op = Int_const { const = _; ty } | Undefined ty } ->
       f (dst, ty);
       ()
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()

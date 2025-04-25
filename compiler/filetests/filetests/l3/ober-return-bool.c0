@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+bool return_bool() {
+    return true;
+}
+
+int main() {
+    return return_bool() ? 1 : 0;
+}
+----
+1

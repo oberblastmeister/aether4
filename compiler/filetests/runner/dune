@@ -14,3 +14,10 @@
    (copy %{project_root}/runtime/libc0_runtime.a libc0_runtime.a)
   )
 )
+
+(rule
+ (target libc0_test_utils.a)
+  (action
+   (copy %{project_root}/runtime/libc0_test_utils.a libc0_test_utils.a)
+  )
+)

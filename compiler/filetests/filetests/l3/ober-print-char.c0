@@ -1,0 +1,21 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+extern void c0_print_char(int c);
+
+int main() {
+    c0_print_char(97);
+    c0_print_char(98);
+    c0_print_char(99);
+    c0_print_char(100);
+    return 0;
+}
+----
+a
+b
+c
+d
+0

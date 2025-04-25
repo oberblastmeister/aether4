@@ -11,6 +11,7 @@ let generate_rules_diff dir base =
   %{v "project_root"}/compiler/filetests/runner/filetests_runner.exe
   ; filetests_runner.exe needs libc0_runtime.a so it can link it with the compiled c0 program
   %{v "project_root"}/compiler/filetests/runner/libc0_runtime.a
+  %{v "project_root"}/compiler/filetests/runner/libc0_test_utils.a
  )
  (action
   (with-stdout-to %{base}.c0.output

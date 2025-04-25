@@ -187,8 +187,15 @@ and parse_assert env : Cst.stmt =
 and parse_return env : Cst.stmt =
   let open Span.Syntax in
   let ret = expect_eq Return env in
-  let expr = parse_expr env in
-  Cst.Return { expr; span = ret.span ++ Cst.expr_span expr }
+  let expr = Parser.optional parse_expr env in
+  Cst.Return
+    { expr
+    ; span =
+        Option.value_map
+          expr
+          ~f:(fun expr -> ret.span ++ Cst.expr_span expr)
+          ~default:ret.span
+    }
 
 and parse_decl env : Cst.stmt =
   let open Span.Syntax in

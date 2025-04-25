@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void bruh() {
+    return;
+}
+
+int main() {
+    bruh();
+    return 0;
+}
+----
+0

@@ -9,6 +9,7 @@ type st =
   ; declared_funcs : Ast.func_sig Ast.Var.Map.t
   ; defined_funcs : Ast.Var.Set.t
   ; typedefs : Ast.ty Ast.Var.Map.t
+  ; return_ty : Ast.ty
   }
 
 let create_state () =
@@ -16,6 +17,7 @@ let create_state () =
   ; declared_funcs = Ast.Var.Map.empty
   ; defined_funcs = Ast.Var.Set.empty
   ; typedefs = Ast.Var.Map.empty
+  ; return_ty = Ast.void_ty
   }
 ;;
 
@@ -93,9 +95,14 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
     let cond = check_expr st cond Ast.bool_ty in
     let body = check_stmt st body in
     While { cond; body; span }
-  | Return { expr; span } ->
-    (* TODO: fix this *)
-    Return { expr = check_expr st expr Ast.int_ty; span }
+  | Return { expr; span } -> begin
+    match st.return_ty, expr with
+    | Void _, Some _ -> throw_s [%message "Cannot return expression, return type is void"]
+    | Void _, None -> stmt
+    | ty, None ->
+      throw_s [%message "Must return expression, return type is not void" (ty : Ast.ty)]
+    | ty, Some expr -> Return { expr = Some (check_expr st expr ty); span }
+  end
   | Effect expr ->
     let expr = infer_expr st expr in
     Effect expr
@@ -167,7 +174,7 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
       List.fold func.params ~init:st ~f:(fun st param ->
         { st with context = Map.add_exn st.context ~key:param.var ~data:param.ty })
     in
-    let body = check_block st_with_params func.body in
+    let body = check_block { st_with_params with return_ty = func.ty } func.body in
     let func = { func with body } in
     Ast.Func_defn func, st
   | Ast.Typedef typedef ->

@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+int bruh() {
+    return;
+}
+
+int main() {
+    bruh();
+    return 0;
+}
+----
+("Must return expression, return type is not void" (ty (Int 7:1-4)))

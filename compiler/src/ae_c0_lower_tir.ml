@@ -80,6 +80,7 @@ let lower_ty (ty : Ast.ty) : Tir.Ty.t =
   match ty with
   | Int _ -> Int
   | Bool _ -> Bool
+  | Void _ -> Void
   | _ -> todol [%here]
 ;;
 
@@ -132,11 +133,21 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
     lower_expr st cont dst expr
   | Return { expr; span } ->
     let dst = fresh_temp ~name:"ret" st in
-    let ty = Ast.expr_ty_exn expr in
-    let info = Span.to_info span in
-    (* important: we override the continuation here because nothing should be after a Ret *)
-    let cont = empty +> [ ins ~info (Ret { src = dst; ty = lower_ty ty }) ] in
-    lower_expr st cont dst expr
+    begin
+      match expr with
+      | None ->
+        let info = Span.to_info span in
+        empty
+        +> [ ins ~info (Nullary { dst; op = Void_const })
+           ; ins ~info (Ret { src = dst; ty = Void })
+           ]
+      | Some expr ->
+        let ty = Ast.expr_ty_exn expr in
+        let info = Span.to_info span in
+        (* important: we override the continuation here because nothing should be after a Ret *)
+        let cont = empty +> [ ins ~info (Ret { src = dst; ty = lower_ty ty }) ] in
+        lower_expr st cont dst expr
+    end
   | If { cond; body1; body2; span } ->
     let info = Span.to_info span in
     let cond_temp = fresh_temp ~info ~name:"cond" st in

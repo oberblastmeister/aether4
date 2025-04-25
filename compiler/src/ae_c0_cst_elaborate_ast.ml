@@ -180,7 +180,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     in
     (empty +> Ast.[ Assign { lvalue; expr; span } ]), st
   | Return { expr; span } ->
-    let expr = elab_expr st expr in
+    let expr = Option.map ~f:(elab_expr st) expr in
     (empty +> Ast.[ Return { expr; span } ]), st
   | If { cond; body1; body2; span } ->
     let cond = elab_expr st cond in

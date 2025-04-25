@@ -1,0 +1,28 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+extern void c0_print_char6(int c1, int c2, int c3, int c4, int c5, int c6);
+extern void c0_print_char7(int c1, int c2, int c3, int c4, int c5, int c6, int c7);
+extern void c0_print_char14(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8, int c9, int c10, int c11, int c12, int c13, int c14);
+
+int main() {
+    int a = 97;
+    c0_print_char6(a, 98, 99, 100, 101, 102);
+    c0_print_char7(a, 98, 99, 100, 101, 102, 103);
+    c0_print_char14(a, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110);
+    c0_print_char7(a, 98, 99, 100, 101, 102, 103);
+    c0_print_char7(a, 98, 99, 100, 101, 102, 103);
+    c0_print_char7(a, 98, 99, 100, 101, 102, 103);
+    return 0;
+}
+----
+a b c d e f
+a b c d e f g
+a b c d e f g h i j k l m n
+a b c d e f g
+a b c d e f g
+a b c d e f g
+0

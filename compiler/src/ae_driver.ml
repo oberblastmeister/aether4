@@ -56,12 +56,14 @@ let get_self_exe_path =
          path)
 ;;
 
-let find_runtime_path () =
+let find_runtime_dir () =
   let exe_path = get_self_exe_path () in
-  Filename.(concat (Filename.dirname exe_path) "libc0_runtime.a")
+  Filename.dirname exe_path
 ;;
 
-let link_files_with_runtime mgr paths out_path =
+let find_runtime_path () = Filename.(concat (find_runtime_dir ()) "libc0_runtime.a")
+
+let link_files_with_runtime ~mgr ~paths ~out_path =
   let runtime_path = find_runtime_path () in
   Eio.Process.run
     mgr
@@ -121,7 +123,11 @@ let copy_file ~src ~dst =
   ()
 ;;
 
-let compile_source_to_a_out (env : Env.t) source =
+let compile_source_to_a_out (env : Env.t) sources =
+  let source, object_files = List.hd_exn sources, List.drop sources 1 in
+  List.iter object_files ~f:(fun source ->
+    let ext = Filename.split_extension source |> snd |> Option.value_exn in
+    assert (String.equal ext "a"));
   let cache_dir_path =
     Option.value env.cache_dir_path ~default:Path.(Stdenv.cwd env.env / ".c0_cache")
   in
@@ -150,9 +156,9 @@ let compile_source_to_a_out (env : Env.t) source =
       let@ asm_file = Path.with_open_out ~create:(`Or_truncate 0o777) asm_path in
       Flow.copy_string asm_content asm_file;
       link_files_with_runtime
-        (Stdenv.process_mgr env.env)
-        [ Path.native_exn asm_path ]
-        (Path.native_exn out_path);
+        ~mgr:(Stdenv.process_mgr env.env)
+        ~paths:(object_files @ [ Path.native_exn asm_path ])
+        ~out_path:(Path.native_exn out_path);
       Ok (out_path, true)
     | Error e -> Error e)
 ;;
@@ -160,7 +166,7 @@ let compile_source_to_a_out (env : Env.t) source =
 let compile_path_to_a_out (env : Env.t) =
   let@ file = Path.with_open_in env.path in
   let source = Flow.read_all file in
-  compile_source_to_a_out env source
+  compile_source_to_a_out env [ source ]
 ;;
 
 let compile_path ?out_path (env : Env.t) =
