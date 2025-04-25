@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int main() {
+    assert true;
+    return 0;
+}
+----
+0

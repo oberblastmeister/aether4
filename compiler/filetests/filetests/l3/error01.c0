@@ -12,4 +12,4 @@ int main (int x) {
   return x+x;
 }
 ----
-("Parameters had unequal lengths" (name main@1))
+("Parameters had unequal lengths" (name main@2))

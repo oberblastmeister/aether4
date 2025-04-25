@@ -33,4 +33,4 @@ int main() {
     return -1;
 }
 ----
-("Function does not return on all control flow paths" (func.name main@0))
+("Function does not return on all control flow paths" (func.name main@1))

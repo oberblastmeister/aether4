@@ -33,6 +33,7 @@ module Exit_status = struct
       (match s with
        | "SIGFPE" -> `Signaled Caml_sys.sigfpe
        | "SIGSEGV" -> `Signaled Caml_sys.sigsegv
+       | "SIGABRT" -> `Signaled Caml_sys.sigabrt
        | _ -> raise_s [%message "Failed to parse signal for exit status"])
     | List [ Atom "Exited"; s ] -> `Exited (Int.t_of_sexp s)
     | _ -> raise_s [%message "Could not parse sexp into exit status"]

@@ -2,7 +2,6 @@ open Std
 
 open struct
   
-  module Stack_slot_entity = Ae_stack_slot_entity
   module Label = Ae_label
   module Temp = Ae_temp
   module Dominators = Ae_dominators

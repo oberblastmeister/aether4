@@ -6,4 +6,4 @@ int main(int first, int second) {
     return 0;
 }
 ----
-("Parameters had unequal lengths" (name main@0))
+("Parameters had unequal lengths" (name main@1))

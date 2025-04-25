@@ -7,6 +7,7 @@ type 'a t =
   }
 [@@deriving sexp, compare, equal, hash]
 
+let none t = { t; span = Span.none }
 let map t ~f = { t with t = f t.t }
 
 let map_option t ~f =

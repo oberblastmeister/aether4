@@ -3,6 +3,7 @@ module Cst = Ae_c0_cst
 module Ast = Ae_c0_ast
 module Bag = Ae_data_bag
 module Span = Ae_span
+module Spanned = Ae_spanned
 open Bag.Syntax
 
 let empty = Bag.empty
@@ -105,7 +106,27 @@ let elab_ty st (ty : Cst.ty) : Ast.ty =
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
-  | Assert e -> todol [%here]
+  | Assert { expr; span } ->
+    let expr = elab_expr st expr in
+    let c0_runtime_assert_var = elab_func_var st (Spanned.none "c0_runtime_assert") in
+    let stmts =
+      let int i = Ast.Int_const (Spanned.none (Int64.of_int_exn i)) in
+      [ Ast.Effect
+          (Call
+             { func = c0_runtime_assert_var
+             ; args =
+                 [ expr
+                 ; int span.start.line
+                 ; int span.start.col
+                 ; int span.stop.line
+                 ; int span.stop.col
+                 ]
+             ; ty = None
+             ; span
+             })
+      ]
+    in
+    empty +> stmts, st
   | Decl { ty; name; expr; span } ->
     (match ty with
      | Void span ->
@@ -385,28 +406,47 @@ let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
 ;;
 
 let elab_program st (prog : Cst.program) : Ast.program =
-  let st = ref st in
+  let c0_runtime_assert_var, st =
+    declare_func_var st { t = "c0_runtime_assert"; span = Span.none }
+  in
+  let st_ref = ref st in
   let res =
     List.map prog ~f:(fun decl ->
-      let decl, st' = elab_global_decl !st decl in
-      st := st';
+      let decl, st' = elab_global_decl !st_ref decl in
+      st_ref := st';
       decl)
   in
-  let st = !st in
-  let main, st = declare_func_var st { t = "main"; span = Span.none } in
+  let main_var, st = declare_func_var !st_ref { t = "main"; span = Span.none } in
+  st_ref := st;
+  st_ref := st;
   let main_decl =
     Ast.Func_decl
-      { name = main
+      { name = main_var
       ; ty = { ty = Ast.int_ty; params = []; span = Span.none; is_extern = false }
       }
   in
-  (* let panic, _st = declare_func_var st { t = "_runtime_c0_panic"; span = Span.none } in
-  let panic_decl =
+  let c0_runtime_assert_decl =
+    let param s ty =
+      let var = fresh_var !st_ref { t = s; span = Span.none } in
+      ({ var; ty; span = Span.none } : Ast.param)
+    in
     Ast.Extern_func_defn
-      { name = panic; ty = { ty = Ast.void_ty; params = []; span = Span.none } }
+      { name = c0_runtime_assert_var
+      ; ty =
+          { ty = Ast.void_ty
+          ; params =
+              [ param "cond" Ast.bool_ty
+              ; param "start_line" Ast.int_ty
+              ; param "start_col" Ast.int_ty
+              ; param "end_line" Ast.int_ty
+              ; param "end_col" Ast.int_ty
+              ]
+          ; span = Span.none
+          ; is_extern = true
+          }
+      }
   in
-  panic_decl :: main_decl :: res *)
-  main_decl :: res
+  c0_runtime_assert_decl :: main_decl :: res
 ;;
 
 let elaborate_program prog =
