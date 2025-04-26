@@ -23,3 +23,4 @@ type t =
 val atom : string -> t
 val list : ?delim:Delim.t -> t list -> t
 val to_sexp : t -> Sexp.t
+val to_string : t -> string

@@ -4,7 +4,7 @@ open Sexp_lang.Pretty
 
 let stack_address (t : Stack_address.t) =
   match t with
-  | Slot s -> atom (Stack_slot.to_string s)
+  | Slot s -> list [ atom "slot"; atom (Stack_slot.to_string s) ]
   | Previous_frame i -> list [ atom "previous_frame"; atom (Int32.to_string_hum i) ]
   | Current_frame i -> list [ atom "current_frame"; atom (Int32.to_string_hum i) ]
 ;;
@@ -74,7 +74,7 @@ let block_param (t : Block_param.t) =
 
 let instr (t : Instr.t) =
   match t with
-  | Block_params params -> list (List.map params ~f:block_param)
+  | Block_params params -> list ([ atom "block_params" ] @ List.map params ~f:block_param)
   | Mov { dst; src; size } -> list [ instr "mov" size; operand dst; operand src ]
   | Nop -> list [ atom "nop" ]
   | Undefined { dst; size } -> list [ instr "undefined" size; operand dst ]
@@ -90,9 +90,47 @@ let instr (t : Instr.t) =
   | Unreachable -> list [ atom "unreachable" ]
   | Call { dst; size; func; args; call_conv } ->
     list
-      [ instr "call" size
-      ; atom call_conv.name
-      ; temp dst
+    @@ [ instr "call" size ]
+    @ (if String.equal call_conv.name "c0"
+       then []
+       else [ Keyword "call_conv"; atom call_conv.name ])
+    @ []
+    @ [ temp dst
       ; list ([ atom func ] @ List.map ~f:(fun (loc, _ty) -> location loc) args)
       ]
+;;
+
+let block (t : Block.t) =
+  let instrs = Arrayp.to_list t.body in
+  let block_params, rest =
+    ( List.hd instrs
+      |> Option.value_exn ~message:"Expected block params as first instruction"
+      |> Instr'.instr
+      |> Instr.block_params_val
+      |> Option.value_exn ~message:"Expected block params as first instruction"
+    , List.drop instrs 1 )
+  in
+  let instrs =
+    List.map rest ~f:(fun i -> instr i.i) |> List.intersperse ~sep:(Ann Line)
+  in
+  list
+    ([ atom "block"
+     ; list ([ label t.label ] @ List.map block_params ~f:block_param)
+     ; Ann IndentLine
+     ]
+     @ instrs)
+;;
+
+let func (t : Func.t) =
+  let blocks =
+    Map.data t.blocks
+    |> List.map ~f:(fun b -> block b)
+    |> List.intersperse ~sep:(Ann Line)
+  in
+  list ([ atom "func"; atom t.name; Ann IndentLine ] @ blocks)
+;;
+
+let program (t : Program.t) =
+  let funcs = List.map t.funcs ~f:func in
+  list funcs
 ;;

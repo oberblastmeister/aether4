@@ -12,6 +12,7 @@ module Destruct_ssa = Ae_abs_x86_destruct_ssa
 module Repair = Ae_abs_x86_repair
 module Check_register_pressure = Ae_abs_x86_check_register_pressure
 module X86_call_conv = Ae_x86_call_conv
+module Pretty = Ae_abs_x86_pretty
 open Ae_abs_x86_types
 open Ae_trace
 
@@ -30,7 +31,6 @@ let convert ~func_index func =
   let allocation =
     Regalloc_treescan.alloc_func ~colors:X86_call_conv.regalloc_usable_colors func
   in
-  trace_allocation allocation;
   let mach_reg_gen = Func.create_mach_reg_gen ~allocation func in
   let func = Repair.repair_func ~mach_reg_gen ~allocation func in
   let func = Split_critical.split func in
