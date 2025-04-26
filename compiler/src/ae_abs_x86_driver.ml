@@ -25,7 +25,6 @@ let trace_allocation allocation =
 let convert ~func_index func =
   let func = Legalize.legalize_func func in
   let func = Pre_spill.spill_func ~num_regs:X86_call_conv.num_regs func in
-  trace_ls [%lazy_message (func : Func.t)];
   Check_register_pressure.check_func ~num_regs:X86_call_conv.num_regs func;
   Check.check func |> Or_error.ok_exn;
   let allocation =

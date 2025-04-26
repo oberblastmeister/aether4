@@ -217,6 +217,7 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     end
   | Ret { src; size } ->
     let src = lower_operand st src in
+    assert (Flat_x86.Operand.reg_val src |> Option.value_exn |> Mach_reg.equal RAX);
     Flat_x86.Instr.(
       empty
       +> [ ins (Mov { dst = Reg RAX; src; size }) ]

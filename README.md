@@ -4,9 +4,6 @@ See the [documentation](./docs)
 
 TODO:
 
-- [] add the void type
-    - but don't add it to any IR!
-    - instead, just add a undefined instruction
 - [] add more tests
 - [] add support for typedefs
 - [] fix the existing graph coloring register allocator

@@ -20,8 +20,23 @@ type t =
   | Ann of ann
 [@@deriving equal, compare, sexp]
 
+let is_ann = function
+  | Ann _ -> true
+  | _ -> false
+;;
+
+let rec to_sexp t =
+  match t with
+  | List (ts, _d) ->
+    let ts = List.filter ts ~f:(fun t -> not (is_ann t)) in
+    Sexp.List (List.map ts ~f:to_sexp)
+  | Atom s -> Sexp.Atom s
+  | Keyword s -> Sexp.Atom ("#:" ^ s)
+  | Ann _ -> Sexp.List []
+;;
+
 let atom x = Atom x
-let list xs = List (xs, Paren)
+let list ?(delim = Delim.Paren) xs = List (xs, delim)
 let brack_list xs = List (xs, Brack)
 let brace_list xs = List (xs, Brace)
 

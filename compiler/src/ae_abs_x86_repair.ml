@@ -35,13 +35,6 @@ let repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr =
     let defined_mach_regs =
       List.map ~f:snd constrained_defs @ clobbers |> Set.of_list (module Mach_reg)
     in
-    trace_s
-      [%message
-        (instr : Instr.t)
-          (uses : Temp.t list)
-          (defs : Temp.t list)
-          (live_through : Temp.t list)
-          (clobbers : Mach_reg.t list)];
     let alloc_register available_mach_regs temp =
       (* first try to assign it to the register we already have *)
       let mach_reg = Mach_reg.of_enum_exn allocation.Temp.!(temp) in
@@ -210,7 +203,6 @@ let repair_block
         |> List.append __ args_on_stack_location
       in
       let moves, moves_rem = List.zip_with_remainder block_params arg_locations in
-      trace_ls [%lazy_message (moves : (Block_param.t * Location.t) list)];
       begin
         match moves_rem with
         | Some (First _) -> assert false
@@ -263,7 +255,6 @@ let repair_block
       let moves_before, new_instr, moves_after =
         repair_instr ~mach_reg_gen ~ty_table ~allocation ~live_in ~live_out instr
       in
-      trace_s [%message (moves_before : Instr.t list) (moves_after : Instr.t list)];
       Multi_edit.add_inserts
         edit
         block.label

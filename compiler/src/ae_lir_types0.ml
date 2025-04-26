@@ -123,7 +123,7 @@ module Instr = struct
   let iter_uses instr ~f =
     match instr with
     | Block_params _ | Nop -> ()
-    | Call { dst = _; func = _; ty = _; args } -> (List.iter @> Fold.of_fn fst) args ~f
+    | Call { args; _ } -> (List.iter @> Fold.of_fn fst) args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
       f src2;

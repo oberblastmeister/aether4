@@ -19,3 +19,7 @@ type t =
   | Keyword of string
   | Ann of ann
 [@@deriving equal, compare, sexp]
+
+val atom : string -> t
+val list : ?delim:Delim.t -> t list -> t
+val to_sexp : t -> Sexp.t

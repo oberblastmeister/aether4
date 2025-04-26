@@ -51,6 +51,5 @@ let compute (func : Func.t) =
   in
   let bottom_size = compute_bottom_size func in
   let frame_size = align (Int.neg !offset + bottom_size) in
-  trace_s [%message (offset : int ref) (bottom_size : int) (frame_size : int)];
   { table = layout_table; frame_size }
 ;;

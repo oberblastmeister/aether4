@@ -1,0 +1,16 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+void f() {
+    return;
+}
+
+int main() {
+    return 0;
+}
+----
+("Filetest failed"
+ "Expected test to fail to compile, but test compiled properly")
