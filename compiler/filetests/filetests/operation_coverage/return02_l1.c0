@@ -2,12 +2,14 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int a = 1024;
     int b = a * 1024;
     a -= 2;
     b %= 1024*1023;
     return (b-a);
 }
+
+
+void main() { assert (run() == (2)); }
 ----
-2

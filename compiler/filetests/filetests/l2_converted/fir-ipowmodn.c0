@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
 	int modulus = 23947;
 	int exponent = 1248123;
 	int base = 328;
@@ -32,5 +32,7 @@ int main() {
   
 	return x;
 }
+
+
+void main() { assert (run() == (22058)); }
 ----
-22058

@@ -2,7 +2,7 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int a = 10;
     int b = 12;
     int c = 13;
@@ -18,5 +18,7 @@ int main() {
     d *= another;
     return a + b + c + d;
 }
+
+
+void main() { assert (run() == (151)); }
 ----
-151

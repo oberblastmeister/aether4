@@ -2,10 +2,13 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     // 2^63 + 1
     int x = 9223372036854775809;
     return x;
 }
+
+
+void main() {}
 ----
 ("Int did not fit in 64 bits" (i 9223372036854775809))

@@ -5,7 +5,7 @@
 */
 
 //checks if array's digits contains a pair with a sum equal to x
-int main() {
+int run() {
   int array = 2375;
   int size = 4;
   int x = 8;
@@ -42,5 +42,7 @@ int main() {
 
   return 0;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

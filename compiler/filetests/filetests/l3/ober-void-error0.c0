@@ -8,9 +8,12 @@ void bruh() {
     return 1;
 }
 
-int main() {
+int run() {
     bruh();
     return 0;
 }
+
+
+void main() {}
 ----
 "Cannot return expression, return type is void"

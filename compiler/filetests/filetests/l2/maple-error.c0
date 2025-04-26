@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int n = 6;
   if (n < 8)
     if (n < 4)
@@ -32,5 +32,8 @@ int main() {
   else 
     return -1;
 }
+
+
+void main() {}
 ----
-("Function does not return on all control flow paths" (func.name main@1))
+("Function does not return on all control flow paths" (func.name run@1))

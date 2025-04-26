@@ -2,9 +2,12 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     void first;
     return 0;
 }
+
+
+void main() {}
 ----
 ("Variable declarations cannot have type void" (span 6:5-9))

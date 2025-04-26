@@ -12,3 +12,4 @@ concatenated_output2.txt
 concatenated_output3.txt
 script.py
 *.o
+__pycache__/

@@ -5,7 +5,7 @@
 */
 
 // partial order of tuples (u1, u2) and (v1, v2)
-int main() {
+int run() {
   int U1 = 34;
   int U2 = 27;
   int V1 = 40;
@@ -16,5 +16,7 @@ int main() {
 
   return greater | ~(less - 1);
 }
+
+
+void main() { assert (run() == (-1)); }
 ----
--1

@@ -8,8 +8,10 @@ bool return_bool() {
     return true;
 }
 
-int main() {
+int run() {
     return return_bool() ? 1 : 0;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

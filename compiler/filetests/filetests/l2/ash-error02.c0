@@ -3,7 +3,7 @@
 */
 
 // unitialized variable
-int main() {
+int run() {
   int c = 0;
   int a;
   for ( ; c < 33; a *= 3) {
@@ -15,5 +15,8 @@ int main() {
   return a;
 }
 
+
+
+void main() {}
 ----
 ("Variable was used before initialized" (var a@2))

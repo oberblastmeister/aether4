@@ -5,5 +5,8 @@
 int main(int first, int second) {
     return 0;
 }
+
+
+void main() {}
 ----
 ("Parameters had unequal lengths" (name main@1))

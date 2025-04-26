@@ -2,10 +2,12 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int first = 23;
     int q = first / 12;
     return q;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

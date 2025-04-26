@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
 	int iters = 7;
 	int w = 3;
 
@@ -66,5 +66,7 @@ int main() {
 
 	return xor;
 }
+
+
+void main() { assert (run() == (2)); }
 ----
-2

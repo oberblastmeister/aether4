@@ -4,8 +4,11 @@
 )
 */
 
-int main() {
+int run() {
  int tmin = 1<<63; 
  return tmin/(~0);
 }
+
+
+void main() { run(); }
 ----

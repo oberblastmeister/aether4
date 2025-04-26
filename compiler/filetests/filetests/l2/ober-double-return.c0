@@ -4,10 +4,12 @@
 )
 */
 
-int main() {
+int run() {
     bool res = false;
     return 123;
     return res == false ? 0 : 1;
 }
+
+
+void main() { assert (run() == (123)); }
 ----
-123

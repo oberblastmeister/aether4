@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int n = 1000;
   int zeroes = 0;
   /* Use the fact that each multiple of each power of 5 
@@ -14,5 +14,7 @@ int main() {
     zeroes += n / x;
   return zeroes;
 }
+
+
+void main() { assert (run() == (249)); }
 ----
-249

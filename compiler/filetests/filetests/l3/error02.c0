@@ -4,8 +4,11 @@
 )
 */
 
-int main() {
+int run() {
   if (true) return 1; else {}
 }
+
+
+void main() {}
 ----
-("Function does not return on all control flow paths" (func.name main@1))
+("Function does not return on all control flow paths" (func.name run@1))

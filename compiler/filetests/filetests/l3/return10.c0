@@ -14,8 +14,10 @@ int fac(int n) {
   return k;
 }
 
-int main () {
+int run() {
   return fac(5);
 }
+
+
+void main() { assert (run() == (120)); }
 ----
-120

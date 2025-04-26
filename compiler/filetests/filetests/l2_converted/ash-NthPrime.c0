@@ -5,7 +5,7 @@
 */
 
 // computes the Nth prime
-int main() {
+int run() {
   int N = 200;
 
   if (N <= 0) return 0;
@@ -28,5 +28,7 @@ int main() {
     return prime;
   }
 }
+
+
+void main() { assert (run() == (1223)); }
 ----
-1223

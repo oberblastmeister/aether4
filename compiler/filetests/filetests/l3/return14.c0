@@ -11,9 +11,11 @@ int log2(int n) {
   return result;
 }
 
-int main () {
+int run() {
   return log2(1024);
 }
 
+
+
+void main() { assert (run() == (10)); }
 ----
-10

@@ -4,9 +4,12 @@
 )
 */
 
-int main() {
+int run() {
     void bruh;
     return 0;
 }
+
+
+void main() {}
 ----
 ("Variable declarations cannot have type void" (span 8:5-9))

@@ -5,7 +5,7 @@
 */
 
 // Find the next highest power of two
-int main() {
+int run() {
   int N = 3333;
 
   int n = N - 1;
@@ -17,5 +17,7 @@ int main() {
   
   return n + 1;
 }
+
+
+void main() { assert (run() == (4096)); }
 ----
-4096

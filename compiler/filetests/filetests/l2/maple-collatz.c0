@@ -6,7 +6,7 @@
 
 // TODO: this breaks on pre_spill
 // Compute the stopping time of the collatz function on some input x
-int main() {
+int run() {
   int x = 27;
   int steps = 0;
   for (int n = x; n != 1;)
@@ -19,5 +19,7 @@ int main() {
   }
   return steps;
 }
+
+
+void main() { assert (run() == (111)); }
 ----
-111

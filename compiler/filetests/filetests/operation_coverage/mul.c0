@@ -2,8 +2,10 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     return 25 / 12 * 12 + 1;
 }
+
+
+void main() { assert (run() == (25)); }
 ----
-25

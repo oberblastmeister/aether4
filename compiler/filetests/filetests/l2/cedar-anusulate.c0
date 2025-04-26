@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int uf = 3263404442;
 
   int done1 = 0;
@@ -118,5 +118,7 @@ int main() {
 
   return 0;
 }
+
+
+void main() { assert (run() == (7549983130)); }
 ----
-7549983130

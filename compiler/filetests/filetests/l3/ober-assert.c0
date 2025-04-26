@@ -4,9 +4,11 @@
 )
 */
 
-int main() {
+int run() {
     assert true;
     return 0;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

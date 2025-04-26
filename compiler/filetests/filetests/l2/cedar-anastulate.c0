@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int x = 2666579;
 
   if (x == 0)
@@ -204,5 +204,7 @@ int main() {
 
   return res_add;
 }
+
+
+void main() { assert (run() == (1243791692)); }
 ----
-1243791692

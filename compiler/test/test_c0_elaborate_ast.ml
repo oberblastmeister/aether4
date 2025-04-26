@@ -37,7 +37,7 @@ let%expect_test "smoke" =
            ((var end_col@6) (ty (Int -1:-1)) (span -1:-1))))
          (is_extern true) (span -1:-1))))
       (Func_decl (name main@1)
-       (ty ((ty (Int -1:-1)) (params ()) (is_extern false) (span -1:-1))))
+       (ty ((ty (Void -1:-1)) (params ()) (is_extern false) (span -1:-1))))
       (Func_defn
        ((ty (Int 2:3-6)) (name main@1) (params ())
         (body

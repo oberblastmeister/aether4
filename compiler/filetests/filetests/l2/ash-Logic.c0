@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   bool a = !(34 == 0 ? false : true); // false
   bool b = !(-34 == 0 ? false : true); // false
   bool c = (17 != 19); // true
@@ -12,5 +12,7 @@ int main() {
   bool res = a != b || c && d; // false
   return res == false ? 0 : 1;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

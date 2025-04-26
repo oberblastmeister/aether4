@@ -5,12 +5,14 @@
 */
 
 // Compute the digit sum of an integer x
-int main() {
+int run() {
   int x = 43129313;
   int sum = 0;
   for (;x > 0; x /= 10)
     sum += x % 10;
   return sum;
 }
+
+
+void main() { assert (run() == (26)); }
 ----
-26

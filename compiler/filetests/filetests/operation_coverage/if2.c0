@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
     int first = 1;
     int second = 2;
     int third = first + second;
@@ -17,5 +17,7 @@ int main() {
     }
     return first + second;
 }
+
+
+void main() { assert (run() == (7)); }
 ----
-7

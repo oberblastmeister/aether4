@@ -4,8 +4,11 @@
 )
 */
 
-int main() {
+int run() {
     25 / 0;
     return 0;
 }
+
+
+void main() { run(); }
 ----

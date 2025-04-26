@@ -4,7 +4,7 @@
 )
 */
 
-int main () {
+int run() {
   int x145;
   bool break = false;
   while (!break && true) {
@@ -13,5 +13,8 @@ int main () {
   }
   return x145;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t x144) (span 12:5-9))))

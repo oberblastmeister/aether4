@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int x=8;
   int log=0;
   for (; x!=1; x/=2) {
@@ -12,5 +12,7 @@ int main() {
   }
   return log;
 }
+
+
+void main() { assert (run() == (3)); }
 ----
-3

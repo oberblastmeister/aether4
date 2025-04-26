@@ -2,7 +2,7 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
   int ten = 10;
 
   if(ten-10 == 0)
@@ -17,5 +17,8 @@ int main() {
 
   return result;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t result) (span 18:10-16))))

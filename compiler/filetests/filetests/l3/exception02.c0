@@ -10,11 +10,15 @@ extern void c0_print_float(int x);
 extern void c0_print_hex(int n);
 extern void c0_print_char(int c);
 
-int main() {
+int run() {
   int x = c0_fdiv(c0_to_float(1), c0_to_float(0));
   c0_print_float(x);
-  return 0;
+}
+
+void main() {
+    run();
 }
 ----
-inf
-0
+("Filetest failed"
+ ("Could not compile test"
+  ("Function does not return on all control flow paths" (func.name run@6))))

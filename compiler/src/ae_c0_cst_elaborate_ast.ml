@@ -422,7 +422,7 @@ let elab_program st (prog : Cst.program) : Ast.program =
   let main_decl =
     Ast.Func_decl
       { name = main_var
-      ; ty = { ty = Ast.int_ty; params = []; span = Span.none; is_extern = false }
+      ; ty = { ty = Ast.void_ty; params = []; span = Span.none; is_extern = false }
       }
   in
   let c0_runtime_assert_decl =

@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   //Returns a solution to the knapsack problem or -1 if no solution could be found
   int target = 438;
 
@@ -56,5 +56,7 @@ int main() {
   }
   return -1;
 }
+
+
+void main() { assert (run() == (1918)); }
 ----
-1918

@@ -3,7 +3,7 @@
  (kind (CompileFail))
 )
 */
-int main() {
+int run() {
 	int a = 3;
 	int b = 5;
 	int i = 10;
@@ -15,5 +15,8 @@ int main() {
 	}
 	return t;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t t) (span 11:7))))

@@ -2,7 +2,7 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
   int x = 2 + 2;
   int hello;
   if (x == 4) {
@@ -16,5 +16,8 @@ int main() {
   }
   return hello;
 }
+
+
+void main() {}
 ----
 ("Types were not equal" (span 11:9) (ty (Bool -1:-1)) (ty' (Int -1:-1)))

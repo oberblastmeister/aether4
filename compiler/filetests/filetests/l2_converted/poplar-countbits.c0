@@ -5,7 +5,7 @@
 */
 
 // count the number of one bits in 0xABCDEF01
-int main() {
+int run() {
         int num = 2882400001;
         int count = 0;
         int i;
@@ -14,5 +14,7 @@ int main() {
                         count += 1;
         return count;
 }
+
+
+void main() { assert (run() == (18)); }
 ----
-18

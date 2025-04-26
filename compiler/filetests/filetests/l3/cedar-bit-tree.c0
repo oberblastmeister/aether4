@@ -44,9 +44,11 @@ int tree_traverse(int tree)
 		return rsum | (((rres << 1) | 1) << 3);
 }
 
-int main()
+int run()
 {
 	return tree_traverse(1349201357);
 }
+
+
+void main() { assert (run() == (93)); }
 ----
-93

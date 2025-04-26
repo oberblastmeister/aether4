@@ -3,10 +3,13 @@
 */
 
 // if used as a variable
-int main() {
+int run() {
   int if = 2;
   return if;
 }
+
+
+void main() {}
 ----
 ("Parse error"
  ("expected closing brace for block"

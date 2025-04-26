@@ -39,13 +39,19 @@ let rec eval_ty st (ty : Ast.ty) =
   | _ -> ty
 ;;
 
-let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
+let is_ty_eq st ty ty' =
   let ty = eval_ty st ty in
   let ty' = eval_ty st ty' in
   match ty, ty' with
-  | Int _, Int _ -> ()
-  | Bool _, Bool _ -> ()
-  | _ ->
+  | Int _, Int _ -> true
+  | Bool _, Bool _ -> true
+  | Void _, Void _ -> true
+  | _ -> false
+;;
+
+let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
+  if not (is_ty_eq st ty ty')
+  then
     throw_s [%message "Types were not equal" (span : Span.t) (ty : Ast.ty) (ty' : Ast.ty)]
 ;;
 
@@ -152,7 +158,8 @@ let check_func_sig_eq st name (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_s
   begin
     let@: param1, param2 = List.iter params in
     check_ty_eq st Span.none param1.ty param2.ty
-  end
+  end;
+  check_ty_eq st func_sig1.span func_sig1.ty func_sig2.ty
 ;;
 
 let declare_func st name (func_sig : Ast.func_sig) =
@@ -187,6 +194,13 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
         { st with context = Map.add_exn st.context ~key:param.var ~data:param.ty })
     in
     let body = check_block { st_with_params with return_ty = func.ty } func.body in
+    let body =
+      body
+      @
+      if is_ty_eq st (Void Span.none) func.ty
+      then [ Return { expr = None; span = func.span } ]
+      else []
+    in
     let func = { func with body } in
     Ast.Func_defn func, st
   | Ast.Typedef typedef ->

@@ -5,7 +5,7 @@
 */
 
 // while
-int main() {
+int run() {
   int x = 1;
 
   int step = x; 
@@ -19,5 +19,7 @@ int main() {
 
   return x;
 }
+
+
+void main() { assert (run() == (1254)); }
 ----
-1254

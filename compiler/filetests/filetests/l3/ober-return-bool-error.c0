@@ -8,8 +8,11 @@ bool return_bool() {
     return 1;
 }
 
-int main() {
+int run() {
     return return_bool() ? 1 : 0;
 }
+
+
+void main() {}
 ----
 ("Types were not equal" (span 8:12) (ty (Bool 7:1-5)) (ty' (Int -1:-1)))

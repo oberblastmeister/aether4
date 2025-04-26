@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int wrong = 12345;
   int right = 67890;
   if((-4 - (-4)) != 0)
@@ -12,5 +12,7 @@ int main() {
   else
     return right;
 }
+
+
+void main() { assert (run() == (67890)); }
 ----
-67890

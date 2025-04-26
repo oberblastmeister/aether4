@@ -5,10 +5,13 @@
 */
 
 // divide by zero
-int main() {
+int run() {
   int x = 1;
   if(x * 1 != 0 && x / 0 != 0) 
     return 0;
   return 3;
 }
+
+
+void main() { run(); }
 ----

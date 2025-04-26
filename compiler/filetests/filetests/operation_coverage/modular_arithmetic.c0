@@ -2,12 +2,14 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int int_min = 9223372036854775808;
     int int_max = int_min - 1;
     int int_min2 = -int_min;
     int result = int_min2 + int_max;
     return result;
 }
+
+
+void main() { assert (run() == (-1)); }
 ----
--1

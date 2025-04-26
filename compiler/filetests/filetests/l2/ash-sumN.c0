@@ -5,7 +5,7 @@
 */
 
 // validate the formula for the sum of the first n integers
-int main() {
+int run() {
   int N = 100;
 
   int sum = 0;
@@ -13,5 +13,7 @@ int main() {
 
   return (sum == N * (N + 1) / 2) ? 1 : 0;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

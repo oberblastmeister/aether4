@@ -11,8 +11,10 @@ int add(int x, int y) {
     return add(x - 1, y + 1);
 }
 
-int main() {
+int run() {
     return add(10, 4);
 }
+
+
+void main() { assert (run() == (14)); }
 ----
-14

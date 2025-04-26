@@ -2,10 +2,12 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     // 2^63
     int x = 9223372036854775808;
     return x;
 }
+
+
+void main() { assert (run() == (-9223372036854775808)); }
 ----
--9223372036854775808

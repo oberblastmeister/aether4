@@ -15,8 +15,11 @@ int div (int x, int y) {
   return q; 			/* uninitialied variable! */
 }
 
-int main () {
+int run() {
   return div(127,3);
 }
+
+
+void main() {}
 ----
 ("Variable was used before initialized" (var q@2))

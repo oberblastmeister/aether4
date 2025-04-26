@@ -2,12 +2,15 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     return 0;
 }
 
 int another(void first, void second) {
     return 0;
 }
+
+
+void main() {}
 ----
 ("Function parameters cannot have type void" (span 9:13-17))

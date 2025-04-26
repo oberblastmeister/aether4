@@ -4,7 +4,7 @@
 
 // Given a rectangle's area and perimeter, find if the rectangle is a square
 // Plus plus is not in language 2
-int main() {
+int run() {
   int Area = 16;
   int Perimeter = 9;
 
@@ -25,5 +25,7 @@ int main() {
     return 0;
   }
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

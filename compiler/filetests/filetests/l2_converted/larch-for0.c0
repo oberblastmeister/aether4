@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   /* Tests for loops, with break and continue */
   int n;
   bool break = false;
@@ -22,5 +22,7 @@ int main() {
 
   return n;
 }
+
+
+void main() { assert (run() == (26)); }
 ----
-26

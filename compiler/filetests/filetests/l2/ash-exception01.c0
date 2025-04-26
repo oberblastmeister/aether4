@@ -4,7 +4,10 @@
 )
 */
 
-int main() {
+int run() {
   return 1 / ( (!(-4 <= 4) ? 1 : 0) + ~ (-4 / 4) );
 }
+
+
+void main() { run(); }
 ----

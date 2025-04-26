@@ -13,11 +13,14 @@ int fib_rec(int n) {
     return fib_rec(n-1) + fib_rec(n-2, 0);
 }
 
-int main() {
+int run() {
   int n;
   int result;
   n = 10;
   return fib_rec(n);
 }
+
+
+void main() {}
 ----
 ("Invalid number of arguments" (expected 1) (actual 2))

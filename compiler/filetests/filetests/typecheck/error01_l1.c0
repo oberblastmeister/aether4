@@ -2,8 +2,11 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     return a;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t a) (span 6:12))))

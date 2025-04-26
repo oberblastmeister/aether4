@@ -5,7 +5,7 @@
 */
 
 // variable a not fully initialized, but it is never used so it is ok
-int main() {
+int run() {
   int c = 0;
   int q;
   
@@ -23,5 +23,7 @@ int main() {
 
   return q;
 }
+
+
+void main() { assert (run() == (99)); }
 ----
-99

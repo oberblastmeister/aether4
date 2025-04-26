@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int z1 = 1;
   int z2 = !(z1 != 0) ? 1 : 0; // 0
   int z3 = ~z2; // -1
@@ -15,5 +15,7 @@ int main() {
   int frob = ((z1 != 0 && (!((z3 + z5) != 0) != false)) || (z6 / z4 != 0)) ? 1 : 0;
   return frob + z3;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

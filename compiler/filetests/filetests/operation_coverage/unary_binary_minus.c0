@@ -5,10 +5,12 @@
 */
 
 // test unary vs binary minus
-int main() {
+int run() {
   int x = 3;
   x -= x - - - - - - -2;
   return x;
 }
+
+
+void main() { assert (run() == (2)); }
 ----
-2

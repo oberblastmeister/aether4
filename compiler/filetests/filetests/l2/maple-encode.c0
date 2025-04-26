@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int x = 5;
   int y = 10;
   int code = 2;
@@ -21,5 +21,7 @@ int main() {
   //the binary expansion of y
   return code;
 }
+
+
+void main() { assert (run() == (672)); }
 ----
-672

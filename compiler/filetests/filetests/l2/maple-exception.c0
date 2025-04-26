@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int prev = 0;
   int result = 0;
   int i;
@@ -14,4 +14,7 @@ int main() {
   }
   return i / (result + i);
 }
+
+
+void main() { run(); }
 ----

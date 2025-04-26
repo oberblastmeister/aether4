@@ -2,7 +2,7 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
   int X = 12345670;
   int B = 8;
 
@@ -18,5 +18,7 @@ int main() {
   return decimal;
 }
 
+
+
+void main() { assert (run() == (2739128)); }
 ----
-2739128

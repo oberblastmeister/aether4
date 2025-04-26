@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int n = 255;
   int sum = 0;
 
@@ -15,5 +15,7 @@ int main() {
 
   return sum;
 }
+
+
+void main() { assert (run() == (8)); }
 ----
-8

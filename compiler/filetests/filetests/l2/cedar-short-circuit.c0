@@ -4,12 +4,14 @@
 )
 */
 
-int main() {
+int run() {
 	int i = 100;
 	int a = 0;
 	if(a == 0 || i/a == 10)
 		return a;
 	return 0;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

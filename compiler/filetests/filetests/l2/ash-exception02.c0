@@ -4,9 +4,12 @@
 )
 */
 
-int main() {
+int run() {
   bool x = true && (false || (((1 / 0) == 1) ? true : false));
 
   return 42;
 }
+
+
+void main() { run(); }
 ----

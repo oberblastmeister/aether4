@@ -5,10 +5,12 @@
 */
 
 // test logical and / or
-int main() {
+int run() {
   bool x = (1 != 0) && ((2 != 0) || ((3 / 0) == 0 ? false : true));
 
   return x == true ? 1 : 0;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

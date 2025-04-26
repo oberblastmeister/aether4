@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int v = 128; 
   
   int m1 = 2;
@@ -56,5 +56,7 @@ int main() {
   return r;
 }
 
+
+
+void main() { assert (run() == (7)); }
 ----
-7

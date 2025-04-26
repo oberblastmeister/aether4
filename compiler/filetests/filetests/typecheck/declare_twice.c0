@@ -2,10 +2,13 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int first;
     int first;
     return 0;
 }
+
+
+void main() {}
 ----
 ("Var was already declared!" (var ((t first) (span 7:9-14))))

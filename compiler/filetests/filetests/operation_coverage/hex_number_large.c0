@@ -4,10 +4,12 @@
 )
 */
 
-int main() {
+int run() {
     // 2^63 - 1
     int x = 0X7FFFFFFFFFFFFFFF;
     return x;
 }
+
+
+void main() { assert (run() == (9223372036854775807)); }
 ----
-9223372036854775807

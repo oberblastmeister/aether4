@@ -5,7 +5,7 @@
 */
 
 // compute some pi by Taylor expansion of 4 arctan 1 (Gregory-Leibniz)
-int main() {
+int run() {
         int x = 0;
         int i;
         for (i = 0; i < 100; i += 1)
@@ -15,5 +15,7 @@ int main() {
                         x -= 40000 / (2*i + 1);
         return x;
 }
+
+
+void main() { assert (run() == (31312)); }
 ----
-31312

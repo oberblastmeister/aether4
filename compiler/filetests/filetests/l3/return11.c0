@@ -30,7 +30,7 @@ int fib_loop (int n) {
   return fib1;
 }
 
-int main () {
+int run() {
   int n;
   int result;
   n = 10;
@@ -39,5 +39,7 @@ int main () {
     return result;
   return 0;
 }
+
+
+void main() { assert (run() == (89)); }
 ----
-89

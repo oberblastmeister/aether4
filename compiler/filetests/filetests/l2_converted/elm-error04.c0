@@ -3,12 +3,15 @@
 */
 
 // break used as a variable
-int main() {
+int run() {
   int i = 2;
   int break /= i;
   int j = break;
   return j;
 }
+
+
+void main() {}
 ----
 ("Parse error"
  ("expected closing brace for block"

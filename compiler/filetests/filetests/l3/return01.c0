@@ -13,7 +13,7 @@ int sum(int i, int j) {
 }
 
 /* Simple function call to sum up numbers */
-int main () {
+int run() {
   int n;
   int x;
   int y;
@@ -22,5 +22,7 @@ int main () {
   y = n*(n+1)/2;
   return x-y;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

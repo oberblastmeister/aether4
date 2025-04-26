@@ -6,16 +6,19 @@
 
 extern void c0_print_char(int c);
 
-int main() {
+void run() {
     c0_print_char(97);
     c0_print_char(98);
     c0_print_char(99);
     c0_print_char(100);
-    return 0;
+}
+
+
+void main() {
+    run();
 }
 ----
 a
 b
 c
 d
-0

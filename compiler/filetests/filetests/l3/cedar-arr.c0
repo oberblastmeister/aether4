@@ -40,11 +40,13 @@ int arrmulsum(int n0, int n1, int n2, int n3, int n4, int n5, int n6, int n7,
 	return x + arr8_idx(n0, n1, n2, n3, n4, n5, n6, n7, len-1) * arr8_idx(m0, m1, m2, m3, m4, m5, m6, m7, len-1);
 }
 
-int main()
+int run()
 {
 	return arrmulsum(1, 2, 3, 4, 5, 6, 7, 8,
 	                 8, 7, 6, 5, 4, 3, 2, 1,
 	                 8);
 }
+
+
+void main() { assert (run() == (120)); }
 ----
-120

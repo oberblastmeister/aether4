@@ -15,8 +15,10 @@ typedef t8 t7;
 typedef t9 t8;
 typedef t10 t9;
 
-t10 main() {
+t10 run() {
     return 0;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

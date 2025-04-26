@@ -3,7 +3,7 @@
 */
 
 // test register allocation
-int main() {
+int run() {
   int f1 = 1;
   int f2 = 1;
   int f3 = f2+f1;
@@ -14,5 +14,7 @@ int main() {
   int f8 = f7+f6;
   return f8;			// fib(8) == 21
 }
+
+
+void main() { assert (run() == (21)); }
 ----
-21

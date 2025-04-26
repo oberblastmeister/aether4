@@ -4,8 +4,10 @@
 )
 */
 
-int main() {
+int run() {
     return 1 << 5;
 }
+
+
+void main() { assert (run() == (32)); }
 ----
-32

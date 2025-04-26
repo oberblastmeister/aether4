@@ -2,11 +2,14 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int a = 1;
     int b = 2;
     return (a-b));
 }
+
+
+void main() {}
 ----
 ("Parse error"
  ("expected closing brace for block"

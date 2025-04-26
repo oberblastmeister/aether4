@@ -11,5 +11,8 @@ int plus (int x, int y) {
 int main (int x) {
   return x+x;
 }
+
+
+void main() {}
 ----
 ("Parameters had unequal lengths" (name main@2))

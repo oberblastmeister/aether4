@@ -6,7 +6,7 @@
 */
 
 // for loops
-int main() {
+int run() {
  int count = 0;
 
  for (int a=0; a < 5; a+=1)
@@ -18,5 +18,7 @@ int main() {
   return count;
 }
 
+
+
+void main() { assert (run() == (625)); }
 ----
-625

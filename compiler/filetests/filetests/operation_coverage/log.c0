@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
     int b = 10;
     int n = 100000;
     
@@ -16,5 +16,7 @@ int main() {
     
     return res;
 }
+
+
+void main() { assert (run() == (5)); }
 ----
-5

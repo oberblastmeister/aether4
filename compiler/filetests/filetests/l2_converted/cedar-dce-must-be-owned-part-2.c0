@@ -4,9 +4,12 @@
 )
 */
 
-int main() {
+int run() {
   int i = 15 / 0;
   if (false) return i;
   return 1;
 }
+
+
+void main() { run(); }
 ----

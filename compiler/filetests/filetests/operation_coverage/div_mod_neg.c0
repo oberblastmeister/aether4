@@ -2,11 +2,13 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int n = -25;
     int q = n / 12;
     int r = n % 12;
     return q + r;
 }
+
+
+void main() { assert (run() == (-3)); }
 ----
--3

@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   // return the number of unique prime factors the input has.
 
   int in = 24150;
@@ -22,5 +22,7 @@ int main() {
 
   return numfactors;
 }
+
+
+void main() { assert (run() == (6)); }
 ----
-6

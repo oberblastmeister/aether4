@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int one = 1;
   int twentyone = one | (one << 2) | (one << 4);	// 21
   int q = twentyone;
@@ -12,5 +12,7 @@ int main() {
   int seven = q / 9;
   return twentyone / seven;
 }
+
+
+void main() { assert (run() == (3)); }
 ----
-3

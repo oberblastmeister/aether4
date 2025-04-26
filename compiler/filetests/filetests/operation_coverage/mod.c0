@@ -2,10 +2,12 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     int first = 23;
     int r = first % 12;
     return r;
 }
+
+
+void main() { assert (run() == (11)); }
 ----
-11

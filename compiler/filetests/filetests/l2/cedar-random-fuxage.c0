@@ -5,7 +5,7 @@
 */
 
 // TODO: this breaks on pre_spill
-int main() {
+int run() {
 	int r00 = 17;
 	int r01 = 16;
 	int r02 = 15;
@@ -82,5 +82,7 @@ int main() {
 	return total;
 
 }
+
+
+void main() { assert (run() == (-3055843096015207072)); }
 ----
--3055843096015207072

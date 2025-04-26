@@ -8,9 +8,12 @@ int bruh() {
     return;
 }
 
-int main() {
+int run() {
     bruh();
     return 0;
 }
+
+
+void main() {}
 ----
 ("Must return expression, return type is not void" (ty (Int 7:1-4)))

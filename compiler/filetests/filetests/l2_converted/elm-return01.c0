@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int square = 49;
   int root = 0;
 
@@ -13,5 +13,7 @@ int main() {
   }
   return root;
 }
+
+
+void main() { assert (run() == (7)); }
 ----
-7

@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int byte0 = 119;
   int byte1 = 97;
   int byte2 = 110;
@@ -27,5 +27,7 @@ int main() {
 
   return (b << 16) | a;
 }
+
+
+void main() { assert (run() == (71958962)); }
 ----
-71958962

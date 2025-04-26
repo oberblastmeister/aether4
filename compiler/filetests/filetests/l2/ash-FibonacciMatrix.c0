@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int N = 10;
   int A = 1;
   int B = 3;
@@ -38,5 +38,7 @@ int main() {
 
   return Fn;
 }
+
+
+void main() { assert (run() == (199)); }
 ----
-199

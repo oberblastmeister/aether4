@@ -4,10 +4,12 @@
 )
 */
 
-int main() {
+int run() {
     int res;
     if (1234 >= 1) res = 1; else res = -1;
     return res;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

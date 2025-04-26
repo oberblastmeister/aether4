@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   /* Tests the Collatz conjecture on n */
   int n = 4823879;
 
@@ -18,5 +18,7 @@ int main() {
 
   return n;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

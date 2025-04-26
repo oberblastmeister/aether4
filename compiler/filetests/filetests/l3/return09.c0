@@ -23,8 +23,10 @@ int exp(int x, int y) {
   return x * r;
 }
 
-int main () {
+int run() {
   return exp(2, 31);
 }
+
+
+void main() { assert (run() == (2147483648)); }
 ----
-2147483648

@@ -6,7 +6,7 @@
 
 // Checks whether a number n is a palindrome
 // returns 1 if palindrome 0 otherwise
-int main() {
+int run() {
   int x = 94522549;
   int y = x;
   int len = 0;
@@ -35,5 +35,7 @@ int main() {
   }
   return 1;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

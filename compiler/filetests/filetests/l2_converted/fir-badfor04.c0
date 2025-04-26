@@ -2,7 +2,7 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
 	int i;
 	for (i = 1; i <= 10; i ++)
 	{
@@ -10,5 +10,8 @@ int main() {
 	}
 	return n;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t n) (span 9:3))))

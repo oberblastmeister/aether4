@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   // make sure shift uses sign extension
   int v = 1;
   int i;
@@ -16,4 +16,7 @@ int main() {
   }
   return 1 / (~v);
 }
+
+
+void main() { run(); }
 ----

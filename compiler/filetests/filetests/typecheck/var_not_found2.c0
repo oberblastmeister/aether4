@@ -2,10 +2,13 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int first = 123;
     int second = first + third + fourth;
     return second;
 }
+
+
+void main() {}
 ----
 ("Variable not found" (var ((t third) (span 7:26-31))))

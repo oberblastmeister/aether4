@@ -9,8 +9,10 @@ int first(int first, int second, int third, int fourth) {
 }
 
 // variable a not fully initialized, but it is never used so it is ok
-int main() {
+int run() {
     return first(12, 1, 1, 1);
 }
+
+
+void main() { assert (run() == (1249)); }
 ----
-1249

@@ -2,10 +2,13 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int hello;
     int another = hello;
     return 1234;
 }
+
+
+void main() {}
 ----
 ("Variable was used before initialized" (var hello@0))

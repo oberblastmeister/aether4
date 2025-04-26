@@ -36,7 +36,7 @@ let check_next_use s =
 
 let simple_source =
   {|
-  int main() {
+  void main() {
       int first = 1342;
       int unused = 0;
       int second = 1234;
@@ -48,17 +48,16 @@ let simple_source =
       } else {
         another = bl;
       }
-      return first + second;
+      int res = first + second;
   }
 |}
 ;;
 
 let source2 =
   {|
-  int main() {
+  void main() {
       int res;
       if (1 > 1) res = 1; else res = -1;
-      return res;
   }
   |}
 ;;
@@ -79,10 +78,15 @@ let%expect_test "smoke" =
              (info (3:11-16)) (ann ()))
             ((i (Unary (dst rhs@21) (op (Copy Int)) (src second@5))) (index 2)
              (info (5:11-17)) (ann ()))
-            ((i (Bin (dst ret@22) (op Add) (src1 lhs@20) (src2 rhs@21)))
-             (index 3) (info (14:14-28)) (ann ()))
-            ((i (Ret (src ret@22) (ty Int))) (index 4) (info (14:7-28)) (ann ()))
-            ((i Unreachable) (index 5) (info ([9,7]-[13,8])) (ann ()))))))
+            ((i (Bin (dst tmp@22) (op Add) (src1 lhs@20) (src2 rhs@21)))
+             (index 3) (info (14:17-31)) (ann ()))
+            ((i (Unary (dst res@23) (op (Copy Int)) (src tmp@22))) (index 4)
+             (info (14:11-14)) (ann ()))
+            ((i (Nullary (dst ret@24) (op Void_const))) (index 5)
+             (info ([2,3]-[15,4])) (ann ()))
+            ((i (Ret (src ret@24) (ty Void))) (index 6) (info ([2,3]-[15,4]))
+             (ann ()))
+            ((i Unreachable) (index 7) (info ([9,7]-[13,8])) (ann ()))))))
         (then@1
          ((label then@1)
           (body
@@ -144,7 +148,7 @@ let%expect_test "smoke" =
                (b2 ((label else@2) (args ())))))
              (index 16) (info ([9,7]-[13,8])) (ann ()))
             ((i Unreachable) (index 17) (info ([2,3]-[15,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 23) (next_label_id 4)))
+      (start start@3) (next_temp_id 25) (next_label_id 4)))
     ((live_in
       ((join@0 (second@5)) (then@1 (first@1 second@5 third@9))
        (else@2 (first@1 second@5 bl@13))))
@@ -170,10 +174,15 @@ let%expect_test "smoke2" =
              (info (3:11-16)) (ann ()))
             ((i (Unary (dst rhs@21) (op (Copy Int)) (src second@5))) (index 2)
              (info (5:11-17)) (ann ()))
-            ((i (Bin (dst ret@22) (op Add) (src1 lhs@20) (src2 rhs@21)))
-             (index 3) (info (14:14-28)) (ann ()))
-            ((i (Ret (src ret@22) (ty Int))) (index 4) (info (14:7-28)) (ann ()))
-            ((i Unreachable) (index 5) (info ([9,7]-[13,8])) (ann ()))))))
+            ((i (Bin (dst tmp@22) (op Add) (src1 lhs@20) (src2 rhs@21)))
+             (index 3) (info (14:17-31)) (ann ()))
+            ((i (Unary (dst res@23) (op (Copy Int)) (src tmp@22))) (index 4)
+             (info (14:11-14)) (ann ()))
+            ((i (Nullary (dst ret@24) (op Void_const))) (index 5)
+             (info ([2,3]-[15,4])) (ann ()))
+            ((i (Ret (src ret@24) (ty Void))) (index 6) (info ([2,3]-[15,4]))
+             (ann ()))
+            ((i Unreachable) (index 7) (info ([9,7]-[13,8])) (ann ()))))))
         (then@1
          ((label then@1)
           (body
@@ -235,7 +244,7 @@ let%expect_test "smoke2" =
                (b2 ((label else@2) (args ())))))
              (index 16) (info ([9,7]-[13,8])) (ann ()))
             ((i Unreachable) (index 17) (info ([2,3]-[15,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 23) (next_label_id 4)))
+      (start start@3) (next_temp_id 25) (next_label_id 4)))
     ((live_in
       ((join@0 ((second@5 2))) (then@1 ((first@1 1) (second@5 8) (third@9 2)))
        (else@2 ((first@1 2) (second@5 6) (bl@13 1)))))
@@ -255,11 +264,11 @@ let%expect_test "smoke2" =
        ((join@0
          ((label join@0)
           (body
-           (((i (Block_params (((param res@7) (ty Int))))) (index 0)
-             (info (4:7-40)) (ann ()))
-            ((i (Unary (dst ret@8) (op (Copy Int)) (src res@7))) (index 1)
-             (info (3:11-14)) (ann ()))
-            ((i (Ret (src ret@8) (ty Int))) (index 2) (info (5:7-17)) (ann ()))
+           (((i (Block_params ())) (index 0) (info (4:7-40)) (ann ()))
+            ((i (Nullary (dst ret@7) (op Void_const))) (index 1)
+             (info ([2,3]-[5,4])) (ann ()))
+            ((i (Ret (src ret@7) (ty Void))) (index 2) (info ([2,3]-[5,4]))
+             (ann ()))
             ((i Unreachable) (index 3) (info (4:7-40)) (ann ()))))))
         (then@1
          ((label then@1)
@@ -267,7 +276,7 @@ let%expect_test "smoke2" =
            (((i (Block_params ())) (index 0) (info (4:7-40)) (ann ()))
             ((i (Nullary (dst res@6) (op (Int_const 1)))) (index 1) (info (4:24))
              (ann ()))
-            ((i (Jump ((label join@0) (args (res@6))))) (index 2) (info (4:7-40))
+            ((i (Jump ((label join@0) (args ())))) (index 2) (info (4:7-40))
              (ann ()))
             ((i Unreachable) (index 3) (info (4:7-40)) (ann ()))))))
         (else@2
@@ -280,13 +289,13 @@ let%expect_test "smoke2" =
              (ann ()))
             ((i (Bin (dst res@5) (op Sub) (src1 lhs@3) (src2 rhs@4))) (index 3)
              (info (4:38-40)) (ann ()))
-            ((i (Jump ((label join@0) (args (res@5))))) (index 4) (info (4:7-40))
+            ((i (Jump ((label join@0) (args ())))) (index 4) (info (4:7-40))
              (ann ()))
             ((i Unreachable) (index 5) (info (4:7-40)) (ann ()))))))
         (start@3
          ((label start@3)
           (body
-           (((i (Block_params ())) (index 0) (info ([2,3]-[6,4])) (ann ()))
+           (((i (Block_params ())) (index 0) (info ([2,3]-[5,4])) (ann ()))
             ((i (Nullary (dst lhs@0) (op (Int_const 1)))) (index 1) (info (4:11))
              (ann ()))
             ((i (Nullary (dst rhs@1) (op (Int_const 1)))) (index 2) (info (4:15))
@@ -297,8 +306,8 @@ let%expect_test "smoke2" =
               (Cond_jump (cond cond@2) (b1 ((label then@1) (args ())))
                (b2 ((label else@2) (args ())))))
              (index 4) (info (4:7-40)) (ann ()))
-            ((i Unreachable) (index 5) (info ([2,3]-[6,4])) (ann ()))))))))
-      (start start@3) (next_temp_id 9) (next_label_id 4)))
+            ((i Unreachable) (index 5) (info ([2,3]-[5,4])) (ann ()))))))))
+      (start start@3) (next_temp_id 8) (next_label_id 4)))
     ((live_in ()) (live_out ()))
     |}]
 ;;

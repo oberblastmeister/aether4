@@ -2,8 +2,10 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
     return false || false ? 1 : -1;
 }
+
+
+void main() { assert (run() == (-1)); }
 ----
--1

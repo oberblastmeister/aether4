@@ -20,7 +20,7 @@ int will_return (int n) {
   n -= 1;
 }
 
-int main () {
+int run() {
   int n; // initialize to 0
   n = 0;
   if (n + 0 != 0)
@@ -30,5 +30,7 @@ int main () {
       return 3;
   return 4;
 }
+
+
+void main() { assert (run() == (4)); }
 ----
-4

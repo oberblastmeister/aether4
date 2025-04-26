@@ -1006,8 +1006,10 @@ int a2 () { return a3()+1; }
 int a1 () { return a2()+1; }
 int a0 () { return a1()+1; }
 
-int main() {
+int run() {
     return a0();
 }
+
+
+void main() { assert (run() == (1000)); }
 ----
-1000

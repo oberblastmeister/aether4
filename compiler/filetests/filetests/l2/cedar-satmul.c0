@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int x = 1879048192;
   int sig = x >> 31;
   int xt2 = x + x;
@@ -14,5 +14,7 @@ int main() {
   int sigsel = sig ^ min;
   return ((sigsel ^ xt3) & ovf) ^ xt3;
 }
+
+
+void main() { assert (run() == (5637144579)); }
 ----
-5637144579

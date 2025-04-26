@@ -5,7 +5,7 @@
 */
 
 // count the primes less than 100
-int main() {
+int run() {
         int count = 0;
         int i;
         for (i = 2; i < 100; i += 1) {
@@ -20,5 +20,7 @@ int main() {
         }
         return count;
 }
+
+
+void main() { assert (run() == (25)); }
 ----
-25

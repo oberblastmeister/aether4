@@ -223,7 +223,7 @@ int int1, int bitpos, int rnd, int sh, int res, int op1, int op2, int res_rshift
 
 }
 
-int main ()
+int run()
 {
 	int x;
 	int done1;
@@ -287,5 +287,7 @@ int main ()
 
 	return x;
 }
+
+
+void main() { assert (run() == (1243791692)); }
 ----
-1243791692

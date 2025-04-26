@@ -5,7 +5,7 @@
 */
 
 // it will eventually divide by zero
-int main() {
+int run() {
   int result = 4096;
   
   int i;
@@ -16,4 +16,7 @@ int main() {
 
   return result;
 }
+
+
+void main() { run(); }
 ----

@@ -3,9 +3,12 @@
 */
 
 // parentheses not matching
-int main() {
+int run() {
   int i = (2*((3 + 4));
   return i;
 }
+
+
+void main() {}
 ----
 ("Parse error" "expected closing RParen")

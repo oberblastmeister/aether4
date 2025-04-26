@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int uf = 1036831949;
   int sig = uf>>31;
   int exp = ((uf>>23) & 255);
@@ -60,5 +60,7 @@ int main() {
 	return 2147483648;
   return 0;
 }
+
+
+void main() { assert (run() == (0)); }
 ----
-0

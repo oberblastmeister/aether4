@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   /* Returns the smallest factor of n, other than 1 */
   int n = 1883473201;
 
@@ -22,5 +22,7 @@ int main() {
 
   return n;
 }
+
+
+void main() { assert (run() == (43399)); }
 ----
-43399

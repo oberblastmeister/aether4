@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   int x = 4293980400;
   x = ~x;
   int a = x;
@@ -19,5 +19,7 @@ int main() {
   int in_1 = (x>>1)&1;
   return 32 + ~(in_16 + in_8 + in_4 + in_2 + in_1) + (a == 0 ? 1 : 0);
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

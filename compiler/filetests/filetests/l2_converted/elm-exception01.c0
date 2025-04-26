@@ -5,8 +5,11 @@
 */
 
 // mod by zero in shift
-int main() {
+int run() {
   int i = 20;
   return i << i % 0 + 2;
 }
+
+
+void main() { run(); }
 ----

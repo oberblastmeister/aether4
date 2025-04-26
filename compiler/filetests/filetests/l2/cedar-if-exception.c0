@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
 	int i = 1;
 	int j = 0;
 	if(i != 0) {
@@ -14,4 +14,7 @@ int main() {
 	else
 		return 0;
 }
+
+
+void main() { run(); }
 ----

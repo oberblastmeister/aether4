@@ -4,9 +4,11 @@
 )
 */
 
-int main() {
+int run() {
     // this truncates towards negative infinity
     return -9 >> 2;
 }
+
+
+void main() { assert (run() == (-3)); }
 ----
--3

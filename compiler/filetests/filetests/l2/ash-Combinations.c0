@@ -3,7 +3,7 @@
 */
 
 // Combinations: N choose K
-int main() {
+int run() {
     int N = 10;
     int K = 6;
     
@@ -26,5 +26,7 @@ int main() {
     
     return num / den;
 }
+
+
+void main() { assert (run() == (210)); }
 ----
-210

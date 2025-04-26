@@ -15,8 +15,10 @@ int gcd (int x, int y) {
   return x;
 }
   
-int main () {
+int run() {
   return gcd(24,56);
 }
+
+
+void main() { assert (run() == (8)); }
 ----
-8

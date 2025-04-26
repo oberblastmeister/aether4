@@ -4,9 +4,11 @@
 )
 */
 
-int main() {
+int run() {
     int bruh = 1234;
     return bruh * -1;
 }
+
+
+void main() { assert (run() == (-1234)); }
 ----
--1234

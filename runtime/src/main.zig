@@ -1,6 +1,6 @@
 const std = @import("std");
 
-extern fn c0_main_export() i64;
+extern fn c0_main_export() void;
 
 export fn c0_panic() void {
     @panic("Panic!");
@@ -13,7 +13,6 @@ export fn c0_runtime_assert(cond: bool, start_line: u64, start_col: u64, end_lin
 }
 
 export fn main() void {
-    const res = c0_main_export();
-    std.io.getStdOut().writer().print("{}\n", .{res}) catch unreachable;
+    c0_main_export();
     std.process.exit(0);
 }

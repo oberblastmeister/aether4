@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
   /* Returns the number of bits that are set in n */
   int n = 2056452334;
 
@@ -36,5 +36,7 @@ int main() {
 
   return result;
 }
+
+
+void main() { assert (run() == (19)); }
 ----
-19

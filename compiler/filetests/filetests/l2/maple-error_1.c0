@@ -5,7 +5,7 @@
 */
 
 // Variable names cannot be reserved keywords 
-int main() {
+int run() {
   _return = 88;
   _break = 100;
   _continue = 0;
@@ -19,5 +19,8 @@ int main() {
     return !1;
   return _return;
 }
+
+
+void main() {}
 ----
 ("Parse error" "expected condition expression for if")

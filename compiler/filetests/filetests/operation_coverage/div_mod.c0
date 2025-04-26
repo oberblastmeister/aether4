@@ -4,11 +4,13 @@
 )
 */
 
-int main() {
+int run() {
     int first = 23;
     int q = first / 12;
     int r = first % 12;
     return q + r;
 }
+
+
+void main() { assert (run() == (12)); }
 ----
-12

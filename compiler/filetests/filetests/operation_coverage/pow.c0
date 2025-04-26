@@ -4,7 +4,7 @@
 )
 */
 
-int main() {
+int run() {
     int e = 5;
     int n = 2;
     
@@ -14,5 +14,7 @@ int main() {
     }
     return res;
 }
+
+
+void main() { assert (run() == (32)); }
 ----
-32

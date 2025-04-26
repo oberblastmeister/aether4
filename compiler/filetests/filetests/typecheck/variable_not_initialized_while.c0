@@ -2,12 +2,15 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int bruh;
     while (true) {
         bruh = 1;
     }
     return bruh;
 }
+
+
+void main() {}
 ----
 ("Variable was used before initialized" (var bruh@0))

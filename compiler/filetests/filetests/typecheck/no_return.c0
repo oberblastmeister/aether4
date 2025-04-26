@@ -2,11 +2,14 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
     int hello = 1234;
     int another = 12;
     int third = hello + another;
     third += another;
 }
+
+
+void main() {}
 ----
-("Function does not return on all control flow paths" (func.name main@1))
+("Function does not return on all control flow paths" (func.name run@1))

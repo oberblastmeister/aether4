@@ -2,7 +2,7 @@
 ( (kind (CompileAndRun)) )
 */
 
-int main() {
+int run() {
   int a = 0;
   int b = a+1;
   int c = 2*b;
@@ -10,5 +10,7 @@ int main() {
   int e = -d;
   return d;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

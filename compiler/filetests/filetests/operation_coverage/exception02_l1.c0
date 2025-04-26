@@ -2,9 +2,12 @@
 ( (kind (CompileAndRun (status (Signaled SIGFPE)))) )
 */
 
-int main() {
+int run() {
     int a = 1;
     int b = 2/(a-1);
     return a+b;
 }
+
+
+void main() { run(); }
 ----

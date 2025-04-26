@@ -17,11 +17,13 @@ int ack(int m, int n)
 	}
 }
 
-int main()
+int run()
 {
 	int x;
 	x = ack(3,3);
 	return x;
 }
+
+
+void main() { assert (run() == (61)); }
 ----
-61

@@ -6,7 +6,7 @@
 
 // Perform a logical right shift by 1<=n<=31 on signed integer x
 // using bit tricks
-int main() {
+int run() {
   // hex = 0x8437a1d3
   int x = -2076728877;
   int n = 6;
@@ -14,5 +14,7 @@ int main() {
   // result value = 34659975
   return (x >> n)^((x >> 31) << (33 + (~n)));
 }
+
+
+void main() { assert (run() == (34659975)); }
 ----
-34659975

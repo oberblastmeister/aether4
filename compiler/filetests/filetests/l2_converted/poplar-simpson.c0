@@ -5,7 +5,7 @@
 */
 
 // compute integral x^3 from 0 to 1 by Simpson's rule
-int main() {
+int run() {
         int a = 0;
         int b = 100;
         int sum = 0;
@@ -18,5 +18,7 @@ int main() {
         }
         return sum;
 }
+
+
+void main() { assert (run() == (23687392)); }
 ----
-23687392

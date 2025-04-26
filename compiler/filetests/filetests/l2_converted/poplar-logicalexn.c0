@@ -5,9 +5,12 @@
 */
 
 // Will throw an exception if short-circuit logical operators work
-int main() {
+int run() {
     int t = 5;
     int f = 0;
     return ((t != 0 && 0 != 0) || (f != 0 && 3 != 0) || (1/0 != 0) ? 1 : 0);
 }
+
+
+void main() { run(); }
 ----

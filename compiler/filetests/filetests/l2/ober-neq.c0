@@ -4,9 +4,11 @@
 )
 */
 
-int main() {
+int run() {
   bool c = (17 != 19); // true
   return c == false ? 0 : 1;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

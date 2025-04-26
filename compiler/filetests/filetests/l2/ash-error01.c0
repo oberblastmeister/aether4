@@ -2,7 +2,7 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
   int noReturn;
   if (true) 
     if (true) 
@@ -19,5 +19,8 @@ int main() {
           else return 1;
     else return 1;
 }
+
+
+void main() {}
 ----
-("Function does not return on all control flow paths" (func.name main@1))
+("Function does not return on all control flow paths" (func.name run@1))

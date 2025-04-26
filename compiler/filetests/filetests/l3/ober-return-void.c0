@@ -8,9 +8,12 @@ void f() {
     return;
 }
 
-int main() {
+int run() {
     return 0;
 }
+
+
+void main() {}
 ----
 ("Filetest failed"
  "Expected test to fail to compile, but test compiled properly")

@@ -2,9 +2,12 @@
 ( (kind (CompileFail)) )
 */
 
-int main() {
+int run() {
 	for ( ; ; );
 	return 0;
 }
+
+
+void main() {}
 ----
 ("Parse error" "expected for parens")

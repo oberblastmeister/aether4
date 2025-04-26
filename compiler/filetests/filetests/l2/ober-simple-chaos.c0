@@ -5,11 +5,13 @@
 )
 */
 
-int main() {
+int run() {
   int x0 = 1;
   int x1 = x0+1;
   int x2 = x1+1;
   return x0 + x1 + x2;
 }
+
+
+void main() { assert (run() == (6)); }
 ----
-6

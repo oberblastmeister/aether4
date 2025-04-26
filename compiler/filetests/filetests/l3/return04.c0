@@ -63,10 +63,12 @@ int add (int n, int m) {
   return fraction(x1*y2+x2*y1, y1*y2);
 }
 
-int main () {
+int run() {
   int n;
   n = add(fraction(2,4),fraction(2,3)); /* 1/2 + 2/3 = 7/6 */
   return (pi1(n) == 7 && pi2(n) == 6) ? 1 : 0;
 }
+
+
+void main() { assert (run() == (1)); }
 ----
-1

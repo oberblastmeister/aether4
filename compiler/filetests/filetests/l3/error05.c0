@@ -30,7 +30,7 @@ int fib_loop (int n) {
   return fib1;
 }
 
-int main () {
+int run() {
   int n;
   int result;
   n = 10;
@@ -39,5 +39,8 @@ int main () {
     return result;
   return 0;
 }
+
+
+void main() {}
 ----
 ("Function variable not found" (func_var ((t fib_reC) (span 13:27-34))))

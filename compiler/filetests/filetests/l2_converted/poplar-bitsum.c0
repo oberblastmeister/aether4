@@ -5,7 +5,7 @@
 */
 
 // Calculate the binary digit sum of the input
-int main() {
+int run() {
     int input = 96198526;    // 101101110111101111101111110
     int sum = 0;
     int shifts;
@@ -15,5 +15,7 @@ int main() {
     }
     return sum;
 }
+
+
+void main() { assert (run() == (21)); }
 ----
-21
