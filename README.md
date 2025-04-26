@@ -10,5 +10,4 @@ TODO:
 - [] remove all record types from the ir interface, it should be fully abstract
 - rewrite the process stuff to use spawn/cmd instead of eio
 - remove the changed stuff in the driver
-- add pretty printer using sexp_lang
 - update tests to not return integer

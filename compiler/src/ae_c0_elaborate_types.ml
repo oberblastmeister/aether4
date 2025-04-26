@@ -29,7 +29,19 @@ let var_ty st var =
     throw_s [%message "Var not found!" (var : Ast.Var.t)])
 ;;
 
-let check_ty_eq _st span (ty : Ast.ty) (ty' : Ast.ty) =
+let rec eval_ty st (ty : Ast.ty) =
+  match ty with
+  | Ty_var v ->
+    Map.find st.typedefs v
+    |> Option.value_or_thunk ~default:(fun () ->
+      throw_s [%message "Type def not found" (v : Ast.var)])
+    |> eval_ty st
+  | _ -> ty
+;;
+
+let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
+  let ty = eval_ty st ty in
+  let ty' = eval_ty st ty' in
   match ty, ty' with
   | Int _, Int _ -> ()
   | Bool _, Bool _ -> ()

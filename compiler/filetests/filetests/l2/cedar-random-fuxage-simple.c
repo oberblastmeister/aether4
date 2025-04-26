@@ -6,7 +6,6 @@
 /*
 (
  (kind (CompileAndRun))
- (trace)
  (emit (Abs_asm Asm))
 )
 */

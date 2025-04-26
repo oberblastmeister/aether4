@@ -11,12 +11,17 @@ let empty = Bag.empty
 let ins = Tir.Instr'.create_unindexed
 let bc ?(args = []) label = { Tir.Block_call.label; args }
 
-type global_st = { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t }
+type global_st =
+  { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t
+  ; typedefs : Ast.ty Ast.Var.Table.t
+  }
+
 type instrs = Tir.Instr'.t Bag.t [@@deriving sexp_of]
 
 let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
-  { func_ty_map }
+  let typedefs = Ast.Var.Table.create () in
+  { func_ty_map; typedefs }
 ;;
 
 type st =
@@ -76,12 +81,12 @@ let add_fresh_block ?name ?info ?params t instrs : Label.t =
   label
 ;;
 
-let lower_ty (ty : Ast.ty) : Tir.Ty.t =
+let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
   match ty with
   | Int _ -> Int
   | Bool _ -> Bool
   | Void _ -> Void
-  | _ -> todol [%here]
+  | Ty_var var -> lower_ty st (Hashtbl.find_exn st.global_st.typedefs var)
 ;;
 
 let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =
@@ -145,7 +150,8 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
         (* important: we override the continuation here because nothing should be after a Ret *)
-        let cont = empty +> [ ins ~info (Ret { src = dst; ty = lower_ty ty }) ] in
+        let ty = lower_ty st ty in
+        let cont = empty +> [ ins ~info (Ret { src = dst; ty }) ] in
         lower_expr st cont dst expr
     end
   | If { cond; body1; body2; span } ->
@@ -231,7 +237,9 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     let info = Span.to_info span in
     let op : Tir.Bin_op.t =
       match op with
-      | Eq -> Eq (lower_ty (Ast.expr_ty_exn lhs))
+      | Eq ->
+        let ty = lower_ty st (Ast.expr_ty_exn lhs) in
+        Eq ty
       | _ -> lower_bin_op op
     in
     let src1 = fresh_temp ~info ~name:"lhs" st in
@@ -242,11 +250,9 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     cont
   | Var { var; ty } ->
     let src = var_temp st var in
+    let ty = lower_ty st (Option.value_exn ty) in
     empty
-    +> [ ins
-           ~info:(Span.to_info var.span)
-           (Unary { dst; op = Copy (lower_ty (Option.value_exn ty)); src })
-       ]
+    +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
     ++ cont
   | Call { func; args; ty; span } ->
     let ty = Option.value_exn ty in
@@ -257,15 +263,16 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
         fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
     in
     let cont =
+      let ty = lower_ty st ty in
       empty
       +> [ ins
              (Call
                 { dst
-                ; ty = lower_ty ty
+                ; ty
                 ; func = func.name
                 ; args =
                     List.zip_exn arg_temps func_sig.params
-                    |> List.map ~f:(fun (arg, param) -> arg, lower_ty param.ty)
+                    |> List.map ~f:(fun (arg, param) -> arg, lower_ty st param.ty)
                 ; is_extern = func_sig.is_extern
                 })
          ]
@@ -285,7 +292,7 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let start_label =
     let params =
       List.map defn.params ~f:(fun param ->
-        { Tir.Block_param.param = var_temp st param.var; ty = lower_ty param.ty })
+        { Tir.Block_param.param = var_temp st param.var; ty = lower_ty st param.ty })
     in
     add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" ~params st start_instrs
   in
@@ -305,16 +312,18 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
 
 let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
   match decl with
-  | Ast.Extern_func_defn { name; ty } ->
+  | Extern_func_defn { name; ty } ->
     Hashtbl.set st.func_ty_map ~key:name ~data:ty;
     None
-  | Ast.Func_decl { name; ty } ->
+  | Func_decl { name; ty } ->
     Hashtbl.set st.func_ty_map ~key:name ~data:ty;
     None
-  | Ast.Func_defn defn ->
+  | Func_defn defn ->
     Hashtbl.set st.func_ty_map ~key:defn.name ~data:(Ast.func_defn_to_ty defn);
     Some (lower_func_defn st defn)
-  | Ast.Typedef _ -> None
+  | Typedef { ty; name; span = _ } ->
+    Hashtbl.set st.typedefs ~key:name ~data:ty;
+    None
 ;;
 
 let lower_program (program : Ast.program) : Tir.Program.t =

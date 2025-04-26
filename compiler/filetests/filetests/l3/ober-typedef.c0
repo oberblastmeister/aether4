@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+typedef t1 int;
+typedef t2 t1;
+typedef t3 t2;
+typedef t4 t3;
+typedef t5 t4;
+typedef t6 t5;
+typedef t7 t6;
+typedef t8 t7;
+typedef t9 t8;
+typedef t10 t9;
+
+t10 main() {
+    return 0;
+}
+----
+0
