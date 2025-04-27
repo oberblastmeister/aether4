@@ -60,6 +60,7 @@ module Make (Arg : Arg) : sig
   end
 
   val sep : 'a t -> by:unit t -> 'a list t
+  val sep1 : 'a t -> by:unit t -> 'a list t
   val with_env : Data.t -> Stream.t -> (env -> 'a) -> ('a, Error.t) Parse_result.t
   val expect_eq : Token.t -> unit t
   val expect : (Token.t -> 'a option) -> 'a t

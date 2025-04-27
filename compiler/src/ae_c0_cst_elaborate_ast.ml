@@ -127,28 +127,37 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       ]
     in
     empty +> stmts, st
-  | Decl { ty; name; expr; span } ->
-    (match ty with
-     | Void span ->
-       throw_s [%message "Variable declarations cannot have type void" (span : Span.t)]
-     | _ -> ());
-    let var, st' = declare_var st name in
-    let ty = elab_ty st' ty in
+  | Decl { ty; names; expr; span } ->
+    let st_ref = ref st in
+    if List.length names > 1 && Option.is_some expr
+    then throw_s [%message "Can't have multiple variable declarations with assignment"];
     let stmts =
-      match expr with
-      | None -> empty +> Ast.[ Declare { ty; var; span } ]
-      | Some expr ->
-        let tmp = fresh_var st { t = "tmp"; span = name.span } in
-        let expr = elab_expr st expr in
-        empty
-        +> Ast.
-             [ Declare { ty; var = tmp; span }
-             ; Assign { lvalue = tmp; expr; span }
-             ; Declare { ty; var; span }
-             ; Assign { lvalue = var; expr = Var { var = tmp; ty = None }; span }
-             ]
+      let@: name = List.map names in
+      let st = !st_ref in
+      (match ty with
+       | Void span ->
+         throw_s [%message "Variable declarations cannot have type void" (span : Span.t)]
+       | _ -> ());
+      let var, st' = declare_var st name in
+      let ty = elab_ty st' ty in
+      let stmts =
+        match expr with
+        | None -> empty +> Ast.[ Declare { ty; var; span } ]
+        | Some expr ->
+          let tmp = fresh_var st { t = "tmp"; span = name.span } in
+          let expr = elab_expr st expr in
+          empty
+          +> Ast.
+               [ Declare { ty; var = tmp; span }
+               ; Assign { lvalue = tmp; expr; span }
+               ; Declare { ty; var; span }
+               ; Assign { lvalue = var; expr = Var { var = tmp; ty = None }; span }
+               ]
+      in
+      st_ref := st';
+      stmts
     in
-    stmts, st'
+    Bag.concat stmts, !st_ref
   | Block { block; span } ->
     (empty +> Ast.[ Block { block = elab_block st block; span } ]), st
   | Post { lvalue; op; span } ->

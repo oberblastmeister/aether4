@@ -20,7 +20,7 @@ type block =
 and stmt =
   | Decl of
       { ty : ty
-      ; name : var
+      ; names : var list
       ; expr : expr option
       ; span : Span.t
       }

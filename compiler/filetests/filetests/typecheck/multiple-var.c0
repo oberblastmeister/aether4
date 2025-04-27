@@ -1,0 +1,8 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+void main() {
+    int x, y, z;
+}
+----

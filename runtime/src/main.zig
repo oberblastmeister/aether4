@@ -12,6 +12,14 @@ export fn c0_runtime_assert(cond: bool, start_line: u64, start_col: u64, end_lin
     }
 }
 
+export fn c0_runtime_print_int(i: i64) void {
+    std.debug.print("{}\n", .{i});
+}
+
+export fn c0_runtime_print_bool(b: bool) void {
+    std.debug.print("{}\n", .{b});
+}
+
 export fn main() void {
     c0_main_export();
     std.process.exit(0);

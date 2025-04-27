@@ -184,7 +184,7 @@ module Make (Arg : Arg) = struct
     ;;
   end
 
-  let sep p ~by env =
+  let sep1 p ~by env =
     let open Syntax in
     let rec loop acc env =
       ((fun env ->
@@ -194,11 +194,13 @@ module Make (Arg : Arg) = struct
        <|> fun _env -> List.rev acc)
         env
     in
-    ((fun env ->
-       let x = p env in
-       loop [ x ] env)
-     <|> pure [])
-      env
+    let x = p env in
+    loop [ x ] env
+  ;;
+
+  let sep p ~by env =
+    let open Syntax in
+    ((fun env -> sep1 p ~by env) <|> pure []) env
   ;;
 
   let optional p = Syntax.(Option.some <$> p <|> pure None)

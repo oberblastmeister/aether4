@@ -42,7 +42,7 @@ let%expect_test "simple decl" =
         (params ())
         (body
          (((block
-            ((Decl (ty (Int 3:7-10)) (name ((t first) (span 3:11-16)))
+            ((Decl (ty (Int 3:7-10)) (names (((t first) (span 3:11-16))))
               (expr
                ((Bin (lhs (Int_const ((t 12) (span 3:19-21)))) (op Add)
                  (rhs
@@ -58,7 +58,7 @@ let%expect_test "simple decl" =
                    (op Div) (rhs (Int_const ((t 2) (span 3:43)))) (span 3:24-44)))
                  (span 3:19-44))))
               (span 3:7-44))
-             (Decl (ty (Int 4:7-10)) (name ((t second) (span 4:11-17)))
+             (Decl (ty (Int 4:7-10)) (names (((t second) (span 4:11-17))))
               (expr
                ((Bin
                  (lhs
@@ -90,7 +90,7 @@ let%expect_test "simple control flow" =
         (params ())
         (body
          (((block
-            ((Decl (ty (Int 3:7-10)) (name ((t i) (span 3:11)))
+            ((Decl (ty (Int 3:7-10)) (names (((t i) (span 3:11))))
               (expr ((Int_const ((t 1234) (span 3:15-19))))) (span 3:7-19))
              (If (cond (Var ((t b) (span 4:11))))
               (body1
@@ -157,11 +157,11 @@ let%expect_test "bool" =
         (params ())
         (body
          (((block
-            ((Decl (ty (Int 3:11-14)) (name ((t first) (span 3:15-20)))
+            ((Decl (ty (Int 3:11-14)) (names (((t first) (span 3:15-20))))
               (expr ((Int_const ((t 0) (span 3:23))))) (span 3:11-24))
-             (Decl (ty (Int 4:11-14)) (name ((t second) (span 4:15-21)))
+             (Decl (ty (Int 4:11-14)) (names (((t second) (span 4:15-21))))
               (expr ((Int_const ((t 1234) (span 4:24-28))))) (span 4:11-28))
-             (Decl (ty (Bool 5:11-15)) (name ((t third) (span 5:16-21)))
+             (Decl (ty (Bool 5:11-15)) (names (((t third) (span 5:16-21))))
               (expr ((Bool_const ((t true) (span 5:24-28))))) (span 5:11-28))
              (Return
               (expr
@@ -208,7 +208,7 @@ let%expect_test "typedef" =
         (body
          (((block
             ((Decl (ty (Ty_var ((t testing) (span 7:5-12))))
-              (name ((t first) (span 7:13-18)))
+              (names (((t first) (span 7:13-18))))
               (expr ((Int_const ((t 0) (span 7:21))))) (span 7:5-22))
              (Effect
               (Call (func ((t first) (span 8:5-10)))
@@ -227,7 +227,7 @@ let%expect_test "typedef" =
         (body
          (((block
             ((Decl (ty (Ty_var ((t testing) (span 12:5-12))))
-              (name ((t second) (span 12:13-19)))
+              (names (((t second) (span 12:13-19))))
               (expr ((Int_const ((t 1234) (span 12:22-26))))) (span 12:5-26))))
            (span [11,21]-[13,4]))))
         (span [11,3]-[13,4])))
@@ -265,7 +265,7 @@ let%expect_test _ =
         (params ())
         (body
          (((block
-            ((Decl (ty (Int 3:7-10)) (name ((t first) (span 3:11-16)))
+            ((Decl (ty (Int 3:7-10)) (names (((t first) (span 3:11-16))))
               (expr ((Int_const ((t 0) (span 3:19))))) (span 3:7-20))
              (Assert (expr (Bool_const ((t true) (span 4:14-18)))) (span 4:7-18))))
            (span [2,16]-[5,6]))))

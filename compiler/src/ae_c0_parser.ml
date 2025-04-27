@@ -200,7 +200,8 @@ and parse_return env : Cst.stmt =
 and parse_decl env : Cst.stmt =
   let open Span.Syntax in
   let ty = parse_ty env in
-  let name = parse_ident env in
+  (* Very important that this is sep1. So that the parser doesn't loop, and we properly emit a fail *)
+  let names = Parser.sep1 parse_ident ~by:(expect_eq_ Comma) env in
   let expr =
     Parser.optional
       (fun env ->
@@ -215,7 +216,7 @@ and parse_decl env : Cst.stmt =
   in
   Cst.Decl
     { ty
-    ; name
+    ; names
     ; expr
     ; span =
         Cst.ty_span ty ++ Option.value_map expr ~f:Cst.expr_span ~default:(Cst.ty_span ty)
