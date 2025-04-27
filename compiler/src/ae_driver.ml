@@ -6,13 +6,10 @@ module Lir = Ae_lir_std
 module Abs_x86 = Ae_abs_x86_std
 module Flat_x86 = Ae_flat_x86_std
 module Path_utils = Ae_path_utils
-module Stdenv = Eio.Stdenv
-module Path = Eio.Path
-module Process = Eio.Process
-module File = Eio.File
-module Flow = Eio.Flow
-module Fs = Eio.Fs
 module Spanned = Ae_spanned
+module Path = Ae_path
+module Fs = Ae_fs
+module Process = Ae_process
 
 module Emit = struct
   type t =
@@ -31,13 +28,12 @@ end
 
 module Env = struct
   type t =
-    { env : Eio_unix.Stdenv.base
-    ; cache_dir_path : Fs.dir_ty Path.t option
-    ; path : Fs.dir_ty Path.t
+    { cache_dir_path : string option
+    ; path : string
     ; emit : Emit.t list
     }
 
-  let create ?cache_dir_path ?(emit = []) env path = { env; cache_dir_path; emit; path }
+  let create ?cache_dir_path ?(emit = []) path = { cache_dir_path; emit; path }
 end
 
 let get_self_exe_path =
@@ -63,14 +59,17 @@ let find_runtime_dir () =
 
 let find_runtime_path () = Filename.(concat (find_runtime_dir ()) "libc0_runtime.a")
 
-let link_files_with_runtime ~mgr ~paths ~out_path =
+let link_files_with_runtime ~paths ~out_path =
   let runtime_path = find_runtime_path () in
-  Eio.Process.run
-    mgr
-    ([ "zig"; "cc"; "-Wno-unused-command-line-argument" ]
-     @ [ runtime_path ]
-     @ paths
-     @ [ "-o"; out_path ])
+  let args =
+    [ "cc"; "-Wno-unused-command-line-argument" ]
+    @ [ runtime_path ]
+    @ paths
+    @ [ "-o"; out_path ]
+  in
+  let child = Process.spawn ~prog:"zig" ~args in
+  (* TODO: don't use wait_exn here *)
+  Process.Child.wait_exn child
 ;;
 
 let compile_source_to_tir ?(emit = []) source =
@@ -116,75 +115,67 @@ let compile_source_to_asm ?(emit = []) source =
   Ok formatted_asm
 ;;
 
-let copy_file ~src ~dst =
-  let@ from_file = Path.with_open_in src in
-  let@ to_file = Path.with_open_out ~create:(`Or_truncate 0o777) dst in
-  Flow.copy from_file to_file;
-  ()
-;;
-
 let compile_source_to_a_out (env : Env.t) sources =
   let source, object_files = List.hd_exn sources, List.drop sources 1 in
   List.iter object_files ~f:(fun source ->
     let ext = Filename.split_extension source |> snd |> Option.value_exn in
     assert (String.equal ext "a"));
   let cache_dir_path =
-    Option.value env.cache_dir_path ~default:Path.(Stdenv.cwd env.env / ".c0_cache")
+    Option.value env.cache_dir_path ~default:Path.(Sys_unix.getcwd () / ".c0_cache")
   in
-  let name = Path.native_exn env.path |> Filename.basename |> Filename.chop_extension in
+  let name = env.path |> Path.basename |> Path.chop_extension in
   let module Digest = Digestif.BLAKE2B in
-  let digest = Digest.digestv_string [ Path.native_exn env.path; source ] in
+  let digest = Digest.digestv_string [ env.path; source ] in
   let hashed_dir_path =
     let ascii_digest =
       Base64.encode_exn ~alphabet:Base64.uri_safe_alphabet (Digest.to_raw_string digest)
     in
     let hashed_dir_name =
-      Filename.basename (Filename.chop_extension (Path.native_exn env.path))
-      ^ "-"
-      ^ ascii_digest
+      Path.basename (Path.chop_extension env.path) ^ "-" ^ ascii_digest
     in
     Path.(cache_dir_path / hashed_dir_name)
   in
   let asm_path = Path.(hashed_dir_path / (name ^ ".s")) in
   let out_path = Path.(hashed_dir_path / "a.out") in
-  Path.mkdirs ~exists_ok:true ~perm:0o777 hashed_dir_path;
+  Fs.create_dir_all ~perm:0o777 hashed_dir_path;
   if Path.is_file out_path
-  then Ok (out_path, false)
+  then Ok out_path
   else (
     match compile_source_to_asm ~emit:env.emit source with
     | Ok asm_content ->
-      let@ asm_file = Path.with_open_out ~create:(`Or_truncate 0o777) asm_path in
-      Flow.copy_string asm_content asm_file;
-      link_files_with_runtime
-        ~mgr:(Stdenv.process_mgr env.env)
-        ~paths:(object_files @ [ Path.native_exn asm_path ])
-        ~out_path:(Path.native_exn out_path);
-      Ok (out_path, true)
+      Out_channel.write_all asm_path ~data:asm_content;
+      link_files_with_runtime ~paths:(object_files @ [ asm_path ]) ~out_path;
+      Ok out_path
     | Error e -> Error e)
 ;;
 
 let compile_path_to_a_out (env : Env.t) =
-  let@ file = Path.with_open_in env.path in
-  let source = Flow.read_all file in
+  let source = In_channel.read_all env.path in
   compile_source_to_a_out env [ source ]
 ;;
 
 let compile_path ?out_path (env : Env.t) =
   let open Result.Let_syntax in
-  let%bind a_out_path, changed = compile_path_to_a_out env in
-  let name = Path.native_exn env.path |> Filename.basename |> Filename.chop_extension in
-  let out_path = Option.value out_path ~default:Path.(Stdenv.cwd env.env / name) in
-  if Path.is_file out_path
-  then if changed then copy_file ~src:a_out_path ~dst:out_path else ()
-  else copy_file ~src:a_out_path ~dst:out_path;
+  let%bind a_out_path = compile_path_to_a_out env in
+  let name = env.path |> Filename.basename |> Filename.chop_extension in
+  let out_path = Option.value out_path ~default:Path.(Ae_env.getcwd () / name) in
+  Fs.copy ~src:a_out_path ~dst:out_path;
   Ok ()
 ;;
 
 let run_path (env : Env.t) =
   let open Result.Let_syntax in
-  let%bind a_out_path, _changed = compile_path_to_a_out env in
-  let proc = Stdenv.process_mgr env.env in
-  Process.run proc [ Path.native_exn a_out_path ];
+  let%bind a_out_path = compile_path_to_a_out env in
+  let res =
+    Core_unix.create_process_with_fds
+      ~prog:a_out_path
+      ~args:[]
+      ~stdin:(Use_this Core_unix.stdin)
+      ~stdout:(Use_this Core_unix.stdout)
+      ~stderr:(Use_this Core_unix.stderr)
+      ()
+  in
+  Core_unix.waitpid_exn res.pid;
   Ok ()
 ;;
 
@@ -199,8 +190,7 @@ let compile_command =
      fun () ->
        if not (Stdlib.Sys.is_regular_file path)
        then raise_s [%message "Path does not exist!" (path : string)];
-       let@ env = Eio_main.run in
-       let env = Env.create env Path.(Stdenv.fs env / path) in
+       let env = Env.create path in
        (* The path could be a symlink, which could be out of the current working directory *)
        (* This would cause eio to error *)
        (* So bypass this by using Stdenv.fs *)
@@ -217,8 +207,7 @@ let run_command =
      fun () ->
        if not (Stdlib.Sys.is_regular_file path)
        then raise_s [%message "Path does not exist!" (path : string)];
-       let@ env = Eio_main.run in
-       let env = Env.create env Path.(Stdenv.fs env / path) in
+       let env = Env.create path in
        run_path env)
 ;;
 

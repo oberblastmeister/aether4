@@ -1,6 +1,6 @@
 /*
 (
- (kind (CompileAndRun (status (Signaled SIGFPE))))
+ (kind (CompileAndRun (status (Signal SIGFPE))))
 )
 */
 

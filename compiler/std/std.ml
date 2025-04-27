@@ -4,6 +4,9 @@ include Core
 module Fold = Functional.Fold
 module Iter = Functional.Iter
 module Traverse = Functional.Traverse
+module Core_unix = struct
+  include Core_unix
+end
 
 module Fn = struct
   include Fn

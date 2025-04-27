@@ -3,7 +3,6 @@ open Aether4
 open Ae_trace
 module Driver = Ae_driver
 module C0 = Ae_c0_std
-module Entity_graph_utils = Ae_entity_graph_utils
 module Tir = Ae_tir_std
 open Tir
 module Dominators = Ae_dominators

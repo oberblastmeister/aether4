@@ -5,4 +5,12 @@
   (pps ppx_jane ppx_inline_test))
  (flags
   (:standard -warn-error -A))
- (libraries core core_kernel.vec functional unix zarith))
+ (libraries 
+   core  
+   core_unix
+   core_unix.filename_unix
+   core_unix.command_unix
+   core_kernel.vec
+   functional
+   unix
+   zarith))

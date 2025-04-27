@@ -1,14 +1,9 @@
 open Std
 open Aether4
 open Ae_std
-module Stdenv = Eio.Stdenv
-module Path = Eio.Path
-module Flow = Eio.Flow
-module Process = Eio.Process
-module Buf_read = Eio.Buf_read
 module Chaos_mode = Ae_chaos_mode
 
-module Exit_status = struct
+(* module Exit_status = struct
   type t =
     [ `Exited of int
       (*
@@ -38,18 +33,18 @@ module Exit_status = struct
     | List [ Atom "Exited"; s ] -> `Exited (Int.t_of_sexp s)
     | _ -> raise_s [%message "Could not parse sexp into exit status"]
   ;;
-end
+end *)
 
 module Kind = struct
   type t =
-    | CompileAndRun of { status : Exit_status.t option [@sexp.option] }
+    | CompileAndRun of { status : Core_unix.Exit_or_signal.error option [@sexp.option] }
     | CompileFail of { option : unit option [@sexp.option] }
   [@@deriving sexp]
 end
 
 type t =
   { kind : Kind.t
-  ; status : Exit_status.t option [@sexp.option]
+  ; status : Core_unix.Exit_or_signal.error option [@sexp.option]
   ; trace : bool [@sexp.bool]
   ; emit : Driver.Emit.t list [@sexp.list]
   ; chaos_spill_mode : Chaos_mode.Spill_mode.t option [@sexp.option]

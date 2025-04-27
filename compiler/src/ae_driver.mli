@@ -1,7 +1,6 @@
 open Std
 module Tir := Ae_tir_std
-module Path := Eio.Path
-module Fs := Eio.Fs
+module Path = Ae_path
 
 module Emit : sig
   type t =
@@ -18,30 +17,19 @@ end
 
 module Env : sig
   type t =
-    { env : Eio_unix.Stdenv.base
-    ; cache_dir_path : Fs.dir_ty Path.t option
-    ; path : Fs.dir_ty Path.t
+    { cache_dir_path : string option
+    ; path : string
     ; emit : Emit.t list
     }
 
-  val create
-    :  ?cache_dir_path:Fs.dir_ty Path.t
-    -> ?emit:Emit.t list
-    -> Eio_linux.stdenv
-    -> Fs.dir_ty Path.t
-    -> t
+  val create : ?cache_dir_path:Path.t -> ?emit:Emit.t list -> Path.t -> t
 end
 
 val find_runtime_dir : unit -> string
 val run_cli : unit -> unit
-val compile_path : ?out_path:Fs.dir_ty Path.t -> Env.t -> unit Or_error.t
-val compile_path_to_a_out : Env.t -> (Fs.dir_ty Path.t * bool) Or_error.t
+val compile_path : ?out_path:Path.t -> Env.t -> unit Or_error.t
+val compile_path_to_a_out : Env.t -> Path.t Or_error.t
 val compile_source_to_tir : ?emit:Emit.t list -> string -> Tir.Program.t Or_error.t
-val compile_source_to_a_out : Env.t -> string list -> (Fs.dir_ty Path.t * bool) Or_error.t
+val compile_source_to_a_out : Env.t -> string list -> Path.t Or_error.t
 val compile_source_to_asm : ?emit:Emit.t list -> string -> string Or_error.t
-
-val link_files_with_runtime
-  :  mgr:_ Eio.Process.mgr
-  -> paths:Filename.t list
-  -> out_path:Filename.t
-  -> unit
+val link_files_with_runtime : paths:Filename.t list -> out_path:Filename.t -> unit

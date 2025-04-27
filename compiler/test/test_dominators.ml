@@ -7,7 +7,6 @@ module Dominators = Ae_dominators
 module Label = Ae_label
 module Graph = Ae_data_graph_std
 module Intern = Label.Intern.Make_global ()
-module Entity_graph_utils = Ae_entity_graph_utils
 
 let lab = Intern.intern
 

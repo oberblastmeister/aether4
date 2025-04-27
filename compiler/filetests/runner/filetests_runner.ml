@@ -1,11 +1,7 @@
 open Std
 open Aether4
 open Aether4.Ae_std
-module Stdenv = Eio.Stdenv
-module Path = Eio.Path
-module Flow = Eio.Flow
-module Process = Eio.Process
-module Buf_read = Eio.Buf_read
+module Process = Ae_process
 module Test_options = Filetests_test_options
 module Trace = Ae_trace
 module Chaos_mode = Ae_chaos_mode
@@ -26,9 +22,7 @@ module Test = struct
 
   let format_source_with_bar { source; expect = _; options = _ } =
     source
-    ^ (if
-         String.length source > 0
-         && Char.equal (String.get source (String.length source - 1)) '\n'
+    ^ (if String.length source > 0 && Char.equal source.[String.length source - 1] '\n'
        then ""
        else "\n")
     ^ "----\n"
@@ -36,9 +30,7 @@ module Test = struct
 
   let format { source; expect; options = _ } =
     source
-    ^ (if
-         String.length source > 0
-         && Char.equal (String.get source (String.length source - 1)) '\n'
+    ^ (if String.length source > 0 && Char.equal source.[String.length source - 1] '\n'
        then ""
        else "\n")
     ^ "----\n"
@@ -46,13 +38,10 @@ module Test = struct
   ;;
 end
 
-let run_test env path =
+let run_test path =
   eprintf "filetest %s\n" (Filename_unix.realpath path);
   let open Result.Let_syntax in
-  let contents =
-    let@ file = Path.with_open_in Path.(Stdenv.fs env / path) in
-    Flow.read_all file
-  in
+  let contents = In_channel.read_all path in
   let test = Test.parse contents in
   let@ () = Trace.with_trace test.options.trace in
   let@ () =
@@ -63,7 +52,7 @@ let run_test env path =
   (* this makes sure that any later stuff gets printed after and gets formatted properly *)
   Test.format_source_with_bar test |> print_string;
   let emit = test.options.emit in
-  let env = Driver.Env.create ~emit env Path.(Stdenv.fs env / path) in
+  let env = Driver.Env.create ~emit path in
   let res =
     try
       Driver.compile_source_to_a_out
@@ -77,37 +66,49 @@ let run_test env path =
   in
   let%bind () =
     match res, test.options.kind with
-    | Ok (a_out_path, _changed), CompileAndRun { status = expected_status } ->
-      let pmgr = Stdenv.process_mgr env.env in
-      let@ sw = Eio.Switch.run ~name:"proc" in
-      let buf = Buffer.create 100 in
-      let stdout_sink = Flow.buffer_sink buf in
-      let stderr_sink = Flow.buffer_sink buf in
-      let proc =
-        Process.spawn
-          ~stdout:stdout_sink
-          ~stderr:stderr_sink
-          ~executable:(Path.native_exn a_out_path)
-          ~sw
-          pmgr
-          []
+    | Ok a_out_path, CompileAndRun { status = expected_status } ->
+      let fd_read, fd_write = Spawn.safe_pipe () in
+      let status =
+        try
+          let proc =
+            Core_unix.create_process_with_fds
+              ~prog:a_out_path
+              ~args:[]
+              ~env:(`Extend [])
+              ~stdin:Generate
+              ~stdout:(Use_this fd_write)
+              ~stderr:(Use_this fd_write)
+              ()
+          in
+          (* This gets duped in the child, we need to close this so that input_all receives EOF *)
+          Core_unix.close fd_write;
+          Core_unix.close proc.stdin;
+          let status = Core_unix.waitpid proc.pid in
+          let in_channel = Core_unix.in_channel_of_descr fd_read in
+          let output = in_channel |> In_channel.input_all in
+          In_channel.close in_channel;
+          print_string output;
+          status
+        with
+        | exn ->
+          Core_unix.close fd_read;
+          Core_unix.close fd_write;
+          raise exn
       in
-      let status = Process.await proc in
-      let output = Buffer.contents buf in
-      print_string output;
       let%bind () =
         match expected_status, status with
-        | Some expected_status, status when not (Poly.equal expected_status status) ->
+        | Some expected_status, Error status when not (Poly.equal expected_status status)
+          ->
           error_s
             [%message
               "The exit status was not equal"
-                (status : Test_options.Exit_status.t)
-                (expected_status : Test_options.Exit_status.t)]
-        | None, `Exited 0 -> Ok ()
-        | None, _ ->
+                (status : Core_unix.Exit_or_signal.error)
+                (expected_status : Core_unix.Exit_or_signal.error)]
+        | None, Ok () -> Ok ()
+        | None, Error status ->
           error_s
             [%message
-              "Process did not exit normally" (status : Test_options.Exit_status.t)]
+              "Process did not exit normally" (status : Core_unix.Exit_or_signal.error)]
         | _ -> Ok ()
       in
       Ok ()
@@ -131,8 +132,7 @@ let command =
       let open Command.Param in
       let%map path = anon ("filename" %: Filename_unix.arg_type) in
       fun () ->
-        let@ env = Eio_main.run in
-        match run_test env path with
+        match run_test path with
         | Ok () -> ()
         | Error e ->
           printf
