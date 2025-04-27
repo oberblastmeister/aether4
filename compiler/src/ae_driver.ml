@@ -47,7 +47,7 @@ let get_self_exe_path =
       (match !self_exe_path with
        | Some path -> path
        | None ->
-         let path = Caml_unix.readlink "/proc/self/exe" in
+         let path = Core_unix.readlink "/proc/self/exe" in
          self_exe_path := Some path;
          path)
 ;;
@@ -124,12 +124,9 @@ let compile_source_to_a_out (env : Env.t) sources =
     Option.value env.cache_dir_path ~default:Path.(Sys_unix.getcwd () / ".c0_cache")
   in
   let name = env.path |> Path.basename |> Path.chop_extension in
-  let module Digest = Digestif.BLAKE2B in
-  let digest = Digest.digestv_string [ env.path; source ] in
+  let digest = Md5.digest_string (env.path ^ source) in
   let hashed_dir_path =
-    let ascii_digest =
-      Base64.encode_exn ~alphabet:Base64.uri_safe_alphabet (Digest.to_raw_string digest)
-    in
+    let ascii_digest = Md5.to_hex digest in
     let hashed_dir_name =
       Path.basename (Path.chop_extension env.path) ^ "-" ^ ascii_digest
     in

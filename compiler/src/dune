@@ -24,7 +24,4 @@
   core_unix.command_unix
   zarith
   int_repr
-  cmdliner
-  digestif.c
-  base64
   ))
