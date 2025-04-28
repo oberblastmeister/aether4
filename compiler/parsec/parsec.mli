@@ -10,20 +10,28 @@ module type Chunk = sig
   type t [@@deriving sexp_of, compare, equal]
 end
 
+module type Snapshot = sig
+  type t [@@deriving sexp_of]
+end
+
 module type Stream = sig
   module Token : Token
   module Chunk : Chunk
+  module Snapshot : Snapshot
 
   type t [@@deriving sexp_of]
 
-  val of_chunk : Chunk.t -> t
   val next : t -> Token.t option
   val peek : t -> Token.t option
-  val copy : t -> t
+  val snapshot : t -> Snapshot.t
+  val restore : t -> Snapshot.t -> unit
 end
 
 module Make_stream (Token : Token) :
-  Stream with module Token = Token and type Chunk.t = Token.t list
+  Stream
+  with module Token = Token
+   and type Chunk.t = Token.t array
+   and type Snapshot.t = int
 
 module type Arg = sig
   module Data : sig

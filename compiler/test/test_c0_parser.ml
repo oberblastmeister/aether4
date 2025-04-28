@@ -5,7 +5,7 @@ module C0 = Ae_c0_std
 let check s =
   let module Lexer = Ae_c0_lexer in
   let tokens = Lexer.tokenize s in
-  let program = C0.Parser.parse tokens in
+  let program = C0.Parser.parse (Array.of_list tokens) in
   print_s [%sexp (program : C0.Cst.program Or_error.t)];
   ()
 ;;

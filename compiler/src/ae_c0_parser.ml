@@ -3,15 +3,77 @@ module Token = Ae_c0_token
 module Cst = Ae_c0_cst
 module Span = Ae_span
 module Spanned = Ae_spanned
+module Context = Ae_c0_parser_context
 
 module Stream_token = struct
-  type t = Token.t Spanned.t [@@deriving sexp_of]
+  type t = Token.t Spanned.t [@@deriving sexp_of, compare, equal]
 
   let compare t1 t2 = Token.compare t1.Spanned.t t2.Spanned.t
   let equal t1 t2 = Token.equal t1.Spanned.t t2.Spanned.t
 end
 
-module Stream = Parsec.Make_stream (Stream_token)
+module Stream = struct
+  open struct
+    module Token' = Token
+  end
+
+  module Token = Stream_token
+
+  module Chunk = struct
+    type t = Token.t array [@@deriving sexp_of, compare, equal]
+  end
+
+  module Snapshot = struct
+    type t =
+      { pos : int
+      ; context : Context.t
+      }
+    [@@deriving sexp_of]
+  end
+
+  type t =
+    { tokens : Token.t array
+    ; mutable pos : int
+    ; mutable context : Context.t
+    }
+  [@@deriving sexp_of]
+
+  let next ({ tokens; pos; context } as stream) =
+    if pos < Array.length tokens
+    then begin
+      let t = tokens.(pos) in
+      stream.pos <- succ pos;
+      Some
+        (match t.t with
+         | Ident s ->
+           if Context.is_ty_ident context s then { t with t = Token'.TyIdent s } else t
+         | _ -> t)
+    end
+    else None
+  ;;
+
+  let peek { tokens; pos; context } =
+    if pos < Array.length tokens
+    then begin
+      let t = tokens.(pos) in
+      Some
+        (match t.t with
+         | Ident s ->
+           if Context.is_ty_ident context s then { t with t = Token'.TyIdent s } else t
+         | _ -> t)
+    end
+    else None
+  ;;
+
+  let snapshot { pos; context; _ } = { Snapshot.pos; context }
+
+  let restore t { Snapshot.pos; context } =
+    t.pos <- pos;
+    t.context <- context
+  ;;
+
+  let create tokens = { tokens; pos = 0; context = Context.empty }
+end
 
 module Error = struct
   type t = Sexp of Sexp.t [@@deriving sexp_of]
@@ -452,7 +514,7 @@ let rec parse_program env : Cst.program =
 ;;
 
 let parse tokens =
-  let stream = Stream.of_chunk tokens in
+  let stream = Stream.create tokens in
   Parser.with_env () stream (fun env -> parse_program env)
   |> Parsec.Parse_result.to_result_exn
   |> Result.map_error ~f:(fun (Sexp s) -> Core.Error.create_s s)

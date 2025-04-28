@@ -78,7 +78,8 @@ let compile_source_to_tir ?(emit = []) source =
   if Emit.mem emit Tokens
   then print_s [%message "tokens" (tokens : C0.Token.t Spanned.t list)];
   let%bind program =
-    C0.Parser.parse tokens
+    Array.of_list tokens
+    |> C0.Parser.parse
     |> Result.map_error ~f:(Error.tag_s ~tag:[%message "Parse error"])
   in
   if Emit.mem emit Cst then print_s [%message "cst" (program : C0.Cst.program)];

@@ -8,45 +8,55 @@ module type Chunk = sig
   type t [@@deriving sexp_of, compare, equal]
 end
 
+module type Snapshot = sig
+  type t [@@deriving sexp_of]
+end
+
 module type Stream = sig
   module Token : Token
   module Chunk : Chunk
+  module Snapshot : Snapshot
 
   type t [@@deriving sexp_of]
 
-  val of_chunk : Chunk.t -> t
   val next : t -> Token.t option
   val peek : t -> Token.t option
-  val copy : t -> t
+  val snapshot : t -> Snapshot.t
+  val restore : t -> Snapshot.t -> unit
 end
 
 module Make_stream (Token : Token) :
-  Stream with module Token = Token and type Chunk.t = Token.t list = struct
-  type t = Token.t list ref [@@deriving sexp_of]
+  Stream
+  with module Token = Token
+   and type Chunk.t = Token.t array
+   and type Snapshot.t = int = struct
+  type t =
+    { tokens : Token.t Array.t
+    ; mutable pos : int
+    }
+  [@@deriving sexp_of]
 
   module Token = Token
 
   module Chunk = struct
-    type t = Token.t list [@@deriving sexp_of, compare, equal]
+    type t = Token.t array [@@deriving sexp_of, compare, equal]
   end
 
-  let of_chunk c = ref c
+  module Snapshot = Int
 
-  let next t =
-    match !t with
-    | [] -> None
-    | x :: xs ->
-      t := xs;
-      Some x
+  let next ({ pos; tokens } as stream) =
+    if pos < Array.length tokens
+    then begin
+      let t = tokens.(pos) in
+      stream.pos <- succ pos;
+      Some t
+    end
+    else None
   ;;
 
-  let peek t =
-    match !t with
-    | [] -> None
-    | x :: _ -> Some x
-  ;;
-
-  let copy t = ref !t
+  let peek { pos; tokens } = if pos < Array.length tokens then Some tokens.(pos) else None
+  let snapshot t = t.pos
+  let restore t pos = t.pos <- pos
 end
 
 module type Arg = sig
@@ -123,11 +133,11 @@ module Make (Arg : Arg) = struct
   ;;
 
   let orelse p1 p2 env =
-    let s = Stream.copy env.stream in
+    let snap = Stream.snapshot env.stream in
     match p1 env with
     | res -> res
     | exception Fail ->
-      env.stream <- s;
+      Stream.restore env.stream snap;
       p2 env
   ;;
 
@@ -143,10 +153,10 @@ module Make (Arg : Arg) = struct
 
   let many p env =
     let rec loop acc =
-      let s = Stream.copy env.stream in
+      let snap = Stream.snapshot env.stream in
       match p env with
       | exception Fail ->
-        env.stream <- s;
+        Stream.restore env.stream snap;
         List.rev acc
       | x -> loop (x :: acc)
     in

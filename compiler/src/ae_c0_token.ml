@@ -2,6 +2,7 @@ open Std
 
 type t =
   | Ident of string
+  | TyIdent of string
   | Hexnum of string
   | Decnum of string
   | Semi

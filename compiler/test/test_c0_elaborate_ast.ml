@@ -8,7 +8,7 @@ module Flat_x86 = Ae_flat_x86_std
 
 let check s =
   let tokens = C0.Lexer.tokenize s in
-  let cst = C0.Parser.parse tokens |> Result.ok |> Option.value_exn in
+  let cst = Array.of_list tokens |> C0.Parser.parse |> Result.ok |> Option.value_exn in
   let ast = C0.Cst_elaborate_ast.elaborate_program cst in
   print_s [%sexp (ast : C0.Ast.program Or_error.t)]
 ;;
