@@ -275,7 +275,6 @@ and parse_return env : Cst.stmt =
 and parse_decl env : Cst.stmt =
   let open Span.Syntax in
   let ty = parse_ty env in
-  (* Very important that this is sep1. So that the parser doesn't loop, and we properly emit a fail *)
   let names = Parser.sep parse_ident ~by:(expect_eq_ Comma) env in
   let expr =
     Parser.optional

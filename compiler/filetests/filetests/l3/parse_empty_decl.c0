@@ -1,0 +1,11 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void main() {
+    int; bool; int; void; bool;
+    assert (true);
+}
+----
