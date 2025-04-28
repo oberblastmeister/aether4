@@ -15,4 +15,4 @@ int run() {
 
 void main() {}
 ----
-("Parse error" "expected for parens")
+("Parse error" ((((t Eq) (span 9:15))) "expected for parens"))

@@ -90,7 +90,7 @@ module Make (Arg : Arg) = struct
   module Token = Stream.Token
 
   module Exceptions = struct
-    exception Error of Error.t [@@deriving sexp_of]
+    exception Error of Error.t * Token.t option [@@deriving sexp_of]
     exception Fail [@@deriving sexp_of]
   end
 
@@ -105,30 +105,34 @@ module Make (Arg : Arg) = struct
   let with_env data stream f =
     let env = { data; stream } in
     match f env with
-    | exception Error e -> Parse_result.Error e
+    | exception Error (e, t) -> Parse_result.Error (e, t)
     | exception Fail -> Parse_result.Fail
     | res -> Parse_result.Ok res
   ;;
 
   let stream env = env.stream
   let fail _ = raise_notrace Fail
-  let error _ e = raise_notrace (Error e)
+  let error env e = raise_notrace (Error (e, Stream.peek env.stream))
 
   type 'a t = env -> 'a
 
   let expect_eq t env =
-    match Stream.next env.stream with
+    match Stream.peek env.stream with
     | None -> fail env
-    | Some t' when Token.equal t t' -> ()
+    | Some t' when Token.equal t t' ->
+      Stream.next env.stream |> ignore;
+      ()
     | Some _ -> fail env
   ;;
 
   let expect f env =
-    match Stream.next env.stream with
+    match Stream.peek env.stream with
     | Some t ->
       (match f t with
        | None -> fail env
-       | Some x -> x)
+       | Some x ->
+         Stream.next env.stream |> ignore;
+         x)
     | None -> fail env
   ;;
 

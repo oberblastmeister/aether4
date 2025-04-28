@@ -1,5 +1,5 @@
 /*
-( (kind (CompileFail)) )
+( (kind (CompileAndRun)) )
 */
 
 int run() {
@@ -10,4 +10,3 @@ int run() {
 
 void main() {}
 ----
-("Parse error" "expected for parens")

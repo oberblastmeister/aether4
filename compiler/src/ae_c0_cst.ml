@@ -60,7 +60,7 @@ and stmt =
 
 and for_paren =
   { init : stmt option
-  ; cond : expr
+  ; cond : expr option
   ; incr : stmt option
   }
 [@@deriving sexp_of]

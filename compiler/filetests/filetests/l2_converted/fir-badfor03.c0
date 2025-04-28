@@ -16,5 +16,4 @@ int run() {
 void main() {}
 ----
 ("Parse error"
- ("expected closing brace for block"
-  ("Stream.peek (Parser.stream env)" (((t (Ident n)) (span 10:3))))))
+ ((((t (Ident n)) (span 10:3))) "expected closing brace for block"))

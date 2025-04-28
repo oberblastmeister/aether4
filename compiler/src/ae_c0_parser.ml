@@ -38,6 +38,13 @@ module Stream = struct
     }
   [@@deriving sexp_of]
 
+  let sexp t =
+    let tokens =
+      Array.sub t.tokens ~pos:t.pos ~len:(min 5 (Array.length t.tokens - t.pos - 1))
+    in
+    [%message (tokens : Token.t array)]
+  ;;
+
   let next ({ tokens; pos; context } as stream) =
     if pos < Array.length tokens
     then begin
@@ -142,40 +149,52 @@ let parse_ty env : Cst.ty =
 let rec parse_block env : Cst.block =
   let open Span.Syntax in
   let lbrace = expect_eq LBrace env in
-  let block = Parser.many parse_stmt env in
+  let block = Parser.many try_parse_stmt env in
   let rbrace =
     expect_eq RBrace
-    |> Parser.cut
-         (Sexp
-            [%message
-              "expected closing brace for block"
-                (Stream.peek (Parser.stream env) : Token.t Spanned.t option)])
+    |> Parser.cut (Sexp [%message "expected closing brace for block"])
     |> Fn.( |> ) env
   in
   { block; span = lbrace.span ++ rbrace.span }
 
-and parse_stmt env : Cst.stmt =
+and try_parse_stmt env : Cst.stmt =
   let stmt =
     (parse_if
      <|> parse_for
      <|> parse_while
      <|> ((fun b -> Cst.Block b) <$> parse_block)
-     <|> (parse_semi_stmt <* expect_eq_ Semi))
+     <|> parse_semi_stmt)
       env
   in
   stmt
 
+and parse_stmt env =
+  try_parse_stmt |> Parser.cut (Sexp [%message "expected stmt"]) |> Fn.( |> ) env
+
 and parse_semi_stmt env : Cst.stmt =
   let res =
-    (parse_decl
-     <|> ((fun d -> Cst.Assign d) <$> parse_assign)
-     <|> parse_return
-     <|> parse_assert
-     <|> parse_post
-     <|> ((fun e -> Cst.Effect e) <$> parse_expr))
+    (parse_assign
+     <* expect_eq_ Semi
+     <|> (parse_return <* expect_eq_ Semi)
+     <|> (parse_assert <* expect_eq_ Semi)
+     <|> (parse_post <* expect_eq_ Semi)
+     <|> (parse_effect <* expect_eq_ Semi)
+     <|> (parse_decl <* expect_eq_ Semi)
+     <|> parse_single_semi_stmt)
       env
   in
   res
+
+and parse_single_semi_stmt env =
+  expect_eq_ Semi env;
+  Cst.Assert { expr = Bool_const { t = true; span = Span.none }; span = Span.none }
+
+and parse_effect env =
+  let e = try_parse_expr env in
+  Cst.Effect e
+
+and parse_simp env : Cst.stmt =
+  (parse_assign <|> parse_post <|> parse_effect <|> parse_decl) env
 
 and parse_if env : Cst.stmt =
   let open Span.Syntax in
@@ -185,14 +204,12 @@ and parse_if env : Cst.stmt =
     |> Parser.cut (Sexp [%message "expected condition expression for if"])
     |> Fn.( |> ) env
   in
-  let body1 =
-    parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env
-  in
+  let body1 = parse_stmt env in
   let body2 =
     Parser.optional
       (fun env ->
          expect_eq_ Else env;
-         parse_stmt |> Parser.cut (Sexp [%message "expected if stmt"]) |> Fn.( |> ) env)
+         parse_stmt env)
       env
   in
   Cst.If
@@ -215,9 +232,7 @@ and parse_while env : Cst.stmt =
     |> Parser.cut (Sexp [%message "expected while condition expression"])
     |> Fn.( |> ) env
   in
-  let body =
-    parse_stmt |> Parser.cut (Sexp [%message "expected while stmt"]) |> Fn.( |> ) env
-  in
+  let body = parse_stmt env in
   Cst.While { cond; body; span = while_tok.span ++ Cst.stmt_span body }
 
 and parse_for env : Cst.stmt =
@@ -228,17 +243,15 @@ and parse_for env : Cst.stmt =
     |> Parser.cut (Sexp [%message "expected for parens"])
     |> Fn.( |> ) env
   in
-  let body =
-    parse_stmt |> Parser.cut (Sexp [%message "expected for stmt"]) |> Fn.( |> ) env
-  in
+  let body = parse_stmt env in
   Cst.For { paren; body; span = for_tok.span ++ Cst.stmt_span body }
 
 and parse_for_paren env : Cst.for_paren =
-  let init = (Parser.optional parse_semi_stmt) env in
+  let init = (Parser.optional parse_simp) env in
   expect_eq_ Semi env;
-  let cond = parse_expr env in
+  let cond = (Parser.optional try_parse_expr) env in
   expect_eq_ Semi env;
-  let incr = (Parser.optional parse_semi_stmt) env in
+  let incr = (Parser.optional parse_simp) env in
   { init; cond; incr }
 
 and parse_assert env : Cst.stmt =
@@ -249,7 +262,7 @@ and parse_assert env : Cst.stmt =
 and parse_return env : Cst.stmt =
   let open Span.Syntax in
   let ret = expect_eq Return env in
-  let expr = Parser.optional parse_expr env in
+  let expr = Parser.optional try_parse_expr env in
   Cst.Return
     { expr
     ; span =
@@ -263,16 +276,12 @@ and parse_decl env : Cst.stmt =
   let open Span.Syntax in
   let ty = parse_ty env in
   (* Very important that this is sep1. So that the parser doesn't loop, and we properly emit a fail *)
-  let names = Parser.sep1 parse_ident ~by:(expect_eq_ Comma) env in
+  let names = Parser.sep parse_ident ~by:(expect_eq_ Comma) env in
   let expr =
     Parser.optional
       (fun env ->
          expect_eq_ Eq env;
-         let expr =
-           parse_expr
-           |> Parser.cut (Sexp [%message "expected expression after equal sign"])
-           |> Fn.( |> ) env
-         in
+         let expr = parse_expr env in
          expr)
       env
   in
@@ -295,12 +304,12 @@ and parse_post_op env : Cst.post_op Spanned.t =
    <|> (Parser.map & Spanned.map) (expect_eq DashDash) ~f:(Fn.const Cst.Decr))
     env
 
-and parse_assign env : Cst.assign =
+and parse_assign env : Cst.stmt =
   let open Span.Syntax in
   let lvalue = parse_lvalue env in
   let op = parse_assign_op env in
   let expr = parse_expr env in
-  { lvalue; op; expr; span = lvalue.span ++ Cst.expr_span expr }
+  Cst.Assign { lvalue; op; expr; span = lvalue.span ++ Cst.expr_span expr }
 
 and parse_assign_op env : Cst.assign_op =
   (Cst.Mul_assign
@@ -327,6 +336,12 @@ and parse_lvalue env : Cst.lvalue =
     env
 
 and parse_expr env : Cst.expr =
+  let expr =
+    try_parse_expr |> Parser.cut (Sexp [%message "expected expression"]) |> Fn.( |> ) env
+  in
+  expr
+
+and try_parse_expr env : Cst.expr =
   let expr = parse_ternary env in
   expr
 
@@ -439,7 +454,7 @@ and parse_atom env : Cst.expr =
    <|> (Cst.var <$> parse_ident))
     env
 
-and parse_args env : Cst.expr list = Parser.sep parse_expr ~by:(expect_eq_ Comma) env
+and parse_args env : Cst.expr list = Parser.sep try_parse_expr ~by:(expect_eq_ Comma) env
 
 and parse_call env : Cst.expr =
   let func = parse_ident env in
@@ -517,5 +532,6 @@ let parse tokens =
   let stream = Stream.create tokens in
   Parser.with_env () stream (fun env -> parse_program env)
   |> Parsec.Parse_result.to_result_exn
-  |> Result.map_error ~f:(fun (Sexp s) -> Core.Error.create_s s)
+  |> Result.map_error ~f:(fun (Sexp s, t) ->
+    Core.Error.create_s s |> Core.Error.tag_s ~tag:[%sexp (t : Token.t Spanned.t option)])
 ;;

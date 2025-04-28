@@ -23,4 +23,5 @@ int run() {
 
 void main() {}
 ----
-("Parse error" "expected condition expression for if")
+("Parse error"
+ ((((t Eq) (span 17:6))) "expected condition expression for if"))

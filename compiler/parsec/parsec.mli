@@ -63,13 +63,19 @@ module Make (Arg : Arg) : sig
   type 'a t = env -> 'a
 
   module Exceptions : sig
-    exception Error of Error.t [@@deriving sexp_of]
+    exception Error of Error.t * Token.t option [@@deriving sexp_of]
     exception Fail [@@deriving sexp_of]
   end
 
   val sep : 'a t -> by:unit t -> 'a list t
   val sep1 : 'a t -> by:unit t -> 'a list t
-  val with_env : Data.t -> Stream.t -> (env -> 'a) -> ('a, Error.t) Parse_result.t
+
+  val with_env
+    :  Data.t
+    -> Stream.t
+    -> (env -> 'a)
+    -> ('a, Error.t * Token.t option) Parse_result.t
+
   val expect_eq : Token.t -> unit t
   val expect : (Token.t -> 'a option) -> 'a t
   val fail : env -> _

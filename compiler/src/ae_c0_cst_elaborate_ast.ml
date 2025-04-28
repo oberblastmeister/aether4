@@ -226,7 +226,12 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       Option.value_map ~f:(elab_stmt st) ~default:(empty, st) init
     in
     let body_span = Cst.stmt_span body in
-    let cond = elab_expr init_st cond in
+    let cond =
+      Option.value_map
+        ~default:(Ast.Bool_const { t = true; span })
+        ~f:(elab_expr init_st)
+        cond
+    in
     let body = elab_stmt_to_block init_st body in
     let incr =
       Option.value_map
