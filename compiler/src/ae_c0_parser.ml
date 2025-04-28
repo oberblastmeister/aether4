@@ -4,6 +4,7 @@ module Cst = Ae_c0_cst
 module Span = Ae_span
 module Spanned = Ae_spanned
 module Context = Ae_c0_parser_context
+open Ae_trace
 
 module Stream_token = struct
   type t = Token.t Spanned.t [@@deriving sexp_of, compare, equal]
@@ -52,8 +53,7 @@ module Stream = struct
       stream.pos <- succ pos;
       Some
         (match t.t with
-         | Ident s ->
-           if Context.is_ty_ident context s then { t with t = Token'.TyIdent s } else t
+         | Ident s when Context.is_ty_ident context s -> { t with t = Token'.TyIdent s }
          | _ -> t)
     end
     else None
@@ -65,8 +65,7 @@ module Stream = struct
       let t = tokens.(pos) in
       Some
         (match t.t with
-         | Ident s ->
-           if Context.is_ty_ident context s then { t with t = Token'.TyIdent s } else t
+         | Ident s when Context.is_ty_ident context s -> { t with t = Token'.TyIdent s }
          | _ -> t)
     end
     else None
@@ -103,6 +102,8 @@ let expect_eq_ token env =
 ;;
 
 let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
+let parse_ty_ident env = Parser.expect (Spanned.map_option ~f:Token.tyident_val) env
+let parse_general_ident env = (parse_ident <|> parse_ty_ident) env
 
 let spanned_parens p env =
   let lparen = expect_eq LParen env in
@@ -130,26 +131,63 @@ let chainl ~expr:parse_expr ~op:parse_op ~f env =
   loop lhs env
 ;;
 
-let parse_ty env : Cst.ty =
-  ((fun env ->
-     let int = expect_eq Int env in
-     Cst.Int int.span)
-   <|> (fun env ->
-   let bool = expect_eq Bool env in
-   Cst.Bool bool.span)
-   <|> (fun env ->
-   let void = expect_eq Void env in
-   Cst.Void void.span)
-   <|> fun env ->
-   let var = parse_ident env in
-   Cst.Ty_var var)
-    env
+let scoped p env =
+  let stream = Parser.stream env in
+  let context = stream.context in
+  let res = p env in
+  stream.context <- context;
+  res
+;;
+
+let declare_ident env (ident : Cst.var) =
+  let stream = Parser.stream env in
+  stream.context <- Context.declare_ident ident.t stream.context
+;;
+
+let declare_ty_ident env (ident : Cst.var) =
+  let stream = Parser.stream env in
+  stream.context <- Context.declare_ty_ident ident.t stream.context
+;;
+
+let parse_int env =
+  let int = expect_eq Int env in
+  Cst.Int int.span
+;;
+
+let parse_bool env =
+  let bool = expect_eq Bool env in
+  Cst.Bool bool.span
+;;
+
+let parse_void env =
+  let void = expect_eq Void env in
+  Cst.Void void.span
+;;
+
+let parse_ty_var env =
+  let var = parse_ty_ident env in
+  Cst.Ty_var var
+;;
+
+let rec parse_atom_ty env = (parse_int <|> parse_bool <|> parse_void <|> parse_ty_var) env
+
+and parse_ty env =
+  let ty = parse_atom_ty env in
+  (* print_s (Stream.sexp (Parser.stream env)); *)
+  let rec loop ty env =
+    ((fun env ->
+       let tok = expect_eq Star env in
+       loop (Cst.Pointer { ty; span = Span.Syntax.(Cst.ty_span ty ++ tok.span) }) env)
+     <|> Parser.pure ty)
+      env
+  in
+  loop ty env
 ;;
 
 let rec parse_block env : Cst.block =
   let open Span.Syntax in
   let lbrace = expect_eq LBrace env in
-  let block = Parser.many try_parse_stmt env in
+  let block = Parser.many try_parse_stmt |> scoped |> Fn.( |> ) env in
   let rbrace =
     expect_eq RBrace
     |> Parser.cut (Sexp [%message "expected closing brace for block"])
@@ -204,12 +242,12 @@ and parse_if env : Cst.stmt =
     |> Parser.cut (Sexp [%message "expected condition expression for if"])
     |> Fn.( |> ) env
   in
-  let body1 = parse_stmt env in
+  let body1 = scoped parse_stmt env in
   let body2 =
     Parser.optional
       (fun env ->
          expect_eq_ Else env;
-         parse_stmt env)
+         scoped parse_stmt env)
       env
   in
   Cst.If
@@ -232,19 +270,22 @@ and parse_while env : Cst.stmt =
     |> Parser.cut (Sexp [%message "expected while condition expression"])
     |> Fn.( |> ) env
   in
-  let body = parse_stmt env in
+  let body = scoped parse_stmt env in
   Cst.While { cond; body; span = while_tok.span ++ Cst.stmt_span body }
 
 and parse_for env : Cst.stmt =
   let open Span.Syntax in
-  let for_tok = expect_eq For env in
-  let paren =
-    parens parse_for_paren
-    |> Parser.cut (Sexp [%message "expected for parens"])
-    |> Fn.( |> ) env
-  in
-  let body = parse_stmt env in
-  Cst.For { paren; body; span = for_tok.span ++ Cst.stmt_span body }
+  scoped
+    (fun env ->
+       let for_tok = expect_eq For env in
+       let paren =
+         parens parse_for_paren
+         |> Parser.cut (Sexp [%message "expected for parens"])
+         |> Fn.( |> ) env
+       in
+       let body = scoped parse_stmt env in
+       Cst.For { paren; body; span = for_tok.span ++ Cst.stmt_span body })
+    env
 
 and parse_for_paren env : Cst.for_paren =
   let init = (Parser.optional parse_simp) env in
@@ -275,7 +316,7 @@ and parse_return env : Cst.stmt =
 and parse_decl env : Cst.stmt =
   let open Span.Syntax in
   let ty = parse_ty env in
-  let names = Parser.sep parse_ident ~by:(expect_eq_ Comma) env in
+  let names = Parser.sep parse_general_ident ~by:(expect_eq_ Comma) env in
   let expr =
     Parser.optional
       (fun env ->
@@ -284,6 +325,7 @@ and parse_decl env : Cst.stmt =
          expr)
       env
   in
+  List.iter names ~f:(declare_ident env);
   Cst.Decl
     { ty
     ; names
@@ -477,7 +519,8 @@ and parse_num env : Z.t Spanned.t =
 let parse_param env : Cst.param =
   let open Span.Syntax in
   let ty = parse_ty env in
-  let var = parse_ident env in
+  let var = parse_general_ident env in
+  declare_ident env var;
   { ty; var; span = Cst.ty_span ty ++ var.span }
 ;;
 
@@ -488,9 +531,15 @@ let parse_params env : Cst.param list Spanned.t =
 let parse_func env : Cst.global_decl =
   let is_extern = Parser.optional (expect_eq_ Extern) env |> Option.is_some in
   let ty = parse_ty env in
-  let name = parse_ident env in
-  let params = parse_params env in
-  let body = (Option.some <$> parse_block <|> (None <$ expect_eq_ Semi)) env in
+  let name = parse_general_ident env in
+  let params, body =
+    scoped
+      (fun env ->
+         let params = parse_params env in
+         let body = (Option.some <$> parse_block <|> (None <$ expect_eq_ Semi)) env in
+         params, body)
+      env
+  in
   let open Span.Syntax in
   Cst.Func
     { is_extern
@@ -509,9 +558,10 @@ let parse_typedef env : Cst.global_decl =
   Parser.cut
     (Sexp [%message "invalid typedef"])
     (fun env ->
-       let name = parse_ident env in
+       let name = parse_general_ident env in
        let ty = parse_ty env in
        expect_eq_ Semi env;
+       declare_ty_ident env name;
        Cst.Typedef { ty; name; span = Span.Syntax.(typedef.span ++ name.span) })
     env
 ;;

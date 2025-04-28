@@ -33,6 +33,7 @@ let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
   | Int -> I64
   | Bool -> I1
   | Void -> I64
+  | Pointer _ -> I64
 ;;
 
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =

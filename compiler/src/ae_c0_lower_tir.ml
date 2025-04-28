@@ -87,6 +87,9 @@ let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
   | Bool _ -> Bool
   | Void _ -> Void
   | Ty_var var -> lower_ty st (Hashtbl.find_exn st.global_st.typedefs var)
+  | Pointer { ty; span = _ } ->
+    let ty = lower_ty st ty in
+    Pointer ty
 ;;
 
 let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =

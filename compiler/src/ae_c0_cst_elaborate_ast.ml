@@ -94,7 +94,7 @@ let declare_func_var st (var : Cst.var) : Ast.var * st =
   | Some var -> var, st
 ;;
 
-let elab_ty st (ty : Cst.ty) : Ast.ty =
+let rec elab_ty st (ty : Cst.ty) : Ast.ty =
   match ty with
   | Bool span -> Bool span
   | Int span -> Int span
@@ -102,6 +102,9 @@ let elab_ty st (ty : Cst.ty) : Ast.ty =
   | Ty_var var ->
     let var = elab_var st var in
     Ty_var var
+  | Pointer { ty; span } ->
+    let ty = elab_ty st ty in
+    Pointer { ty; span }
 ;;
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =

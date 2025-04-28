@@ -16,6 +16,7 @@ module Ty = struct
     | Int
     | Bool
     | Void
+    | Pointer of t
   [@@deriving sexp_of, equal, compare]
 end
 

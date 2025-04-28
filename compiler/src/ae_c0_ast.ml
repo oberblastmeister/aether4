@@ -28,6 +28,10 @@ type ty =
   | Bool of Span.t
   | Void of Span.t
   | Ty_var of var
+  | Pointer of
+      { ty : ty
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 type stmt =

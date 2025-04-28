@@ -9,6 +9,10 @@ type ty =
   | Bool of Span.t
   | Ty_var of var
   | Void of Span.t
+  | Pointer of
+      { ty : ty
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 type block =
@@ -202,8 +206,7 @@ let stmt_span (stmt : stmt) =
 
 let ty_span (ty : ty) =
   match ty with
-  | Bool span | Int span | Void span -> span
-  | Ty_var { span; _ } -> span
+  | Bool span | Int span | Void span | Pointer { span; _ } | Ty_var { span; _ } -> span
 ;;
 
 let var v = Var v

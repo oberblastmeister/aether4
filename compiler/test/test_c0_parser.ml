@@ -1,10 +1,11 @@
 open Std
 open Aether4
 module C0 = Ae_c0_std
+module Spanned = Ae_spanned
+module Trace = Ae_trace
 
 let check s =
-  let module Lexer = Ae_c0_lexer in
-  let tokens = Lexer.tokenize s in
+  let tokens = C0.Lexer.tokenize s in
   let program = C0.Parser.parse (Array.of_list tokens) in
   print_s [%sexp (program : C0.Cst.program Or_error.t)];
   ()
@@ -23,6 +24,62 @@ let%expect_test "simple" =
      ((Func
        ((is_extern false) (ty (Int 2:5-8)) (name ((t bruh) (span 2:9-13)))
         (params ()) (body (((block ()) (span [2,16]-[4,6])))) (span [2,5]-[4,6])))))
+    |}]
+;;
+
+let%expect_test "pointer" =
+  let s =
+    {|
+    void main() {
+      int * first;
+      int bruh = 1234;
+      bruh * first;
+    }
+    
+    typedef bruh int;
+    
+    void another() {
+      bruh * first;
+      int bruh;
+      bruh * first;
+    }
+  |}
+  in
+  check s;
+  [%expect
+    {|
+    (Ok
+     ((Func
+       ((is_extern false) (ty (Void 2:5-9)) (name ((t main) (span 2:10-14)))
+        (params ())
+        (body
+         (((block
+            ((Decl (ty (Pointer (ty (Int 3:7-10)) (span 3:7-12)))
+              (names (((t first) (span 3:13-18)))) (expr ()) (span 3:7-12))
+             (Decl (ty (Int 4:7-10)) (names (((t bruh) (span 4:11-15))))
+              (expr ((Int_const ((t 1234) (span 4:18-22))))) (span 4:7-22))
+             (Effect
+              (Bin (lhs (Var ((t bruh) (span 5:7-11)))) (op Mul)
+               (rhs (Var ((t first) (span 5:14-19)))) (span 5:7-19)))))
+           (span [2,17]-[6,6]))))
+        (span [2,5]-[6,6])))
+      (Typedef (ty (Int 8:18-21)) (name ((t bruh) (span 8:13-17))) (span 8:5-17))
+      (Func
+       ((is_extern false) (ty (Void 10:5-9)) (name ((t another) (span 10:10-17)))
+        (params ())
+        (body
+         (((block
+            ((Decl
+              (ty
+               (Pointer (ty (Ty_var ((t bruh) (span 11:7-11)))) (span 11:7-13)))
+              (names (((t first) (span 11:14-19)))) (expr ()) (span 11:7-13))
+             (Decl (ty (Int 12:7-10)) (names (((t bruh) (span 12:11-15))))
+              (expr ()) (span 12:7-10))
+             (Effect
+              (Bin (lhs (Var ((t bruh) (span 13:7-11)))) (op Mul)
+               (rhs (Var ((t first) (span 13:14-19)))) (span 13:7-19)))))
+           (span [10,20]-[14,6]))))
+        (span [10,5]-[14,6])))))
     |}]
 ;;
 
@@ -193,7 +250,7 @@ let%expect_test "typedef" =
   
   extern testing another();
   
-  extern void print_char(char c);
+  extern void print_char(testing c);
   |};
   [%expect
     {|
@@ -243,9 +300,9 @@ let%expect_test "typedef" =
        ((is_extern true) (ty (Void 19:10-14))
         (name ((t print_char) (span 19:15-25)))
         (params
-         (((var ((t c) (span 19:31))) (ty (Ty_var ((t char) (span 19:26-30))))
-           (span 19:26-32))))
-        (body ()) (span 19:10-33)))))
+         (((var ((t c) (span 19:34))) (ty (Ty_var ((t testing) (span 19:26-33))))
+           (span 19:26-35))))
+        (body ()) (span 19:10-36)))))
     |}]
 ;;
 
