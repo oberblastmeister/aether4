@@ -15,4 +15,4 @@ int main (int x) {
 
 void main() {}
 ----
-("Parameters had unequal lengths" (name main@2))
+("Parameters had unequal lengths" (name main@1))

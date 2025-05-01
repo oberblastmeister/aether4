@@ -21,4 +21,4 @@ void main() {
 ----
 ("Filetest failed"
  ("Could not compile test"
-  ("Function does not return on all control flow paths" (func.name run@6))))
+  ("Function does not return on all control flow paths" (func.name run@5))))

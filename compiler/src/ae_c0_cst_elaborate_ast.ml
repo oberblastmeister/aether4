@@ -111,6 +111,8 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
   | Assert { expr; span } ->
     let expr = elab_expr st expr in
+    empty +> [ Ast.Assert { expr; span } ], st
+    (* let expr = elab_expr st expr in
     let c0_runtime_assert_var = elab_func_var st (Spanned.none "c0_runtime_assert") in
     let stmts =
       let int i = Ast.Int_const (Spanned.none (Int64.of_int_exn i)) in
@@ -129,7 +131,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
              })
       ]
     in
-    empty +> stmts, st
+    empty +> stmts, st *)
   | Decl { ty; names; expr; span } ->
     let st_ref = ref st in
     if List.length names > 1 && Option.is_some expr
@@ -321,6 +323,9 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     let func = elab_func_var st func in
     let args = List.map args ~f:(elab_expr st) in
     Call { func; args; span; ty = None }
+  | Alloc { ty; span } ->
+    let ty = elab_ty st ty in
+    Nullary { op = Alloc ty; span }
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with
@@ -423,9 +428,6 @@ let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
 ;;
 
 let elab_program st (prog : Cst.program) : Ast.program =
-  let c0_runtime_assert_var, st =
-    declare_func_var st { t = "c0_runtime_assert"; span = Span.none }
-  in
   let st_ref = ref st in
   let res =
     List.map prog ~f:(fun decl ->
@@ -442,28 +444,7 @@ let elab_program st (prog : Cst.program) : Ast.program =
       ; ty = { ty = Ast.void_ty; params = []; span = Span.none; is_extern = false }
       }
   in
-  let c0_runtime_assert_decl =
-    let param s ty =
-      let var = fresh_var !st_ref { t = s; span = Span.none } in
-      ({ var; ty; span = Span.none } : Ast.param)
-    in
-    Ast.Extern_func_defn
-      { name = c0_runtime_assert_var
-      ; ty =
-          { ty = Ast.void_ty
-          ; params =
-              [ param "cond" Ast.bool_ty
-              ; param "start_line" Ast.int_ty
-              ; param "start_col" Ast.int_ty
-              ; param "end_line" Ast.int_ty
-              ; param "end_col" Ast.int_ty
-              ]
-          ; span = Span.none
-          ; is_extern = true
-          }
-      }
-  in
-  c0_runtime_assert_decl :: main_decl :: res
+  main_decl :: res
 ;;
 
 let elaborate_program prog =

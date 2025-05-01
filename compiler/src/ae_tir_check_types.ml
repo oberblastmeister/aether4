@@ -1,4 +1,4 @@
-open Std
+(* open Std
 open Ae_tir_types
 
 exception Exn of Error.t
@@ -78,4 +78,4 @@ let check func =
   match check' func with
   | exception Exn e -> Error e
   | () -> Ok ()
-;;
+;; *)

@@ -70,6 +70,7 @@ rule lex =
   | "void" { Token.Void }
   | "true" { Token.True }
   | "false" { Token.False }
+  | "alloc" { Token.Alloc }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }

@@ -491,9 +491,15 @@ and parse_atom env : Cst.expr =
    <|> parens parse_expr
    <|> (Cst.bool_const <$> parse_true)
    <|> (Cst.bool_const <$> parse_false)
+   <|> parse_alloc
    <|> parse_call
    <|> (Cst.var <$> parse_ident))
     env
+
+and parse_alloc env : Cst.expr =
+  let alloc = expect_eq Alloc env in
+  let ty = spanned_parens parse_ty env in
+  Cst.Alloc { ty = ty.t; span = Span.Syntax.(alloc.span ++ ty.span) }
 
 and parse_args env : Cst.expr list = Parser.sep try_parse_expr ~by:(expect_eq_ Comma) env
 

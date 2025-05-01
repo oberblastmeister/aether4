@@ -6,4 +6,4 @@ int bruh() {
     return 0;
 }
 ----
-("Declared function was not defined" (declared_func main@2))
+("Declared function was not defined" (declared_func main@1))

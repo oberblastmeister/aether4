@@ -196,8 +196,8 @@ module Instr = struct
         ; size : Ty.t
         }
     (*
-       TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
-      The other args should be spilled be the instruction selector
+      TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
+      The other args should be spilled by the instruction selector
     *)
     | Call of
         { dst : Temp.t

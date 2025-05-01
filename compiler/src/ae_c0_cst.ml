@@ -123,6 +123,10 @@ and expr =
       ; args : expr list
       ; span : Span.t
       }
+  | Alloc of
+      { ty : ty
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and unary_op =
@@ -187,7 +191,8 @@ let expr_span (expr : expr) =
   | Unary { span; _ }
   | Bin { span; _ }
   | Ternary { span; _ }
-  | Call { span; _ } -> span
+  | Call { span; _ }
+  | Alloc { span; _ } -> span
 ;;
 
 let stmt_span (stmt : stmt) =

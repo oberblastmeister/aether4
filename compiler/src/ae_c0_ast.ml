@@ -65,10 +65,15 @@ type stmt =
       ; expr : expr
       ; span : Span.t
       }
+  | Assert of
+      { expr : expr
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and lvalue = var [@@deriving sexp_of]
 and block = stmt list [@@deriving sexp_of]
+and nullary_op = Alloc of ty
 
 and expr =
   | Var of
@@ -77,6 +82,10 @@ and expr =
       }
   | Int_const of int64 Spanned.t
   | Bool_const of bool Spanned.t
+  | Nullary of
+      { op : nullary_op
+      ; span : Span.t
+      }
   | Ternary of
       { cond : expr
       ; then_expr : expr
@@ -172,6 +181,7 @@ let expr_span = function
   | Ternary { span; _ }
   | Var { var = { span; _ }; _ }
   | Bin { span; _ }
+  | Nullary { span; _ }
   | Call { span; _ }
   | Int_const { span; _ }
   | Bool_const { span; _ } -> span
@@ -182,6 +192,7 @@ let expr_ty_exn = function
     Option.value_exn ty
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
+  | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
 ;;
 
 let nop_stmt span = Block { block = []; span }

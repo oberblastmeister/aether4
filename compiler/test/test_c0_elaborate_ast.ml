@@ -26,20 +26,10 @@ let%expect_test "smoke" =
   [%expect
     {|
     (Ok
-     ((Extern_func_defn (name c0_runtime_assert@0)
-       (ty
-        ((ty (Void -1:-1))
-         (params
-          (((var cond@10) (ty (Bool -1:-1)) (span -1:-1))
-           ((var start_line@9) (ty (Int -1:-1)) (span -1:-1))
-           ((var start_col@8) (ty (Int -1:-1)) (span -1:-1))
-           ((var end_line@7) (ty (Int -1:-1)) (span -1:-1))
-           ((var end_col@6) (ty (Int -1:-1)) (span -1:-1))))
-         (is_extern true) (span -1:-1))))
-      (Func_decl (name main@1)
+     ((Func_decl (name main@0)
        (ty ((ty (Void -1:-1)) (params ()) (is_extern false) (span -1:-1))))
       (Func_defn
-       ((ty (Int 2:3-6)) (name main@1) (params ())
+       ((ty (Int 2:3-6)) (name main@0) (params ())
         (body
          ((Declare (ty (Int 3:13-16)) (var tmp@1) (span 3:13-26))
           (Assign (lvalue tmp@1) (expr (Int_const ((t 0) (span 3:25))))

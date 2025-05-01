@@ -13,13 +13,20 @@ let ins = Lir.Instr'.create_unindexed
 type st =
   { temp_gen : Temp.Id_gen.t
   ; label_gen : Label.Id_gen.t
+  ; hp_temp : Temp.t
+  ; cx_temp : Temp.t
   }
 
 type instrs = Lir.Instr'.t Bag.t
 
 let create_state func =
-  { temp_gen = Tir.Func.create_temp_gen func
+  let temp_gen = Tir.Func.create_temp_gen func in
+  let hp_temp = Temp.fresh ~name:"HP" temp_gen in
+  let cx_temp = Temp.fresh ~name:"CX" temp_gen in
+  { temp_gen
   ; label_gen = Label.Id_gen.create func.Tir.Func.next_label_id
+  ; hp_temp
+  ; cx_temp
   }
 ;;
 
@@ -61,16 +68,19 @@ let lower_block_call (b : Tir.Block_call.t) : Lir.Block_call.t =
 
 let mangle_func_name name = "_c0_" ^ name
 
+let lower_call ~dst ~ty ~func ~args ~is_extern =
+  let func = if is_extern then func else mangle_func_name func in
+  let ty = lower_ty ty in
+  let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
+  let call_conv = if is_extern then X86_call_conv.sysv else X86_call_conv.c0 in
+  empty +> [ ins (Call { dst; ty; func; args; call_conv }) ]
+;;
+
 let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
-  | Call { dst; ty; func; args; is_extern } ->
-    let func = if is_extern then func else mangle_func_name func in
-    let ty = lower_ty ty in
-    let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
-    let call_conv = if is_extern then X86_call_conv.sysv else X86_call_conv.c0 in
-    empty +> [ ins (Call { dst; ty; func; args; call_conv }) ]
+  | Call { dst; ty; func; args; is_extern } -> lower_call ~dst ~ty ~func ~args ~is_extern
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call b in
@@ -101,6 +111,7 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
       in
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
     | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
+    | Alloc ty -> todol [%here]
   end
   | Unary { dst; op; src } ->
     (match op with
@@ -109,6 +120,17 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
     let op = lower_bin_op op in
     let instr = ins (Bin { dst; op; src1; src2 }) in
     empty +> [ instr ]
+  | Nary { dst; op; srcs } -> begin
+    match op, srcs with
+    | C0_runtime_assert, [ t0; t1; t2; t3; t4 ] ->
+      lower_call
+        ~dst
+        ~ty:Void
+        ~func:"c0_runtime_assert"
+        ~args:[ t0, Bool; t1, Int; t2, Int; t3, Int; t4, Int ]
+        ~is_extern:true
+    | C0_runtime_assert, _ -> raise_s [%message "Invalid operation configuration"]
+  end
   | Ret { src; ty } ->
     let ty = lower_ty ty in
     empty +> [ ins (Ret { src; ty }) ]

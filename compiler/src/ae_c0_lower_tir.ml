@@ -139,6 +139,32 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
     lower_expr st cont dst expr
+  | Assert { expr; span } ->
+    let garbage_dst = fresh_temp ~name:"assert_garbage_dst" st in
+    let cond_dst = fresh_temp ~name:"assert_cond" st in
+    let cont =
+      let t1, t2, t3, t4 =
+        ( fresh_temp ~name:"span_start_line" st
+        , fresh_temp ~name:"span_start_col" st
+        , fresh_temp ~name:"span_end_line" st
+        , fresh_temp ~name:"span_end_col" st )
+      in
+      let int dst i = ins (Nullary { dst; op = Int_const (Int64.of_int i) }) in
+      empty
+      +> [ int t1 span.start.line
+         ; int t2 span.start.col
+         ; int t3 span.stop.line
+         ; int t4 span.stop.col
+         ; ins
+             (Nary
+                { dst = garbage_dst
+                ; op = C0_runtime_assert
+                ; srcs = [ cond_dst; t1; t2; t3; t4 ]
+                })
+         ]
+      ++ cont
+    in
+    lower_expr st cont cond_dst expr
   | Return { expr; span } ->
     let dst = fresh_temp ~name:"ret" st in
     begin
@@ -287,6 +313,12 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
         lower_expr st cont arg_temp arg_expr)
     in
     cont
+  | Nullary { op; span = _ } -> begin
+    match op with
+    | Alloc ty ->
+      let ty = lower_ty st ty in
+      empty +> [ ins (Nullary { dst; op = Alloc ty }) ]
+  end
 ;;
 
 let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =

@@ -14,4 +14,4 @@ int run() {
 
 void main() {}
 ----
-("Function does not return on all control flow paths" (func.name run@1))
+("Function does not return on all control flow paths" (func.name run@0))

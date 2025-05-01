@@ -94,6 +94,10 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
       List.map args_with_params ~f:(fun (arg, param) -> check_expr st arg param.ty)
     in
     Call { func; args; ty = Some func_sig.ty; span }
+  | Nullary { op; span = _ } -> begin
+    match op with
+    | Alloc _ -> expr
+  end
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in
@@ -124,6 +128,9 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   | Effect expr ->
     let expr = infer_expr st expr in
     Effect expr
+  | Assert { expr; span } ->
+    let expr = check_expr st expr (Bool span) in
+    Assert { expr; span }
   | Declare _ -> stmt
   | Assign { lvalue; expr; span } ->
     let ty = infer_expr st (Var { var = lvalue; ty = None }) |> Ast.expr_ty_exn in

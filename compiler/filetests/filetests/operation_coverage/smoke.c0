@@ -1,0 +1,7 @@
+/*
+( (kind (CompileAndRun)) )
+*/
+
+void main() {
+    assert false;
+}

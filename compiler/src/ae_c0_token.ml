@@ -60,5 +60,6 @@ type t =
   | Void
   | Unknown of string
   | Assert
+  | Alloc
   | Eof
 [@@deriving sexp_of, equal, compare, variants]

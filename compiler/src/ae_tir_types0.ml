@@ -49,7 +49,12 @@ module Nullary_op = struct
     | Int_const of int64
     | Bool_const of bool
     | Void_const
+    | Alloc of Ty.t
   [@@deriving sexp_of]
+end
+
+module Nary_op = struct
+  type t = C0_runtime_assert [@@deriving sexp_of]
 end
 
 module Block_param = struct
@@ -84,6 +89,11 @@ module Instr = struct
         { dst : Temp.t
         ; op : Unary_op.t
         ; src : Temp.t
+        }
+    | Nary of
+        { dst : Temp.t
+        ; op : Nary_op.t
+        ; srcs : Temp.t list
         }
     | Nullary of
         { dst : Temp.t
@@ -134,6 +144,9 @@ module Instr = struct
     | Unary { dst = _; op = _; src } ->
       f src;
       ()
+    | Nary { dst = _; op = _; srcs } ->
+      List.iter srcs ~f;
+      ()
     | Nullary { dst = _; op = _ } -> ()
     | Jump b ->
       List.iter b.args ~f;
@@ -183,6 +196,17 @@ module Instr = struct
     | Cond_jump { cond; b1 = _; b2 = _ } ->
       f (cond, Bool);
       ()
+    | Nary { dst = _; op; srcs } -> begin
+      match op, srcs with
+      | C0_runtime_assert, [ t0; t1; t2; t3; t4 ] ->
+        f (t0, Bool);
+        f (t1, Int);
+        f (t2, Int);
+        f (t3, Int);
+        f (t4, Int);
+        ()
+      | C0_runtime_assert, _ -> raise_s [%message "Invalid Nary operation"]
+    end
     | Ret { src; ty } ->
       f (src, ty);
       ()
@@ -191,6 +215,10 @@ module Instr = struct
   let iter_defs_with_ty t ~f =
     match t with
     | Block_params params -> (List.iter @> Fold.of_fn Block_param.to_tuple2) params ~f
+    | Nary { dst; op; srcs = _ } -> begin
+      match op with
+      | C0_runtime_assert -> f (dst, Void)
+    end
     | Nop -> ()
     | Call { dst; ty; _ } ->
       f (dst, ty);
@@ -210,7 +238,8 @@ module Instr = struct
       (match op with
        | Int_const _ -> f (dst, Int)
        | Bool_const _ -> f (dst, Bool)
-       | Void_const -> f (dst, Void));
+       | Void_const -> f (dst, Void)
+       | Alloc ty -> f (dst, Pointer ty));
       ()
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
@@ -240,6 +269,9 @@ module Instr = struct
       let src = f p.src in
       Unary { p with src }
     | Nullary _ -> instr
+    | Nary p ->
+      let srcs = List.map ~f p.srcs in
+      Nary { p with srcs }
     | Jump j ->
       let j = (Traverse.of_field Block_call.Fields.args & List.map) j ~f in
       Jump j
@@ -262,6 +294,7 @@ module Instr = struct
     | Bin p -> Bin { p with dst = f p.dst }
     | Unary p -> Unary { p with dst = f p.dst }
     | Nullary p -> Nullary { p with dst = f p.dst }
+    | Nary p -> Nary { p with dst = f p.dst }
     | Jump _ -> instr
     | Cond_jump _ -> instr
     | Ret _ -> instr

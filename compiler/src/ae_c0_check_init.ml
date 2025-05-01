@@ -26,7 +26,7 @@ and iter_expr_uses (expr : Ast.expr) ~f =
   | Var { var; ty = _ } ->
     f var;
     ()
-  | Int_const _ | Bool_const _ -> ()
+  | Nullary _ | Int_const _ | Bool_const _ -> ()
   | Bin { lhs; op = _; rhs; ty = _; span = _ } ->
     iter_expr_uses lhs ~f;
     iter_expr_uses rhs ~f;
@@ -50,7 +50,7 @@ and check_stmt live (stmt : Ast.stmt) =
     let live_body = check_stmt live body in
     let cond_uses = expr_uses_set cond in
     live |> Set.union live_body |> Set.union cond_uses
-  | Effect expr -> Set.union live (expr_uses_set expr)
+  | Assert { expr; span = _ } | Effect expr -> Set.union live (expr_uses_set expr)
   | Return { expr; span = _ } ->
     (* just discard the live set, because nothing is live before it *)
     Option.value_map ~f:expr_uses_set ~default:Ast.Var.Set.empty expr
