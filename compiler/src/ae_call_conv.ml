@@ -6,10 +6,9 @@ end
 
 type t =
   { name : string
-  ; return_reg : Mach_reg.t
+  ; return_regs : Mach_reg.t list
   ; call_args : Mach_reg.t list
   ; num_args_in_regs : int
   ; call_clobbers : Mach_reg.t list
-  ; num_call_clobbers : int
   }
 [@@deriving sexp_of]

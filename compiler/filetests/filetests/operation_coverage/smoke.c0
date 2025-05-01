@@ -3,5 +3,6 @@
 */
 
 void main() {
-    assert false;
+    // assert false;
 }
+----

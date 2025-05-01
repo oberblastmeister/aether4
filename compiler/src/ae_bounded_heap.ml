@@ -1,8 +1,8 @@
 (* TODO: fix this code *)
 open Std
 
-(* 
-module Id = Entity.Id
+(*
+   module Id = Entity.Id
 module Temp_entity = Ae_abs_asm_temp_entity
 module Temp_id = Temp_entity.Id
 module Table = Id.Table

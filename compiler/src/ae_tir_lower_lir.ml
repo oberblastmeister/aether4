@@ -68,19 +68,20 @@ let lower_block_call (b : Tir.Block_call.t) : Lir.Block_call.t =
 
 let mangle_func_name name = "_c0_" ^ name
 
-let lower_call ~dst ~ty ~func ~args ~is_extern =
+let lower_call ~dsts ~func ~args ~is_extern =
+  let dsts = (List.map & Tuple2.map_snd) dsts ~f:lower_ty in
   let func = if is_extern then func else mangle_func_name func in
-  let ty = lower_ty ty in
   let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
   let call_conv = if is_extern then X86_call_conv.sysv else X86_call_conv.c0 in
-  empty +> [ ins (Call { dst; ty; func; args; call_conv }) ]
+  empty +> [ ins (Call { dsts; func; args; call_conv }) ]
 ;;
 
 let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
-  | Call { dst; ty; func; args; is_extern } -> lower_call ~dst ~ty ~func ~args ~is_extern
+  | Call { dst; ty; func; args; is_extern } ->
+    lower_call ~dsts:[ dst, ty ] ~func ~args ~is_extern
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call b in
@@ -124,8 +125,7 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
     match op, srcs with
     | C0_runtime_assert, [ t0; t1; t2; t3; t4 ] ->
       lower_call
-        ~dst
-        ~ty:Void
+        ~dsts:[ dst, Void ]
         ~func:"c0_runtime_assert"
         ~args:[ t0, Bool; t1, Int; t2, Int; t3, Int; t4, Int ]
         ~is_extern:true
@@ -133,7 +133,7 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   end
   | Ret { src; ty } ->
     let ty = lower_ty ty in
-    empty +> [ ins (Ret { src; ty }) ]
+    empty +> [ ins (Ret { srcs = [ src, ty ]; call_conv = X86_call_conv.c0 }) ]
 ;;
 
 let lower_block st (block : Tir.Block.t) : Lir.Block.t =

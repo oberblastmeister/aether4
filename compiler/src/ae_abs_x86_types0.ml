@@ -192,18 +192,21 @@ module Instr = struct
         ; b2 : Block_call.t
         }
     | Ret of
-        { src : Operand.t
-        ; size : Ty.t
+        { srcs : (Location.t * Ty.t) list
+        ; call_conv : Call_conv.t
         }
     (*
-      TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
+       TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
       The other args should be spilled by the instruction selector
     *)
     | Call of
-        { dst : Temp.t
-        ; size : Ty.t
+        { dsts : (Temp.t * Ty.t) list
         ; func : string
         ; args : (Location.t * Ty.t) list
+          (*
+            Important that we don't access call_conv.clobbers directly.
+            Make sure to call iter_clobbers instead
+          *)
         ; call_conv : Call_conv.t
         }
     | Unreachable
@@ -233,8 +236,8 @@ module Instr = struct
       on_def (Operand.Reg dst, size);
       ()
     | Undefined { dst; size } -> on_def (dst, size)
-    | Call { dst; size; func = _; args; call_conv = _ } ->
-      on_def (Operand.Reg dst, size);
+    | Call { dsts; func = _; args; call_conv = _ } ->
+      List.iter dsts ~f:(fun (dst, size) -> on_def (Operand.Reg dst, size));
       (List.iter @> Fold.of_fn fst @> Location.iter_temp) args ~f:(fun temp ->
         on_use (Operand.Reg temp))
     | Block_params params ->
@@ -271,9 +274,9 @@ module Instr = struct
       in
       on_def (dst, ty);
       ()
-    | Ret { src; size = _ } ->
-      on_use src;
-      ()
+    | Ret { srcs; call_conv = _ } ->
+      (List.iter @> Fold.of_fn fst @> Location.iter_temp) srcs ~f:(fun r ->
+        on_use (Reg r))
     | Unreachable -> ()
   ;;
 
@@ -295,11 +298,11 @@ module Instr = struct
       let dst = map_temp dst ~f:on_def in
       Pop { dst; size }
     | Call p ->
-      let dst = (map_temp ~f:on_def) p.dst in
+      let dsts = (List.map & Tuple2.map_fst) ~f:(map_temp ~f:on_def) p.dsts in
       let args =
         (List.map & Tuple2.map_fst & Location.map_temp) p.args ~f:(map_temp ~f:on_use)
       in
-      Call { p with dst; args }
+      Call { p with dsts; args }
     | Block_params params ->
       let mapper =
         List.map & Traverse.of_field Block_param.Fields.param & Location.map_temp
@@ -347,9 +350,11 @@ module Instr = struct
       let src2 = on_use src2 in
       let dst = on_def dst in
       Bin { dst; src1; op; src2 }
-    | Ret { src; size } ->
-      let src = on_use src in
-      Ret { src; size }
+    | Ret p ->
+      let srcs =
+        (List.map & Tuple2.map_fst & Location.map_temp) p.srcs ~f:(map_temp ~f:on_use)
+      in
+      Ret { p with srcs }
     | Unreachable -> Unreachable
   ;;
 
@@ -362,12 +367,14 @@ module Instr = struct
 
   let iter_constrained_uses_exn t ~f =
     match t with
-    | Ret { src; _ } -> begin
-      match src with
-      | Reg src -> f (src, Mach_reg.RAX)
-      | _ -> ()
+    | Ret { srcs; call_conv } -> begin
+      let zipped, _rem =
+        List.zip_with_remainder (List.map srcs ~f:fst) call_conv.return_regs
+      in
+      List.iter zipped ~f:(fun (loc, ty) ->
+        Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
     end
-    | Call { dst = _; args; func = _; size = _; call_conv } ->
+    | Call { dsts = _; args; func = _; call_conv } ->
       let zipped, _rem =
         List.zip_with_remainder (List.map args ~f:fst) call_conv.call_args
       in
@@ -394,7 +401,15 @@ module Instr = struct
 
   let iter_constrained_defs_exn t ~f =
     match t with
-    | Call { dst; call_conv; _ } -> f (dst, call_conv.return_reg)
+    | Call { dsts; call_conv; _ } ->
+      let t, rem = List.zip_with_remainder (List.map ~f:fst dsts) call_conv.return_regs in
+      begin
+        match rem with
+        | Some (First _) -> todol [%here]
+        | _ -> ()
+      end;
+      List.iter t ~f;
+      ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
        | Idiv | Imod ->
@@ -410,7 +425,13 @@ module Instr = struct
 
   let iter_clobbers t ~f =
     match t with
-    | Call { call_conv; _ } -> List.iter call_conv.call_clobbers ~f
+    | Call { dsts; call_conv; _ } ->
+      let num_return = List.length dsts in
+      assert (num_return <= List.length call_conv.return_regs);
+      let return_regs = List.take call_conv.return_regs num_return in
+      List.iter call_conv.call_clobbers
+      |> Iter.filter ~f:(fun reg -> not (List.mem ~equal:Mach_reg.equal return_regs reg))
+      |> Iter.iter ~f
     | Bin { op = Idiv | Imod; _ } ->
       f Mach_reg.RDX;
       ()
@@ -436,7 +457,9 @@ module Instr = struct
       in
       Operand.iter_reg_val src1 ~f:(fun temp -> f (temp, ty));
       Operand.iter_reg_val src2 ~f:(fun temp -> f (temp, ty))
-    | Ret { src; size } -> Operand.iter_reg_val src ~f:(fun temp -> f (temp, size))
+    | Ret { srcs; call_conv = _ } ->
+      List.iter srcs ~f:(fun (loc, ty) ->
+        Location.iter_temp loc ~f:(fun temp -> f (temp, ty)))
   ;;
 
   let iter_defs instr ~f =
@@ -473,7 +496,7 @@ module Instr = struct
          ())
     | Call { call_conv; _ } ->
       List.iter call_conv.call_clobbers ~f;
-      f call_conv.return_reg;
+      List.iter call_conv.return_regs ~f;
       List.iter call_conv.call_args ~f;
       ()
     | Undefined _
@@ -485,7 +508,9 @@ module Instr = struct
     | Cond_jump _
     | Mov _
     | Mov_abs _ -> ()
-    | Ret _ -> f Mach_reg.RAX
+    | Ret { srcs = _; call_conv } ->
+      List.iter call_conv.return_regs ~f;
+      ()
     | Unreachable -> ()
   ;;
 

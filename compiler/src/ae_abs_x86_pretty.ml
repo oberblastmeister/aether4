@@ -86,18 +86,19 @@ let instr (t : Instr.t) =
   | Jump b -> list [ atom "jump"; block_call b ]
   | Cond_jump { cond; b1; b2 } ->
     list [ atom "cond_jump"; cond_expr cond; block_call b1; block_call b2 ]
-  | Ret { src; size } -> list [ instr "ret" size; operand src ]
+  | Ret { srcs; call_conv } ->
+    (* TODO: add in call conv *)
+    list ([ atom "ret" ] @ List.map srcs ~f:(fun (src, _ty) -> location src))
   | Unreachable -> list [ atom "unreachable" ]
-  | Call { dst; size; func; args; call_conv } ->
+  | Call { dsts; func; args; call_conv } ->
     list
-    @@ [ instr "call" size ]
+    @@ [ atom "call" ]
     @ (if String.equal call_conv.name "c0"
        then []
        else [ Keyword "call_conv"; atom call_conv.name ])
     @ []
-    @ [ temp dst
-      ; list ([ atom func ] @ List.map ~f:(fun (loc, _ty) -> location loc) args)
-      ]
+    @ List.map ~f:(fun (dst, _ty) -> temp dst) dsts
+    @ [ list ([ atom func ] @ List.map ~f:(fun (loc, _ty) -> location loc) args) ]
 ;;
 
 let block (t : Block.t) =

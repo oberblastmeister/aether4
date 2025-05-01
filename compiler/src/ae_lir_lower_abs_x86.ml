@@ -40,12 +40,12 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
-  | Call { dst; func; ty; args; call_conv } ->
-    let ty = lower_ty ty in
+  | Call { dsts; func; args; call_conv } ->
+    let dsts = List.map dsts ~f:(Tuple2.map_both ~f1:Fn.id ~f2:lower_ty) in
     let args =
       List.map args ~f:(Tuple2.map_both ~f1:Abs_x86.Location.temp ~f2:lower_ty)
     in
-    empty +> [ ins (Call { dst; func; size = ty; args; call_conv }) ]
+    empty +> [ ins (Call { dsts; func; args; call_conv }) ]
   | Block_params params ->
     empty
     +> [ ins
@@ -109,10 +109,12 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
       | Lshift -> Lshift
       | Rshift -> Rshift
     in
-    empty +> [ ins (Abs_x86.Instr.Bin { dst; src1; op; src2 }) ]
-  | Ret { src; ty } ->
-    let src = get_operand st src in
-    empty +> [ ins (Abs_x86.Instr.Ret { src; size = lower_ty ty }) ]
+    empty +> [ ins (Bin { dst; src1; op; src2 }) ]
+  | Ret { srcs; call_conv } ->
+    let srcs =
+      List.map srcs ~f:(fun (temp, ty) -> Abs_x86.Location.Temp temp, lower_ty ty)
+    in
+    empty +> [ ins (Ret { srcs; call_conv }) ]
 ;;
 
 let lower_block st (block : Lir.Block.t) : Abs_x86.Block.t =

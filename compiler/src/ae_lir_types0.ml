@@ -93,12 +93,11 @@ module Instr = struct
         ; b2 : Block_call.t
         }
     | Ret of
-        { src : Temp.t
-        ; ty : Ty.t
+        { srcs : (Temp.t * Ty.t) list
+        ; call_conv : Call_conv.t
         }
     | Call of
-        { dst : Temp.t
-        ; ty : Ty.t
+        { dsts : (Temp.t * Ty.t) list
         ; func : string
         ; args : (Temp.t * Ty.t) list
         ; call_conv : Call_conv.t
@@ -140,8 +139,8 @@ module Instr = struct
       List.iter b1.args ~f;
       List.iter b2.args ~f;
       ()
-    | Ret { src; ty = _ } ->
-      f src;
+    | Ret { srcs; call_conv = _ } ->
+      List.iter srcs |> Iter.map ~f:fst |> Iter.iter ~f;
       ()
     | Unreachable -> ()
   ;;
@@ -170,8 +169,8 @@ module Instr = struct
     | Cond_jump { cond; b1 = _; b2 = _ } ->
       f (cond, I1);
       ()
-    | Ret { src; ty } ->
-      f (src, ty);
+    | Ret { srcs; call_conv = _ } ->
+      List.iter srcs ~f;
       ()
   ;;
 
@@ -180,8 +179,8 @@ module Instr = struct
     | Block_params params ->
       List.iter params ~f:(fun param -> f (Block_param.param param, Block_param.ty param))
     | Nop -> ()
-    | Call { dst; ty; _ } ->
-      f (dst, ty);
+    | Call { dsts; _ } ->
+      List.iter dsts ~f;
       ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
       let ty : Ty.t =

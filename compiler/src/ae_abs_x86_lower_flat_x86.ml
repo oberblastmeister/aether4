@@ -25,6 +25,7 @@ type st =
   { frame_layout : Frame_layout.t
   ; allocation : int Abs_x86.Temp.Table.t
   ; func_index : int
+  ; call_conv : Call_conv.t
   }
 
 let get_temp t (temp : Abs_x86.Temp.t) = Mach_reg.of_enum_exn t.allocation.Temp.!(temp)
@@ -215,14 +216,41 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
            ; ins (Mov { dst; src = Reg RDX; size })
            ]
     end
-  | Ret { src; size } ->
-    let src = lower_operand st src in
-    assert (Flat_x86.Operand.reg_val src |> Option.value_exn |> Mach_reg.equal RAX);
-    Flat_x86.Instr.(
-      empty
-      +> [ ins (Mov { dst = Reg RAX; src; size }) ]
-      ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ())
-  | Call { dst; size = _; func; args; call_conv } ->
+  | Ret { srcs; call_conv } ->
+    let srcs_in_registers, src_rem = List.zip_with_remainder srcs call_conv.return_regs in
+    begin
+      match src_rem with
+      | Some (First _) -> todol [%here]
+      | _ -> ()
+    end;
+    let reg_moves =
+      List.map srcs_in_registers ~f:(fun ((arg, ty), reg_expected) ->
+        match arg with
+        | Temp temp ->
+          let reg = get_temp st temp in
+          assert (Mach_reg.equal reg reg_expected);
+          empty
+        | _ ->
+          empty
+          +> [ ins
+                 (Mov
+                    { dst = Reg reg_expected
+                    ; src = lower_operand st (Abs_x86.Location.to_operand arg)
+                    ; size = ty
+                    })
+             ])
+      |> Bag.concat
+    in
+    let stack_moves =
+      match src_rem with
+      | Some (First _) -> todol [%here]
+      | _ -> Bag.empty
+    in
+    empty
+    ++ stack_moves
+    ++ reg_moves
+    ++ epilogue ?info:(Option.map instr.info ~f:(Info.tag ~tag:"epilogue")) ()
+  | Call { dsts; func; args; call_conv } ->
     let args_in_registers, args_rem = List.zip_with_remainder args call_conv.call_args in
     let reg_moves =
       List.map args_in_registers ~f:(fun ((arg, ty), reg_expected) ->
@@ -242,7 +270,6 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
              ])
       |> Bag.concat
     in
-    assert (Mach_reg.equal (get_temp st dst) call_conv.return_reg);
     let stack_moves =
       match args_rem with
       | Some (First args_on_stack) ->
@@ -256,6 +283,16 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
         |> Bag.concat
       | _ -> Bag.empty
     in
+    let dsts_in_registers, dst_rem = List.zip_with_remainder dsts call_conv.return_regs in
+    begin
+      match dst_rem with
+      | Some (First _) -> todol [%here]
+      | _ -> ()
+    end;
+    begin
+      let@: (dst, _ty), reg_expected = List.iter dsts_in_registers in
+      assert (Mach_reg.equal (get_temp st dst) reg_expected)
+    end;
     empty ++ stack_moves ++ reg_moves +> [ ins (Call func) ]
 ;;
 
@@ -315,7 +352,7 @@ let c0_main_export_instructions =
   @ [ Flat_x86.Line.Instr { i = Ret; info = None } ]
 ;;
 
-let lower ~frame_layout ~allocation ~func_index func =
-  let st = { frame_layout; allocation; func_index } in
+let lower ~frame_layout ~allocation ~func_index (func : Abs_x86.Func.t) =
+  let st = { frame_layout; allocation; func_index; call_conv = func.call_conv } in
   lower_func st func
 ;;

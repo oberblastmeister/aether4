@@ -5,6 +5,7 @@ open struct
   module Call_conv = Ae_call_conv
 end
 
+(* invariant: every register that is in a constrained instruction must be in here *)
 let regalloc_usable_mach_regs =
   [ RAX; RCX; RDX; RBX; RSI; RDI; R8; R9; R10; R12; R13; R14; R15 ]
 ;;
@@ -22,37 +23,19 @@ let caller_saved = [ RAX; RDI; RSI; RDX; RCX; R8; R9; R10 ]
 let callee_saved = [ RBX; R12; R13; R14; R15 ]
 
 let c0 =
-  let return_reg = RAX in
-  let call_clobbers =
-    List.filter regalloc_usable_mach_regs ~f:(fun r -> not (equal return_reg r))
-  in
-  let num_call_clobbers = List.length call_clobbers in
+  (* TODO: eventually set these to all of the available registers *)
+  let return_regs = [ RAX; RBX ] in
+  let call_clobbers = regalloc_usable_mach_regs in
   (* 13 call arguments *)
-  let call_args = [ RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15; RBX; RAX ] in
+  let call_args = [ RAX; RBX; RDI; RSI; RCX; RDX; R8; R9; R10; R12; R13; R14; R15 ] in
   let num_args_in_regs = List.length call_args in
-  { Call_conv.name = "c0"
-  ; return_reg
-  ; call_args
-  ; num_args_in_regs
-  ; call_clobbers
-  ; num_call_clobbers
-  }
+  { Call_conv.name = "c0"; return_regs; call_args; num_args_in_regs; call_clobbers }
 ;;
 
 let sysv =
   let call_args = [ RDI; RSI; RDX; RCX; R8; R9 ] in
-  let return_reg = RAX in
-  let call_clobbers =
-    List.filter caller_saved ~f:(fun r ->
-      (not (equal return_reg r)) && List.mem ~equal regalloc_usable_mach_regs r)
-  in
-  let num_call_clobbers = List.length call_clobbers in
+  let return_regs = [ RAX ] in
+  let call_clobbers = caller_saved in
   let num_args_in_regs = List.length call_args in
-  { Call_conv.name = "sysv"
-  ; return_reg
-  ; call_args
-  ; num_args_in_regs
-  ; call_clobbers
-  ; num_call_clobbers
-  }
+  { Call_conv.name = "sysv"; return_regs; call_args; num_args_in_regs; call_clobbers }
 ;;
