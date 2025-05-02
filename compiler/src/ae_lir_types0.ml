@@ -219,9 +219,59 @@ module Instr = struct
   ;;
 
   let iter_defs instr ~f = iter_defs_with_ty instr |> Iter.map ~f:fst |> Iter.iter ~f
-  let map_uses _ = todol [%here]
-  let map_defs _ = todol [%here]
-  let map_block_calls _ = todol [%here]
+
+  let map_uses (instr : t) ~f =
+    match instr with
+    | Unreachable -> Unreachable
+    | Nop -> Nop
+    | Block_params _ -> instr
+    | Call p ->
+      let args = (List.map & Tuple2.map_fst) p.args ~f in
+      Call { p with args }
+    | Bin p ->
+      let src1 = f p.src1 in
+      let src2 = f p.src2 in
+      Bin { p with src1; src2 }
+    | Unary p ->
+      let src = f p.src in
+      Unary { p with src }
+    | Nullary _ -> instr
+    | Jump j ->
+      let j = (Traverse.of_field Block_call.Fields.args & List.map) j ~f in
+      Jump j
+    | Cond_jump { cond; b1; b2 } ->
+      let cond = f cond in
+      let b1 = (Traverse.of_field Block_call.Fields.args & List.map) b1 ~f in
+      let b2 = (Traverse.of_field Block_call.Fields.args & List.map) b2 ~f in
+      Cond_jump { cond; b1; b2 }
+    | Ret p ->
+      let srcs = (List.map & Tuple2.map_fst) p.srcs ~f in
+      Ret { p with srcs }
+  ;;
+
+  let map_defs (instr : t) ~f =
+    match instr with
+    | Unreachable -> Unreachable
+    | Block_params params ->
+      Block_params ((List.map & Traverse.of_field Block_param.Fields.param) params ~f)
+    | Nop -> Nop
+    | Bin p -> Bin { p with dst = f p.dst }
+    | Unary p -> Unary { p with dst = f p.dst }
+    | Nullary p -> Nullary { p with dst = f p.dst }
+    | Jump _ -> instr
+    | Cond_jump _ -> instr
+    | Ret _ -> instr
+    | Call p ->
+      let dsts = (List.map & Tuple2.map_fst) p.dsts ~f in
+      Call { p with dsts }
+  ;;
+
+  let map_block_calls (instr : t) ~f =
+    match instr with
+    | Jump b -> Jump (f b)
+    | Cond_jump { cond; b1; b2 } -> Cond_jump { cond; b1 = f b1; b2 = f b2 }
+    | _ -> instr
+  ;;
 end
 
 module Location = struct

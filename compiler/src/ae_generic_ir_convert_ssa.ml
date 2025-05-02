@@ -40,7 +40,7 @@ module Make (Ir : Ir) = struct
         Dominators.Frontier.find_iter dom_front def_in_label
         |> Iter.filter ~f:(fun l ->
           (*
-             we only want to insert phis where the variable is actually *live*,
+            we only want to insert phis where the variable is actually *live*,
             this is pruned SSA
           *)
           Liveness.Live_set.find live_in l |> Fn.flip Set.mem def)

@@ -6,6 +6,7 @@ module Bag = Ae_data_bag
 module Lir = Ae_lir_types
 module X86_call_conv = Ae_x86_call_conv
 open Bag.Syntax
+open Ae_trace
 
 let empty = Bag.empty
 let ins = Lir.Instr'.create_unindexed
@@ -13,21 +14,19 @@ let ins = Lir.Instr'.create_unindexed
 type st =
   { temp_gen : Temp.Id_gen.t
   ; label_gen : Label.Id_gen.t
-  ; hp_temp : Temp.t
   ; cx_temp : Temp.t
+  ; hp_temp : Temp.t
+  ; is_start_block : bool
   }
 
 type instrs = Lir.Instr'.t Bag.t
 
 let create_state func =
   let temp_gen = Tir.Func.create_temp_gen func in
+  let label_gen = Tir.Func.create_label_gen func in
   let hp_temp = Temp.fresh ~name:"HP" temp_gen in
   let cx_temp = Temp.fresh ~name:"CX" temp_gen in
-  { temp_gen
-  ; label_gen = Label.Id_gen.create func.Tir.Func.next_label_id
-  ; hp_temp
-  ; cx_temp
-  }
+  { temp_gen; label_gen; cx_temp; hp_temp; is_start_block = false }
 ;;
 
 let fresh_temp ?(name = "fresh") ?info t : Lir.Temp.t =
@@ -68,7 +67,11 @@ let lower_block_call (b : Tir.Block_call.t) : Lir.Block_call.t =
 
 let mangle_func_name name = "_c0_" ^ name
 
-let lower_call ~dsts ~func ~args ~is_extern =
+let lower_call st ~dsts ~func ~args ~is_extern =
+  let dsts = (if is_extern then [] else [ st.hp_temp, Tir.Ty.Int ]) @ dsts in
+  let args =
+    (if is_extern then [] else [ st.cx_temp, Tir.Ty.Int; st.hp_temp, Tir.Ty.Int ]) @ args
+  in
   let dsts = (List.map & Tuple2.map_snd) dsts ~f:lower_ty in
   let func = if is_extern then func else mangle_func_name func in
   let args = (List.map & Tuple2.map_snd) args ~f:lower_ty in
@@ -76,12 +79,12 @@ let lower_call ~dsts ~func ~args ~is_extern =
   empty +> [ ins (Call { dsts; func; args; call_conv }) ]
 ;;
 
-let lower_instr _st (instr : Tir.Instr'.t) : instrs =
+let lower_instr st (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
   | Call { dst; ty; func; args; is_extern } ->
-    lower_call ~dsts:[ dst, ty ] ~func ~args ~is_extern
+    lower_call st ~dsts:[ dst, ty ] ~func ~args ~is_extern
   | Unreachable -> empty +> [ ins Unreachable ]
   | Jump b ->
     let b = lower_block_call b in
@@ -91,6 +94,15 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
     let b2 = lower_block_call b2 in
     empty +> [ ins (Cond_jump { cond; b1; b2 }) ]
   | Block_params temps ->
+    let temps =
+      (if st.is_start_block
+       then
+         [ { Tir.Block_param.param = st.cx_temp; ty = Int }
+         ; { param = st.hp_temp; ty = Int }
+         ]
+       else [])
+      @ temps
+    in
     empty
     +> [ ins
            (Lir.Instr.Block_params
@@ -125,6 +137,7 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
     match op, srcs with
     | C0_runtime_assert, [ t0; t1; t2; t3; t4 ] ->
       lower_call
+        st
         ~dsts:[ dst, Void ]
         ~func:"c0_runtime_assert"
         ~args:[ t0, Bool; t1, Int; t2, Int; t3, Int; t4, Int ]
@@ -133,10 +146,12 @@ let lower_instr _st (instr : Tir.Instr'.t) : instrs =
   end
   | Ret { src; ty } ->
     let ty = lower_ty ty in
-    empty +> [ ins (Ret { srcs = [ src, ty ]; call_conv = X86_call_conv.c0 }) ]
+    empty
+    +> [ ins (Ret { srcs = [ st.hp_temp, I64; src, ty ]; call_conv = X86_call_conv.c0 }) ]
 ;;
 
-let lower_block st (block : Tir.Block.t) : Lir.Block.t =
+let lower_block st ~is_start_block (block : Tir.Block.t) : Lir.Block.t =
+  let st = { st with is_start_block } in
   let body =
     Arrayp.to_list (Tir.Block.instrs block)
     |> List.map ~f:(lower_instr st)
@@ -149,12 +164,19 @@ let lower_block st (block : Tir.Block.t) : Lir.Block.t =
 let lower_func (func : Tir.Func.t) : Lir.Func.t =
   let st = create_state func in
   let name = mangle_func_name func.name in
-  let blocks = func.blocks |> Map.map ~f:(lower_block st) in
+  let blocks =
+    func.blocks
+    |> Map.map ~f:(fun block ->
+      lower_block st ~is_start_block:(Label.equal block.label func.start) block)
+  in
   let start = func.start in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in
   let call_conv = X86_call_conv.c0 in
-  { name; blocks; start; next_temp_id; next_label_id; call_conv }
+  let func = { Lir.Func.name; blocks; start; next_temp_id; next_label_id; call_conv } in
+  let func = Lir.Convert_ssa.convert func in
+  Lir.Check.check func |> Or_error.ok_exn;
+  func
 ;;
 
 let lower_program (program : Tir.Program.t) : Lir.Program.t =

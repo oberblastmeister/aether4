@@ -41,7 +41,9 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
   match instr.i with
   | Unreachable -> empty +> [ ins Unreachable ]
   | Call { dsts; func; args; call_conv } ->
-    let dsts = List.map dsts ~f:(Tuple2.map_both ~f1:Fn.id ~f2:lower_ty) in
+    let dsts =
+      List.map dsts ~f:(Tuple2.map_both ~f1:Abs_x86.Location.temp ~f2:lower_ty)
+    in
     let args =
       List.map args ~f:(Tuple2.map_both ~f1:Abs_x86.Location.temp ~f2:lower_ty)
     in

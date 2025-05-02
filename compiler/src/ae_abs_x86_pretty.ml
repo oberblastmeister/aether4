@@ -97,7 +97,7 @@ let instr (t : Instr.t) =
        then []
        else [ Keyword "call_conv"; atom call_conv.name ])
     @ []
-    @ List.map ~f:(fun (dst, _ty) -> temp dst) dsts
+    @ List.map ~f:(fun (dst, _ty) -> location dst) dsts
     @ [ list ([ atom func ] @ List.map ~f:(fun (loc, _ty) -> location loc) args) ]
 ;;
 

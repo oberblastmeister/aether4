@@ -253,22 +253,21 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
   | Call { dsts; func; args; call_conv } ->
     let args_in_registers, args_rem = List.zip_with_remainder args call_conv.call_args in
     let reg_moves =
-      List.map args_in_registers ~f:(fun ((arg, ty), reg_expected) ->
-        match arg with
-        | Temp temp ->
-          let reg = get_temp st temp in
-          assert (Mach_reg.equal reg reg_expected);
-          empty
-        | _ ->
-          empty
-          +> [ ins
-                 (Mov
-                    { dst = Reg reg_expected
-                    ; src = lower_operand st (Abs_x86.Location.to_operand arg)
-                    ; size = ty
-                    })
-             ])
-      |> Bag.concat
+      let@: (arg, ty), reg_expected = List.map args_in_registers in
+      match arg with
+      | Temp temp ->
+        let reg = get_temp st temp in
+        assert (Mach_reg.equal reg reg_expected);
+        empty
+      | _ ->
+        empty
+        +> [ ins
+               (Mov
+                  { dst = Reg reg_expected
+                  ; src = lower_operand st (Abs_x86.Location.to_operand arg)
+                  ; size = ty
+                  })
+           ]
     in
     let stack_moves =
       match args_rem with
@@ -289,11 +288,28 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
       | Some (First _) -> todol [%here]
       | _ -> ()
     end;
-    begin
-      let@: (dst, _ty), reg_expected = List.iter dsts_in_registers in
-      assert (Mach_reg.equal (get_temp st dst) reg_expected)
-    end;
-    empty ++ stack_moves ++ reg_moves +> [ ins (Call func) ]
+    let dst_moves =
+      let@: (dst, ty), in_reg = List.map dsts_in_registers in
+      match dst with
+      | Temp temp ->
+        let reg = get_temp st temp in
+        assert (Mach_reg.equal reg in_reg);
+        empty
+      | _ ->
+        empty
+        +> [ ins
+               (Mov
+                  { dst = lower_operand st (Abs_x86.Location.to_operand dst)
+                  ; src = Reg in_reg
+                  ; size = ty
+                  })
+           ]
+    in
+    empty
+    ++ stack_moves
+    ++ Bag.concat reg_moves
+    +> [ ins (Call func) ]
+    ++ Bag.concat dst_moves
 ;;
 
 let lower_block st (block : Abs_x86.Block.t) : Flat_x86.Line.t Bag.t =

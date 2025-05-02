@@ -133,6 +133,8 @@ module Block_call = struct
     ; args : Location.t list
     }
   [@@deriving sexp_of, fields ~fields ~getters ~iterators:create]
+
+  let map_args t ~f = { label = t.label; args = f t.args }
 end
 
 module Cond_expr = struct
@@ -200,11 +202,11 @@ module Instr = struct
       The other args should be spilled by the instruction selector
     *)
     | Call of
-        { dsts : (Temp.t * Ty.t) list
+        { dsts : (Location.t * Ty.t) list
         ; func : string
         ; args : (Location.t * Ty.t) list
           (*
-            Important that we don't access call_conv.clobbers directly.
+             Important that we don't access call_conv.clobbers directly.
             Make sure to call iter_clobbers instead
           *)
         ; call_conv : Call_conv.t
@@ -237,7 +239,8 @@ module Instr = struct
       ()
     | Undefined { dst; size } -> on_def (dst, size)
     | Call { dsts; func = _; args; call_conv = _ } ->
-      List.iter dsts ~f:(fun (dst, size) -> on_def (Operand.Reg dst, size));
+      List.iter dsts ~f:(fun (loc, ty) ->
+        Location.iter_temp loc ~f:(fun temp -> on_def (Operand.Reg temp, ty)));
       (List.iter @> Fold.of_fn fst @> Location.iter_temp) args ~f:(fun temp ->
         on_use (Operand.Reg temp))
     | Block_params params ->
@@ -298,7 +301,9 @@ module Instr = struct
       let dst = map_temp dst ~f:on_def in
       Pop { dst; size }
     | Call p ->
-      let dsts = (List.map & Tuple2.map_fst) ~f:(map_temp ~f:on_def) p.dsts in
+      let dsts =
+        (List.map & Tuple2.map_fst & Location.map_temp) ~f:(map_temp ~f:on_def) p.dsts
+      in
       let args =
         (List.map & Tuple2.map_fst & Location.map_temp) p.args ~f:(map_temp ~f:on_use)
       in
@@ -408,7 +413,8 @@ module Instr = struct
         | Some (First _) -> todol [%here]
         | _ -> ()
       end;
-      List.iter t ~f;
+      List.iter t ~f:(fun (loc, mach_reg) ->
+        Location.iter_temp loc ~f:(fun temp -> f (temp, mach_reg)));
       ()
     | Bin { dst; op; src1 = _; src2 = _ } ->
       (match op with
@@ -542,6 +548,11 @@ module Instr = struct
     | _ -> false
   ;;
 
+  let is_jump = function
+    | Unreachable _ | Jump _ | Cond_jump _ -> true
+    | _ -> false
+  ;;
+
   let map_block_calls (instr : t) ~f =
     match instr with
     | Jump b -> Jump (f b)
@@ -551,6 +562,32 @@ module Instr = struct
       Cond_jump { cond; b1; b2 }
     | _ -> instr
   ;;
+
+  let map_location_use_defs (t : t) ~on_use ~on_def =
+    match t with
+    | Unreachable
+    | Block_params _
+    | Nop
+    | Mov _
+    | Undefined _
+    | Push _
+    | Pop _
+    | Mov_abs _
+    | Bin _ -> t
+    | Jump _ | Cond_jump _ ->
+      (map_block_calls & Block_call.map_args & List.map) t ~f:on_use
+    | Ret ({ srcs; call_conv = _ } as p) ->
+      let srcs = (List.map & Tuple2.map_fst) srcs ~f:on_use in
+      Ret { p with srcs }
+    | Call ({ args; func = _; dsts; call_conv = _ } as p) ->
+      let args = (List.map & Tuple2.map_fst) args ~f:on_use in
+      let dsts = (List.map & Tuple2.map_fst) dsts ~f:on_def in
+      Call { p with args; dsts }
+  ;;
+
+  let map_location_uses t ~f = map_location_use_defs t ~on_use:f ~on_def:Fn.id
+  let map_location_defs t ~f = map_location_use_defs t ~on_use:Fn.id ~on_def:f
+  let map_locations t ~f = map_location_use_defs t ~on_use:f ~on_def:f
 
   let iter_block_calls instr ~f =
     match instr with

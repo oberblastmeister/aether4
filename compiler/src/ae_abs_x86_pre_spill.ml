@@ -178,7 +178,6 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
     begin
       match instr'.i with
       | Block_params params ->
-        (* TODO: spill these in the proper places *)
         let temps =
           List.filter_map params ~f:(fun param ->
             Location.temp_val param.Block_param.param)
@@ -222,6 +221,7 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
         let `dsts dsts, `func func, `args args, `call_conv call_conv =
           Instr.call_val instr |> Option.value_exn
         in
+        if List.length dsts > List.length call_conv.return_regs then todol [%here];
         let new_args =
           (List.map & Tuple2.map_fst) args ~f:(function
             | Stack slot -> Location.Stack slot
@@ -238,31 +238,21 @@ let spill_block ~num_regs ~active_in ~next_use_out ~spiller ~edit (block : Block
             ~active_list
             ~next_uses:next_uses_here_out
             ~num_virtual_non_active:(List.length clobbers)
-            (List.map ~f:fst dsts)
+            (List.filter_map ~f:(fun (loc, _ty) -> Location.temp_val loc) dsts)
         in
         active := Temp.Set.of_list active_list
       | instr when Instr.is_control instr ->
-        (* for control instructions, set each non active temp to be a slot in the block_call *)
+        (* control instructions use locations because they use or define an unbounded number of temps *)
         let instr =
           begin
-            let@: block_call = Instr.map_block_calls instr in
-            let non_active_uses =
-              Instr.iter_uses instr
-              |> Iter.filter ~f:(fun temp -> not (Set.mem !active temp))
-              |> Iter.to_list
-            in
-            let temps_spilled =
-              List.map non_active_uses ~f:(fun temp -> temp, Spiller.spill spiller temp)
-              |> Temp.Map.of_alist_exn
-            in
-            let new_args =
-              List.map block_call.args ~f:(function
-                | Stack slot -> Location.Stack slot
-                | Temp temp as loc ->
-                  Map.find temps_spilled temp
-                  |> Option.value_map ~f:(fun (slot, _) -> Stack slot) ~default:loc)
-            in
-            { block_call with args = new_args }
+            let@: location = Instr.map_location_uses instr in
+            begin
+              match location with
+              | Temp temp when not (Set.mem !active temp) ->
+                let stack_address, _ = Spiller.spill spiller temp in
+                Location.Stack stack_address
+              | _ -> location
+            end
           end
         in
         Multi_edit.add_replace edit block.label { instr' with i = instr };

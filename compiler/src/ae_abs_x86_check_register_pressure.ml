@@ -14,8 +14,6 @@ open Std
 open Ae_abs_x86_types
 open Ae_trace
 
-
-
 let check_block ~num_regs ~live_out (block : Block.t) =
   let live_out_ref = ref live_out in
   begin
