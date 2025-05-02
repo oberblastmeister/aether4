@@ -86,11 +86,12 @@ let run_test path =
           let status = Core_unix.waitpid proc.pid in
           let in_channel = Core_unix.in_channel_of_descr fd_read in
           let output = in_channel |> In_channel.input_all in
-          In_channel.close in_channel;
           print_string output;
+          In_channel.close in_channel;
           status
         with
         | exn ->
+          print_string "exception when running process\n";
           Core_unix.close fd_read;
           Core_unix.close fd_write;
           raise exn

@@ -67,9 +67,19 @@ let link_files_with_runtime ~paths ~out_path =
     @ paths
     @ [ "-o"; out_path ]
   in
-  let child = Process.spawn ~prog:"zig" ~args in
+  let child =
+    Core_unix.create_process_with_fds
+      ~stdin:(Use_this Core_unix.stdin)
+      ~stdout:(Use_this Core_unix.stdout)
+      ~stderr:(Use_this Core_unix.stderr)
+      ~prog:"zig"
+      ~args
+      ~env:(`Extend [])
+      ()
+  in
   (* TODO: don't use wait_exn here *)
-  Process.Child.wait_exn child
+  Core_unix.waitpid_exn child.pid;
+  ()
 ;;
 
 let compile_source_to_tir ?(emit = []) source =
@@ -88,7 +98,6 @@ let compile_source_to_tir ?(emit = []) source =
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
   let tir = C0.Lower_tree_ir.lower_program program in
-  if Emit.mem emit Tir_non_ssa then print_s [%message "tir_non_ssa" (tir : Tir.Program.t)];
   let tir =
     (Tir.Program.map_funcs & List.map) ~f:(Tir.Convert_ssa.convert ~renumber:()) tir
   in

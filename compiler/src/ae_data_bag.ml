@@ -5,6 +5,7 @@ type 'a t =
   | Leaf of 'a
   | Append of 'a t * 'a t
   | List of 'a list
+  | Concat of 'a t list
 
 let append_list t l = Append (t, List l)
 let append t t' = Append (t, t')
@@ -18,12 +19,13 @@ let of_option = function
 let to_list builder =
   let rec go stack acc =
     match stack with
-    | t :: ts ->
+    | t :: stack ->
       (match t with
-       | Empty -> go ts acc
-       | Leaf x -> go ts (x :: acc)
-       | List xs -> go ts (List.rev_append xs acc)
-       | Append (t1, t2) -> go (t1 :: t2 :: ts) acc)
+       | Empty -> go stack acc
+       | Leaf x -> go stack (x :: acc)
+       | List xs -> go stack (List.rev_append xs acc)
+       | Append (t1, t2) -> go (t1 :: t2 :: stack) acc
+       | Concat ts -> go (List.append ts stack) acc)
     | [] -> acc
   in
   go [ builder ] [] |> List.rev
@@ -31,7 +33,7 @@ let to_list builder =
 
 let to_arrayp t = to_list t |> Arrayp.of_list
 let sexp_of_t f t = to_list t |> List.sexp_of_t f
-let concat ts = List.fold_left ~init:Empty ~f:append ts
+let concat ts = Concat ts
 
 let rec map t ~f =
   match t with
@@ -39,6 +41,7 @@ let rec map t ~f =
   | Leaf x -> Leaf (f x)
   | Append (l, r) -> Append (map l ~f, map r ~f)
   | List l -> List (List.map ~f l)
+  | Concat ts -> Concat (List.map ts ~f:(map ~f))
 ;;
 
 let empty = Empty

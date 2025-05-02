@@ -88,7 +88,22 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
      | Copy ty ->
        let dst = get_operand st dst in
        let src = get_operand st src in
-       empty +> [ ins (Mov { dst; src; size = lower_ty ty }) ])
+       empty +> [ ins (Mov { dst; src; size = lower_ty ty }) ]
+     | Load ty ->
+       let dst = get_operand st dst in
+       empty
+       +> [ ins (Mov { dst; src = Mem (Abs_x86.Address.create src); size = lower_ty ty })
+          ])
+  | Bin { dst; src1; op = Store ty; src2 } ->
+    empty
+    +> [ ins
+           (Mov
+              { dst = Mem (Abs_x86.Address.create src1)
+              ; src = Reg src2
+              ; size = lower_ty ty
+              })
+       ; ins (Undefined { dst = Reg dst; size = Qword })
+       ]
   | Bin { dst; src1; op; src2 } ->
     let dst = get_operand st dst in
     let src1 = get_operand st src1 in
@@ -110,6 +125,7 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
       | Eq ty -> Eq (lower_ty ty)
       | Lshift -> Lshift
       | Rshift -> Rshift
+      | Store _ -> assert false
     in
     empty +> [ ins (Bin { dst; src1; op; src2 }) ]
   | Ret { srcs; call_conv } ->

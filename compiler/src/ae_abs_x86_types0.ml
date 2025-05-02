@@ -10,10 +10,7 @@ module Temp = Ae_temp
 module Label = Ae_label
 module Mach_reg = Ae_x86_mach_reg
 module Stack_slot = Ae_stack_slot
-
-module Address = struct
-  type t = Temp.t Ae_x86_address.t [@@deriving sexp_of]
-end
+module Address = Ae_x86_address.Make (Temp)
 
 module Stack_address = struct
   type t =

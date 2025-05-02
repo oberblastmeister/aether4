@@ -94,6 +94,34 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
     module Map = Entity.Map.Make (T) *)
   end
 
+  module Blocks = struct
+    type t = Block.t Label.Map.t [@@deriving sexp_of]
+  end
+
+  module Linearized = struct
+    type instr = (Label.t, Instr'.t) Either.t [@@deriving sexp_of]
+    type t = instr list [@@deriving sexp_of]
+
+    let to_blocks_exn linear =
+      let rec split blocks_acc label block instrs =
+        match instrs with
+        | [] -> Block.create label (Arrayp.of_list_rev block) :: blocks_acc
+        | instr :: instrs -> begin
+          match instr with
+          | First new_label ->
+            let block = Block.create label (Arrayp.of_list_rev block) in
+            split (block :: blocks_acc) new_label [] instrs
+          | Second instr -> split blocks_acc label (instr :: block) instrs
+        end
+      in
+      let fail () = raise_s [%message "Didn't match format of linearized"] in
+      let%fail (First label :: rest) = linear in
+      split [] label [] rest
+      |> List.map ~f:(fun block -> block.label, block)
+      |> Label.Map.of_alist_exn
+    ;;
+  end
+
   module Adj_map = struct
     type t = Label.t list Label.Map.t
   end

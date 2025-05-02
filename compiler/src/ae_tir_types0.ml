@@ -18,6 +18,15 @@ module Ty = struct
     | Void
     | Pointer of t
   [@@deriving sexp_of, equal, compare]
+
+  let get_byte_size ty =
+    match ty with
+    | Int -> 8
+    | Bool -> 1
+    (* TODO: make this zero some time, so allocating Void will not allocate anything *)
+    | Void -> 1
+    | Pointer _ -> 8
+  ;;
 end
 
 module Bin_op = struct

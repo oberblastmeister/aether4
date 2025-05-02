@@ -30,6 +30,19 @@ type st =
 
 let get_temp t (temp : Abs_x86.Temp.t) = Mach_reg.of_enum_exn t.allocation.Temp.!(temp)
 
+let lower_address st (address : Abs_x86.Address.t) =
+  let base =
+    match address.base with
+    | Reg temp -> Flat_x86.Address.Base.Reg (get_temp st temp)
+  in
+  let index =
+    Option.map address.index ~f:(fun { index; scale } ->
+      { Flat_x86.Address.Index.index = get_temp st index; scale })
+  in
+  let offset = address.offset in
+  { Flat_x86.Address.base; index; offset }
+;;
+
 let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   match operand with
   | Imm i -> Imm i
@@ -37,14 +50,15 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
     match stack_addr with
     | Slot slot ->
       let offset = Frame_layout.resolve_frame_base_offset st.frame_layout slot in
-      Mem (Address.create Mach_reg.RBP offset)
+      Mem (Flat_x86.Address.create Mach_reg.RBP ~offset)
     | Previous_frame i ->
       (* -16 to skip over the pushed return address and pushed base pointer *)
-      Mem (Address.create Mach_reg.RBP (16 + Int.of_int32_exn i))
-    | Current_frame i -> Mem (Address.create Mach_reg.RSP (Int.of_int32_exn i))
+      Mem (Flat_x86.Address.create Mach_reg.RBP ~offset:(16 + Int.of_int32_exn i))
+    | Current_frame i ->
+      Mem (Flat_x86.Address.create Mach_reg.RSP ~offset:(Int.of_int32_exn i))
   end
   | Reg temp -> Reg (get_temp st temp)
-  | Mem _ -> todol [%here]
+  | Mem address -> Mem (lower_address st address)
 ;;
 
 let prologue ?info stack_size =
@@ -361,8 +375,14 @@ let pop_callee_saved =
 ;;
 
 let c0_main_export_instructions =
+  let fail () = assert false in
+  let%fail (arg1_reg :: arg2_reg :: _) = X86_call_conv.c0.call_args in
   Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
   @ push_callee_saved
+  @ Flat_x86.Line.
+      [ Instr { i = Mov { dst = Reg arg1_reg; src = Reg RDI; size = Qword }; info = None }
+      ; Instr { i = Mov { dst = Reg arg2_reg; src = Reg RSI; size = Qword }; info = None }
+      ]
   @ [ Flat_x86.Line.Instr { i = Call "_c0_main"; info = None } ]
   @ pop_callee_saved
   @ [ Flat_x86.Line.Instr { i = Ret; info = None } ]

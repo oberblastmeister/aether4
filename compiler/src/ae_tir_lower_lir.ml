@@ -9,29 +9,34 @@ open Bag.Syntax
 open Ae_trace
 
 let empty = Bag.empty
-let ins = Lir.Instr'.create_unindexed
+let label l = First l
+let ins ?ann ?info i = Second (Lir.Instr'.create_unindexed ?ann ?info i)
 
 type st =
   { temp_gen : Temp.Id_gen.t
   ; label_gen : Label.Id_gen.t
   ; cx_temp : Temp.t
   ; hp_temp : Temp.t
-  ; is_start_block : bool
   }
 
-type instrs = Lir.Instr'.t Bag.t
+type instrs = Lir.Linearized.instr Bag.t
 
 let create_state func =
   let temp_gen = Tir.Func.create_temp_gen func in
   let label_gen = Tir.Func.create_label_gen func in
   let hp_temp = Temp.fresh ~name:"HP" temp_gen in
   let cx_temp = Temp.fresh ~name:"CX" temp_gen in
-  { temp_gen; label_gen; cx_temp; hp_temp; is_start_block = false }
+  { temp_gen; label_gen; cx_temp; hp_temp }
 ;;
 
 let fresh_temp ?(name = "fresh") ?info t : Lir.Temp.t =
   let id = Temp.Id_gen.get t.temp_gen in
   Temp.create ?info name id
+;;
+
+let fresh_label ?(name = "fresh") ?info t : Label.t =
+  let id = Label.Id_gen.get t.label_gen in
+  Label.create ?info name id
 ;;
 
 let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
@@ -79,7 +84,7 @@ let lower_call st ~dsts ~func ~args ~is_extern =
   empty +> [ ins (Call { dsts; func; args; call_conv }) ]
 ;;
 
-let lower_instr st (instr : Tir.Instr'.t) : instrs =
+let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
@@ -95,7 +100,7 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
     empty +> [ ins (Cond_jump { cond; b1; b2 }) ]
   | Block_params temps ->
     let temps =
-      (if st.is_start_block
+      (if is_start_block
        then
          [ { Tir.Block_param.param = st.cx_temp; ty = Int }
          ; { param = st.hp_temp; ty = Int }
@@ -124,11 +129,51 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
       in
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
     | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
-    | Alloc ty -> todol [%here]
+    | Alloc ty ->
+      let size = Tir.Ty.get_byte_size ty in
+      let size_temp = fresh_temp ~name:"size" st in
+      let alloc_succeed_label = fresh_label ~name:"alloc_suceeed" st in
+      let alloc_fail_label = fresh_label ~name:"alloc_fail" st in
+      let alloc_join_label = fresh_label ~name:"alloc_join_label" st in
+      let hp_lim = fresh_temp ~name:"HP_LIM" st in
+      let hp_cmp = fresh_temp ~name:"hp_cmp" st in
+      let new_hp = fresh_temp ~name:"new_hp" st in
+      empty
+      +> [ ins
+             (Nullary
+                { dst = size_temp
+                ; op = Int_const { const = Int64.of_int size; ty = I64 }
+                })
+         ; ins (Bin { dst = new_hp; op = Add; src1 = st.hp_temp; src2 = size_temp })
+         ; ins (Unary { dst = hp_lim; op = Load I64; src = st.cx_temp })
+         ; ins (Bin { dst = hp_cmp; op = Le; src1 = new_hp; src2 = hp_lim })
+         ; ins
+             (Cond_jump
+                { cond = hp_cmp
+                ; b1 = { label = alloc_succeed_label; args = [] }
+                ; b2 = { label = alloc_fail_label; args = [] }
+                })
+         ; label alloc_succeed_label (* set the result temporary *)
+         ; ins (Unary { dst; op = Copy I64; src = st.hp_temp })
+         ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
+         ; ins (Jump { label = alloc_join_label; args = [] })
+         ; label alloc_fail_label (* we have to define dst so it is in strict ssa form *)
+         ; ins (Nullary { dst; op = Undefined I64 })
+         ; ins
+             (Call
+                { dsts = []
+                ; func = "c0_runtime_alloc_fail"
+                ; args = []
+                ; call_conv = X86_call_conv.sysv
+                })
+         ; ins Unreachable
+         ; label alloc_join_label
+         ]
   end
-  | Unary { dst; op; src } ->
-    (match op with
-     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ])
+  | Unary { dst; op; src } -> begin
+    match op with
+    | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ]
+  end
   | Bin { dst; op; src1; src2 } ->
     let op = lower_bin_op op in
     let instr = ins (Bin { dst; op; src1; src2 }) in
@@ -150,25 +195,28 @@ let lower_instr st (instr : Tir.Instr'.t) : instrs =
     +> [ ins (Ret { srcs = [ st.hp_temp, I64; src, ty ]; call_conv = X86_call_conv.c0 }) ]
 ;;
 
-let lower_block st ~is_start_block (block : Tir.Block.t) : Lir.Block.t =
-  let st = { st with is_start_block } in
-  let body =
+let lower_block st ~is_start_block (block : Tir.Block.t) : instrs =
+  let instrs =
     Arrayp.to_list (Tir.Block.instrs block)
-    |> List.map ~f:(lower_instr st)
+    |> List.map ~f:(lower_instr st ~is_start_block)
     |> Bag.concat
-    |> Bag.to_arrayp
   in
-  Lir.Block.create block.label body
+  empty +> [ First block.label ] ++ instrs
 ;;
 
 let lower_func (func : Tir.Func.t) : Lir.Func.t =
   let st = create_state func in
   let name = mangle_func_name func.name in
-  let blocks =
+  let linearized =
     func.blocks
-    |> Map.map ~f:(fun block ->
+    |> Map.to_alist
+    |> List.map ~f:snd
+    |> List.map ~f:(fun block ->
       lower_block st ~is_start_block:(Label.equal block.label func.start) block)
+    |> Bag.concat
+    |> Bag.to_list
   in
+  let blocks = Lir.Linearized.to_blocks_exn linearized in
   let start = func.start in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in

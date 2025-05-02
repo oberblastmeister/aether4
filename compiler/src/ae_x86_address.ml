@@ -1,38 +1,50 @@
 open Std
 
-let ( @> ) = Fold.( @> )
+open struct
+  module Ty = Ae_x86_ty
+end
 
-module Index = struct
-  type 'r t =
-    { index : 'r
-    ; scale : int
+module Make (Temp : sig
+    type t [@@deriving sexp_of, equal]
+  end) =
+struct
+  module Index = struct
+    type t =
+      { index : Temp.t
+      ; scale : int
+      }
+    [@@deriving sexp_of, equal]
+
+    let create index scale = { index; scale }
+    let iter_uses { index; scale = _ } ~f = f index
+  end
+
+  module Base = struct
+    type t = Reg of Temp.t [@@deriving sexp_of, variants, equal]
+
+    let iter_temps base ~f =
+      match base with
+      | Reg r -> f r
+    ;;
+  end
+
+  type t =
+    { base : Base.t
+    ; index : Index.t option
+    ; offset : int
     }
   [@@deriving sexp_of, equal]
 
-  let create index scale = { index; scale }
-  let iter_regs { index; scale = _ } ~f = f index
-end
+  let create ?index ?(offset = 0) base = { base = Base.reg base; index; offset }
 
-module Base = struct
-  type 'r t = Reg of 'r [@@deriving sexp_of, variants, equal]
+  let iter_uses_with_ty { base; index; offset = _ } ~f =
+    Base.iter_temps base ~f:(fun temp -> f (temp, Ty.Qword));
+    (Option.iter @> Index.iter_uses) index ~f:(fun temp -> f (temp, Ty.Qword));
+    ()
+  ;;
 
-  let iter_regs base ~f =
-    match base with
-    | Reg r -> f r
+  let iter_uses t ~f =
+    iter_uses_with_ty t |> Iter.map ~f:fst ~f;
+    ()
   ;;
 end
-
-type 'r t =
-  { base : 'r Base.t
-  ; index : 'r Index.t option
-  ; offset : int
-  }
-[@@deriving sexp_of, equal]
-
-let create base ?index offset = { base = Base.reg base; index; offset }
-
-let iter_regs { base; index; offset = _ } ~f =
-  Base.iter_regs base ~f;
-  (Option.iter @> Index.iter_regs) index ~f;
-  ()
-;;

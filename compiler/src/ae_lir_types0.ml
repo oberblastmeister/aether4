@@ -14,6 +14,11 @@ module Ty = struct
     | I64
     | I1
   [@@deriving sexp_of, equal, compare]
+
+  let get_byte_size = function
+    | I64 -> 8
+    | I1 -> 1
+  ;;
 end
 
 (* TODO: change this to use one mega Prim op type *)
@@ -34,11 +39,15 @@ module Bin_op = struct
     | Eq of Ty.t
     | Lshift
     | Rshift
+    | Store of Ty.t
   [@@deriving sexp_of]
 end
 
 module Unary_op = struct
-  type t = Copy of Ty.t [@@deriving sexp_of]
+  type t =
+    | Copy of Ty.t
+    | Load of Ty.t
+  [@@deriving sexp_of]
 end
 
 module Nullary_op = struct
@@ -152,17 +161,22 @@ module Instr = struct
       List.iter args ~f;
       ()
     | Bin { dst = _; op; src1; src2 } ->
-      let ty : Ty.t =
+      let (ty1 : Ty.t), (ty2 : Ty.t) =
         match op with
-        | Add | Sub | Mul | Div | Mod | Lshift | Rshift | Lt | Gt | Le | Ge -> I64
-        | And ty | Or ty | Xor ty | Eq ty -> ty
+        | Add | Sub | Mul | Div | Mod | Lshift | Rshift | Lt | Gt | Le | Ge -> I64, I64
+        | And ty | Or ty | Xor ty | Eq ty -> ty, ty
+        | Store ty -> I64, ty
       in
-      f (src1, ty);
-      f (src2, ty);
+      f (src1, ty1);
+      f (src2, ty2);
       ()
     | Unary { dst = _; op; src } ->
-      (match op with
-       | Copy ty -> f (src, ty));
+      let ty =
+        match op with
+        | Copy ty -> ty
+        | Load _ -> I64
+      in
+      f (src, ty);
       ()
     | Nullary { dst = _; op = _ } -> ()
     | Jump _b -> ()
@@ -188,11 +202,17 @@ module Instr = struct
         | And ty | Or ty | Xor ty -> ty
         | Add | Sub | Mul | Div | Mod | Lshift | Rshift -> I64
         | Eq _ | Lt | Gt | Le | Ge -> I1
+        (* dst undefined *)
+        | Store _ -> I64
       in
       f (dst, ty)
     | Unary { dst; op; src = _ } ->
-      (match op with
-       | Copy ty -> f (dst, ty));
+      let ty =
+        match op with
+        | Copy ty -> ty
+        | Load ty -> ty
+      in
+      f (dst, ty);
       ()
     | Nullary { dst; op = Int_const { const = _; ty } | Undefined ty } ->
       f (dst, ty);

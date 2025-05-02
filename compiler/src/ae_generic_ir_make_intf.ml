@@ -56,6 +56,17 @@ module type S = sig
     module Map : Entity.Map.S with type 'w Key.t = t *)
   end
 
+  module Blocks : sig
+    type t = Block.t Label.Map.t [@@deriving sexp_of]
+  end
+
+  module Linearized : sig
+    type instr = (Label.t, Instr'.t) Either.t [@@deriving sexp_of]
+    type t = (Label.t, Instr'.t) Either.t list [@@deriving sexp_of]
+
+    val to_blocks_exn : t -> Blocks.t
+  end
+
   module Adj_map : sig
     type t = Label.t list Label.Map.t
   end

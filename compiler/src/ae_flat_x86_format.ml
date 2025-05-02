@@ -90,7 +90,7 @@ let string_of_mach_reg : Ty.t -> _ = function
   | Qword -> string_of_reg64
 ;;
 
-let format_addr_base (base : _ Ae_x86_address.Base.t) =
+let format_addr_base (base : Address.Base.t) =
   match base with
   | Reg r -> "%" ^ string_of_reg64 r
 ;;

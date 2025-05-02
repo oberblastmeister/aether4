@@ -1,16 +1,11 @@
 open Std
 
 open struct
-  
   module Condition_code = Ae_x86_condition_code
 end
 
 module Mach_reg = Ae_x86_mach_reg
-
-module Address = struct
-  type t = Mach_reg.t Ae_x86_address.t [@@deriving sexp_of, equal]
-end
-
+module Address = Ae_x86_address.Make (Mach_reg)
 module Ty = Ae_x86_ty
 
 module Operand = struct
@@ -18,7 +13,7 @@ module Operand = struct
     | Imm of Int32.t
     | Reg of Mach_reg.t
     | Mem of Address.t
-  [@@deriving sexp_of, equal, variants]
+  [@@deriving sexp_of, variants, equal]
 end
 
 module Instr = struct

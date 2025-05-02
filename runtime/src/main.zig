@@ -1,6 +1,13 @@
 const std = @import("std");
 
-extern fn c0_main_export() void;
+const Context = extern struct {
+    hp_lim: *anyopaque,
+    sp_lim: *anyopaque,
+};
+
+// first argument is CX pointer.
+// second argument is HP pointer.
+extern fn c0_main_export(*Context, *anyopaque) void;
 
 export fn c0_panic() void {
     @panic("Panic!");
@@ -20,7 +27,29 @@ export fn c0_runtime_print_bool(b: bool) void {
     std.debug.print("{}\n", .{b});
 }
 
-export fn main() void {
-    c0_main_export();
-    std.process.exit(0);
+export fn c0_runtime_alloc_fail() void {
+    std.debug.panic("Failed to allocate memory", .{});
+}
+
+export fn c0_runtime_deref_fail() void {
+    std.debug.panic("Failed to dereference pointer", .{});
+}
+
+fn run() !void {
+    var act = std.os.linux.Sigaction{
+        .handler = .{ .handler = std.os.linux.SIG.DFL },
+        .mask = std.os.linux.empty_sigset,
+        .flags = 0,
+    };
+    // override the default zig sigfpe handler
+    _ = std.os.linux.sigaction(std.os.linux.SIG.FPE, &act, null);
+    const allocator = std.heap.page_allocator;
+    const HP = try allocator.alloc(u8, 1024 * 1024);
+    defer allocator.free(HP);
+    var context = Context{ .hp_lim = HP[HP.len..].ptr, .sp_lim = undefined };
+    c0_main_export(&context, HP.ptr);
+}
+
+pub fn main() !void {
+    try run();
 }

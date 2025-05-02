@@ -11,7 +11,8 @@
    ppx_jane
    ppx_deriving.enum
    -log-source-position
-   ppx_partial))
+   ppx_partial
+   ppx_pattern))
  (libraries
   parsec
   sexp_lang
