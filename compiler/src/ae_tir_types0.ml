@@ -46,7 +46,27 @@ module Bin_op = struct
     | Eq of Ty.t
     | Lshift
     | Rshift
+    | Store of Ty.t
   [@@deriving sexp_of]
+end
+
+module Place = struct
+  type t = | [@@deriving sexp_of]
+
+  let iter_uses (t : t) =
+    match t with
+    | _ -> .
+  ;;
+
+  let map_uses (t : t) =
+    match t with
+    | _ -> .
+  ;;
+
+  let iter_uses_with_known_ty (t : t) =
+    match t with
+    | _ -> .
+  ;;
 end
 
 module Unary_op = struct
@@ -128,6 +148,12 @@ module Instr = struct
         ; args : (Temp.t * Ty.t) list
         ; is_extern : bool
         }
+    | Getelementptr of
+        { dst : Temp.t
+        ; src : Temp.t (* this is the inner type of the source pointer *)
+        ; ty : Ty.t
+        ; places : Place.t list
+        }
     | Unreachable
   [@@deriving sexp_of, variants]
 
@@ -148,6 +174,10 @@ module Instr = struct
   let iter_uses (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
+    | Getelementptr { dst = _; src; places; ty = _ } ->
+      f src;
+      (List.iter @> Place.iter_uses) places ~f;
+      ()
     | Call { args; _ } -> (List.iter @> Fold.of_fn fst) args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
@@ -176,7 +206,14 @@ module Instr = struct
   let iter_uses_with_known_ty (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
+    | Getelementptr { dst = _; src; ty; places } ->
+      f (src, ty);
+      (List.iter @> Place.iter_uses_with_known_ty) places ~f;
+      ()
     | Call _ -> ()
+    | Bin { dst = _; op = Store ty; src1; src2 } ->
+      f (src1, Pointer ty);
+      f (src2, ty)
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
         match op with
@@ -195,6 +232,7 @@ module Instr = struct
         | Le
         | Ge -> Int
         | Eq ty -> ty
+        | Store _ -> assert false
       in
       f (src1, ty);
       f (src2, ty);
@@ -228,6 +266,9 @@ module Instr = struct
   let iter_defs_with_ty t ~f =
     match t with
     | Block_params params -> (List.iter @> Fold.of_fn Block_param.to_tuple2) params ~f
+    | Getelementptr { dst; src = _; places; ty } ->
+      if not (List.is_empty places) then todol [%here];
+      f (dst, ty)
     | Nary { dst; op; srcs = _ } -> begin
       match op with
       | C0_runtime_assert -> f (dst, Void)
@@ -241,6 +282,7 @@ module Instr = struct
         match op with
         | Add | Sub | Mul | Div | Mod | And | Or | Xor | Lshift | Rshift -> Int
         | Eq _ | Lt | Gt | Le | Ge -> Bool
+        | Store _ -> Void
       in
       f (dst, ty)
     | Unary { dst; op; src = _ } -> begin
@@ -270,6 +312,10 @@ module Instr = struct
   let map_uses (instr : t) ~f =
     match instr with
     | Unreachable -> Unreachable
+    | Getelementptr ({ dst = _; src; places; ty = _ } as p) ->
+      let src = f src in
+      let places = (List.map & Place.map_uses) places ~f in
+      Getelementptr { p with src; places }
     | Nop -> Nop
     | Block_params _ -> instr
     | Call p ->
@@ -302,6 +348,9 @@ module Instr = struct
   let map_defs (instr : t) ~f =
     match instr with
     | Unreachable -> Unreachable
+    | Getelementptr ({ dst; _ } as p) ->
+      let dst = f dst in
+      Getelementptr { p with dst }
     | Block_params params ->
       Block_params ((List.map & Traverse.of_field Block_param.Fields.param) params ~f)
     | Nop -> Nop

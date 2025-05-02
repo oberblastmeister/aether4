@@ -154,8 +154,9 @@ let%expect_test "simple control flow" =
                (Block
                 ((block
                   ((Assign
-                    ((lvalue ((t another) (span 5:9-16))) (op Id_assign)
-                     (expr (Int_const ((t 1243) (span 5:19-23)))) (span 5:9-23)))))
+                    ((lvalue (Lvalue_var ((t another) (span 5:9-16))))
+                     (op Id_assign) (expr (Int_const ((t 1243) (span 5:19-23))))
+                     (span 5:9-23)))))
                  (span [4,14]-[6,8]))))
               (body2 ()) (span [4,7]-[6,8]))))
            (span [2,16]-[7,6]))))
@@ -180,13 +181,13 @@ let%expect_test "simple assign" =
         (body
          (((block
             ((Assign
-              ((lvalue ((t first) (span 3:9-14))) (op Mul_assign)
+              ((lvalue (Lvalue_var ((t first) (span 3:9-14)))) (op Mul_assign)
                (expr
                 (Bin (lhs (Int_const ((t 12) (span 3:18-20)))) (op Add)
                  (rhs (Int_const ((t 12) (span 3:23-25)))) (span 3:18-25)))
                (span 3:9-25)))
              (Assign
-              ((lvalue ((t another) (span 4:11-18))) (op Mod_assign)
+              ((lvalue (Lvalue_var ((t another) (span 4:11-18)))) (op Mod_assign)
                (expr
                 (Bin (lhs (Int_const ((t 12) (span 4:24-26)))) (op Div)
                  (rhs (Int_const ((t 12) (span 4:29-31)))) (span 4:24-31)))

@@ -77,7 +77,13 @@ and assign =
   }
 [@@deriving sexp_of]
 
-and lvalue = var [@@deriving sexp_of]
+and lvalue =
+  | Lvalue_var of var
+  | Lvalue_deref of
+      { lvalue : lvalue
+      ; span : Span.t
+      }
+[@@deriving sexp_of]
 
 and assign_op =
   | Id_assign
@@ -213,6 +219,12 @@ let stmt_span (stmt : stmt) =
 let ty_span (ty : ty) =
   match ty with
   | Bool span | Int span | Void span | Pointer { span; _ } | Ty_var { span; _ } -> span
+;;
+
+let lvalue_span (lvalue : lvalue) =
+  match lvalue with
+  | Lvalue_var { span; _ } -> span
+  | Lvalue_deref { span; _ } -> span
 ;;
 
 let var v = Var v

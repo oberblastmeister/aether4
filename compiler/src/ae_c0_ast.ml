@@ -71,7 +71,18 @@ type stmt =
       }
 [@@deriving sexp_of]
 
-and lvalue = var [@@deriving sexp_of]
+and lvalue =
+  | Lvalue_var of
+      { var : var
+      ; ty : ty option
+      }
+  | Lvalue_deref of
+      { lvalue : lvalue
+      ; span : Span.t
+      ; ty : ty option
+      }
+[@@deriving sexp_of]
+
 and block = stmt list [@@deriving sexp_of]
 and nullary_op = Alloc of ty
 and unary_op = Deref
@@ -204,6 +215,18 @@ let expr_ty_exn = function
   | Unary { ty; _ } -> Option.value_exn ty
 ;;
 
+let lvalue_span (lvalue : lvalue) =
+  match lvalue with
+  | Lvalue_var { var = { span; _ }; _ } -> span
+  | Lvalue_deref { span; _ } -> span
+;;
+
+let lvalue_ty_exn (lvalue : lvalue) =
+  match lvalue with
+  | Lvalue_var { ty; _ } -> Option.value_exn ty
+  | Lvalue_deref { ty; _ } -> Option.value_exn ty
+;;
+
 let nop_stmt span = Block { block = []; span }
 
 let get_func_ty_map program =
@@ -214,4 +237,11 @@ let get_func_ty_map program =
     | Func_defn ({ name; _ } as defn) -> Some (name, func_defn_to_ty defn)
     | Typedef _ -> None)
   |> Var.Map.of_alist_exn
+;;
+
+let rec lvalue_to_expr lvalue : expr =
+  match lvalue with
+  | Lvalue_var { var; ty } -> Var { var; ty }
+  | Lvalue_deref { lvalue; span; ty } ->
+    Unary { expr = lvalue_to_expr lvalue; op = Deref; span; ty }
 ;;

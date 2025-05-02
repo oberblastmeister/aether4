@@ -338,7 +338,7 @@ and parse_post env : Cst.stmt =
   let open Span.Syntax in
   let lvalue = parse_lvalue env in
   let op = parse_post_op env in
-  Cst.Post { lvalue; op = op.t; span = lvalue.span ++ op.span }
+  Cst.Post { lvalue; op = op.t; span = Cst.lvalue_span lvalue ++ op.span }
 
 and parse_post_op env : Cst.post_op Spanned.t =
   ((Parser.map & Spanned.map) (expect_eq PlusPlus) ~f:(Fn.const Cst.Incr)
@@ -350,7 +350,7 @@ and parse_assign env : Cst.stmt =
   let lvalue = parse_lvalue env in
   let op = parse_assign_op env in
   let expr = parse_expr env in
-  Cst.Assign { lvalue; op; expr; span = lvalue.span ++ Cst.expr_span expr }
+  Cst.Assign { lvalue; op; expr; span = Cst.lvalue_span lvalue ++ Cst.expr_span expr }
 
 and parse_assign_op env : Cst.assign_op =
   (Cst.Mul_assign
@@ -373,7 +373,11 @@ and parse_lvalue env : Cst.lvalue =
      let lvalue = parse_lvalue env in
      expect_eq_ RParen env;
      lvalue)
-   <|> parse_ident)
+   <|> (fun env ->
+   let star = expect_eq Star env in
+   let lvalue = parse_lvalue env in
+   Lvalue_deref { lvalue; span = Span.Syntax.(star.span ++ Cst.lvalue_span lvalue) })
+   <|> ((fun v -> Cst.Lvalue_var v) <$> parse_ident))
     env
 
 and parse_expr env : Cst.expr =
@@ -479,10 +483,9 @@ and parse_unary_expr env : Cst.expr =
    let expr = parse_unary_expr env in
    Cst.Unary { op = Bit_not; expr; span = tilde.span ++ Cst.expr_span expr })
    <|> (fun env ->
-     let star = expect_eq Star env in
-     let expr = parse_unary_expr env in
-     Cst.Unary { op = Deref; expr; span = star.span ++ Cst.expr_span expr}
-   )
+   let star = expect_eq Star env in
+   let expr = parse_unary_expr env in
+   Cst.Unary { op = Deref; expr; span = star.span ++ Cst.expr_span expr })
    <|> (fun env ->
    let bang = expect_eq Bang env in
    let expr = parse_unary_expr env in

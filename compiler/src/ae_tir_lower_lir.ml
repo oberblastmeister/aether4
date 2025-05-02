@@ -64,6 +64,7 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Eq ty -> Eq (lower_ty ty)
   | Lshift -> Lshift
   | Rshift -> Rshift
+  | Store ty -> Store (lower_ty ty)
 ;;
 
 let lower_block_call (b : Tir.Block_call.t) : Lir.Block_call.t =
@@ -195,6 +196,7 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
         ~is_extern:true
     | C0_runtime_assert, _ -> raise_s [%message "Invalid operation configuration"]
   end
+  | Getelementptr _ -> todol [%here]
   | Ret { src; ty } ->
     let ty = lower_ty ty in
     empty

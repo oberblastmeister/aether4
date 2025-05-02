@@ -56,6 +56,26 @@ let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
     throw_s [%message "Types were not equal" (span : Span.t) (ty : Ast.ty) (ty' : Ast.ty)]
 ;;
 
+let check_ty_is_pointer st (ty : Ast.ty) span =
+  match ty with
+  | Pointer _ -> ()
+  | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
+;;
+
+let rec infer_lvalue st (lvalue : Ast.lvalue) : Ast.lvalue =
+  match lvalue with
+  | Lvalue_var ({ var; ty = _ } as p) ->
+    let ty = var_ty st var in
+    Lvalue_var { p with ty = Some ty }
+  | Lvalue_deref ({ lvalue; span; ty = _ } as p) ->
+    let lvalue = infer_lvalue st lvalue in
+    let ty = Ast.lvalue_ty_exn lvalue in
+    check_ty_is_pointer st ty span;
+    let fail () = assert false in
+    let%fail (Pointer { ty; _ }) = ty in
+    Lvalue_deref { p with lvalue; ty = Some ty }
+;;
+
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Var { var; ty = _ } -> Var { var; ty = Some (var_ty st var) }
@@ -111,9 +131,9 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
 and check_expr_pointer st (expr : Ast.expr) =
   let expr = infer_expr st expr in
   let span = Ast.expr_span expr in
-  match Ast.expr_ty_exn expr with
-  | Pointer _ -> expr
-  | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
+  let ty = Ast.expr_ty_exn expr in
+  check_ty_is_pointer st ty (Ast.expr_span expr);
+  expr
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in
@@ -149,7 +169,8 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
     Assert { expr; span }
   | Declare _ -> stmt
   | Assign { lvalue; expr; span } ->
-    let ty = infer_expr st (Var { var = lvalue; ty = None }) |> Ast.expr_ty_exn in
+    let lvalue = infer_lvalue st lvalue in
+    let ty = Ast.lvalue_ty_exn lvalue in
     let expr = check_expr st expr ty in
     Assign { lvalue; expr; span }
 

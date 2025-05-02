@@ -107,31 +107,18 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
     Pointer { ty; span }
 ;;
 
+let rec elab_lvalue st (lvalue : Cst.lvalue) : Ast.lvalue =
+  match lvalue with
+  | Lvalue_var var -> Lvalue_var { var = elab_var st var; ty = None }
+  | Lvalue_deref { lvalue; span } ->
+    Lvalue_deref { lvalue = elab_lvalue st lvalue; span; ty = None }
+;;
+
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
   | Assert { expr; span } ->
     let expr = elab_expr st expr in
     empty +> [ Ast.Assert { expr; span } ], st
-    (* let expr = elab_expr st expr in
-    let c0_runtime_assert_var = elab_func_var st (Spanned.none "c0_runtime_assert") in
-    let stmts =
-      let int i = Ast.Int_const (Spanned.none (Int64.of_int_exn i)) in
-      [ Ast.Effect
-          (Call
-             { func = c0_runtime_assert_var
-             ; args =
-                 [ expr
-                 ; int span.start.line
-                 ; int span.start.col
-                 ; int span.stop.line
-                 ; int span.stop.col
-                 ]
-             ; ty = None
-             ; span
-             })
-      ]
-    in
-    empty +> stmts, st *)
   | Decl { ty; names; expr; span } ->
     let st_ref = ref st in
     if List.length names > 1 && Option.is_some expr
@@ -154,9 +141,13 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
           empty
           +> Ast.
                [ Declare { ty; var = tmp; span }
-               ; Assign { lvalue = tmp; expr; span }
+               ; Assign { lvalue = Lvalue_var { var = tmp; ty = None }; expr; span }
                ; Declare { ty; var; span }
-               ; Assign { lvalue = var; expr = Var { var = tmp; ty = None }; span }
+               ; Assign
+                   { lvalue = Lvalue_var { var; ty = None }
+                   ; expr = Var { var = tmp; ty = None }
+                   ; span
+                   }
                ]
       in
       st_ref := st';
@@ -166,7 +157,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   | Block { block; span } ->
     (empty +> Ast.[ Block { block = elab_block st block; span } ]), st
   | Post { lvalue; op; span } ->
-    let lvalue = elab_var st lvalue in
+    let lvalue = elab_lvalue st lvalue in
     let expr =
       match op with
       | Incr -> Ast.Int_const { t = 1L; span }
@@ -179,7 +170,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
                { lvalue
                ; expr =
                    Bin
-                     { lhs = Var { var = lvalue; ty = None }
+                     { lhs = Ast.lvalue_to_expr lvalue
                      ; op = Add
                      ; rhs = expr
                      ; ty = None
@@ -195,9 +186,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     (empty +> Ast.[ Effect e ]), st
   | Assign { lvalue; op; expr; span } ->
     let expr = elab_expr st expr in
-    let lvalue = elab_var st lvalue in
+    let lvalue = elab_lvalue st lvalue in
     let bin_expr op =
-      Ast.(Bin { lhs = Var { var = lvalue; ty = None }; op; rhs = expr; ty = None; span })
+      Ast.(Bin { lhs = Ast.lvalue_to_expr lvalue; op; rhs = expr; ty = None; span })
     in
     let expr =
       match op with

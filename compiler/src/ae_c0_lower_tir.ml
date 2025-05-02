@@ -117,6 +117,18 @@ and add_cond_jump ?info st cont cond_temp body1 body2 =
          (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label })
      ]
 
+(* returns the address of the lvalue *)
+and lower_lvalue st cont dst (lvalue : Ast.lvalue) =
+  match lvalue with
+  | Lvalue_var { var; ty } ->
+    let ty = Option.value_exn ty |> lower_ty st in
+    empty +> [ ins (Unary { dst; op = Copy ty; src = var_temp st var }) ] ++ cont
+  | Lvalue_deref { lvalue; span; ty } ->
+    let ty = Option.value_exn ty |> lower_ty st in
+    let addr_temp = fresh_temp ~name:"lvalue_address" st in
+    let cont = empty +> [ ins (Unary { dst; op = Deref ty; src = addr_temp }) ] ++ cont in
+    lower_lvalue st cont addr_temp lvalue
+
 (* invariant:
 
   `lower_stmt st cont stmt`
@@ -132,9 +144,23 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
   | Declare { ty = _; var; span = _ } ->
     let _ = var_temp st var in
     empty ++ cont
-  | Assign { lvalue; expr; span = _ } ->
-    let temp = var_temp st lvalue in
+  | Assign { lvalue = Lvalue_var { var; ty }; expr; span = _ } ->
+    let temp = var_temp st var in
     lower_expr st cont temp expr
+  | Assign { lvalue = Lvalue_deref { lvalue; span = _; ty }; expr; span = _ } ->
+    let ty = Option.value_exn ty |> lower_ty st in
+    let addr_temp = fresh_temp ~name:"lvalue_address" st in
+    let garbage_temp = fresh_temp ~name:"garbage" st in
+    let expr_dst = fresh_temp ~name:"store_expr" st in
+    let cont =
+      empty
+      +> [ ins
+             (Bin { dst = garbage_temp; op = Store ty; src1 = addr_temp; src2 = expr_dst })
+         ]
+      ++ cont
+    in
+    let cont = lower_expr st cont expr_dst expr in
+    lower_lvalue st cont addr_temp lvalue
   | Block { block; span = _ } -> lower_block st cont block
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in

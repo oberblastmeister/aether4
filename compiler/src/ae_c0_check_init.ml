@@ -1,5 +1,6 @@
 (* TODO: reformulate this as a forward analysis *)
 open Std
+open Ae_trace
 module Ast = Ae_c0_ast
 
 exception Exn of Sexp.t
@@ -38,7 +39,15 @@ and iter_expr_uses (expr : Ast.expr) ~f =
     (List.iter @> iter_expr_uses) args ~f;
     ()
 
+and iter_lvalue_uses (lvalue : Ast.lvalue) ~f =
+  match lvalue with
+  | Ast.Lvalue_var { var; _ } -> f var
+  | Ast.Lvalue_deref { lvalue; _ } -> iter_lvalue_uses lvalue ~f
+
 and expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_list
+
+and lvalue_uses_set lvalue =
+  iter_lvalue_uses lvalue |> Iter.to_list |> Ast.Var.Set.of_list
 
 and check_stmt live (stmt : Ast.stmt) =
   match stmt with
@@ -61,8 +70,10 @@ and check_stmt live (stmt : Ast.stmt) =
     if Set.mem live var
     then throw_s [%message "Variable was used before initialized" (var : Ast.var)]
     else live
-  | Assign { lvalue; expr; span = _ } ->
-    live |> Fn.flip Set.remove lvalue |> Set.union (expr_uses_set expr)
+  | Assign { lvalue = Lvalue_var { var; _ }; expr; span = _ } ->
+    live |> Fn.flip Set.remove var |> Set.union (expr_uses_set expr)
+  | Assign { lvalue = Lvalue_deref _ as lvalue; expr; _ } ->
+    live |> Set.union (lvalue_uses_set lvalue) |> Set.union (expr_uses_set expr)
 ;;
 
 let check_global_decl (decl : Ast.global_decl) =
