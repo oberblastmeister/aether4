@@ -154,10 +154,12 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
                 ; b2 = { label = alloc_fail_label; args = [] }
                 })
          ; label alloc_succeed_label (* set the result temporary *)
+         ; ins (Block_params [])
          ; ins (Unary { dst; op = Copy I64; src = st.hp_temp })
          ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
          ; ins (Jump { label = alloc_join_label; args = [] })
          ; label alloc_fail_label (* we have to define dst so it is in strict ssa form *)
+         ; ins (Block_params [])
          ; ins (Nullary { dst; op = Undefined I64 })
          ; ins
              (Call
@@ -168,11 +170,15 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
                 })
          ; ins Unreachable
          ; label alloc_join_label
+         ; ins (Block_params [])
          ]
   end
   | Unary { dst; op; src } -> begin
     match op with
     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ]
+    | Deref ty ->
+      let ty = lower_ty ty in
+      empty +> [ ins (Unary { dst; op = Load ty; src }) ]
   end
   | Bin { dst; op; src1; src2 } ->
     let op = lower_bin_op op in

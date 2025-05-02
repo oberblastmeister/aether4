@@ -39,13 +39,14 @@ let rec eval_ty st (ty : Ast.ty) =
   | _ -> ty
 ;;
 
-let is_ty_eq st ty ty' =
+let rec is_ty_eq st ty ty' =
   let ty = eval_ty st ty in
   let ty' = eval_ty st ty' in
   match ty, ty' with
   | Int _, Int _ -> true
   | Bool _, Bool _ -> true
   | Void _, Void _ -> true
+  | Pointer { ty = ty1; span = _ }, Pointer { ty = ty2; span = _ } -> is_ty_eq st ty1 ty2
   | _ -> false
 ;;
 
@@ -58,6 +59,14 @@ let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Var { var; ty = _ } -> Var { var; ty = Some (var_ty st var) }
+  | Unary ({ expr; op; ty = _; span } as p) -> begin
+    match op with
+    | Deref ->
+      let expr = check_expr_pointer st expr in
+      let fail () = assert false in
+      let%fail (Pointer { ty; span = _ }) = Ast.expr_ty_exn expr in
+      Unary { p with expr; ty = Some ty }
+  end
   | Int_const _ | Bool_const _ -> expr
   | Ternary { cond; then_expr; else_expr; ty = _; span } ->
     let cond = check_expr st cond Ast.bool_ty in
@@ -98,6 +107,13 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     match op with
     | Alloc _ -> expr
   end
+
+and check_expr_pointer st (expr : Ast.expr) =
+  let expr = infer_expr st expr in
+  let span = Ast.expr_span expr in
+  match Ast.expr_ty_exn expr with
+  | Pointer _ -> expr
+  | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
 
 and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
   let expr = infer_expr st expr in

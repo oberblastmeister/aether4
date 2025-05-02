@@ -35,6 +35,10 @@ export fn c0_runtime_deref_fail() void {
     std.debug.panic("Failed to dereference pointer", .{});
 }
 
+export fn lir_runtime_unreachable() void {
+    std.debug.panic("Executed unreachable instruction", .{});
+}
+
 fn run() !void {
     var act = std.os.linux.Sigaction{
         .handler = .{ .handler = std.os.linux.SIG.DFL },
@@ -45,6 +49,7 @@ fn run() !void {
     _ = std.os.linux.sigaction(std.os.linux.SIG.FPE, &act, null);
     const allocator = std.heap.page_allocator;
     const HP = try allocator.alloc(u8, 1024 * 1024);
+    @memset(HP, 0);
     defer allocator.free(HP);
     var context = Context{ .hp_lim = HP[HP.len..].ptr, .sp_lim = undefined };
     c0_main_export(&context, HP.ptr);

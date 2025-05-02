@@ -50,7 +50,10 @@ module Bin_op = struct
 end
 
 module Unary_op = struct
-  type t = Copy of Ty.t [@@deriving sexp_of]
+  type t =
+    | Copy of Ty.t
+    | Deref of Ty.t
+  [@@deriving sexp_of]
 end
 
 module Nullary_op = struct
@@ -196,10 +199,11 @@ module Instr = struct
       f (src1, ty);
       f (src2, ty);
       ()
-    | Unary { dst = _; op; src } ->
-      (match op with
-       | Copy ty -> f (src, ty));
-      ()
+    | Unary { dst = _; op; src } -> begin
+      match op with
+      | Copy ty -> f (src, ty)
+      | Deref ty -> f (src, Pointer ty)
+    end
     | Nullary { dst = _; op = _ } -> ()
     | Jump _b -> ()
     | Cond_jump { cond; b1 = _; b2 = _ } ->
@@ -239,17 +243,18 @@ module Instr = struct
         | Eq _ | Lt | Gt | Le | Ge -> Bool
       in
       f (dst, ty)
-    | Unary { dst; op; src = _ } ->
-      (match op with
-       | Copy ty -> f (dst, ty));
-      ()
-    | Nullary { dst; op } ->
-      (match op with
-       | Int_const _ -> f (dst, Int)
-       | Bool_const _ -> f (dst, Bool)
-       | Void_const -> f (dst, Void)
-       | Alloc ty -> f (dst, Pointer ty));
-      ()
+    | Unary { dst; op; src = _ } -> begin
+      match op with
+      | Copy ty -> f (dst, ty)
+      | Deref ty -> f (dst, ty)
+    end
+    | Nullary { dst; op } -> begin
+      match op with
+      | Int_const _ -> f (dst, Int)
+      | Bool_const _ -> f (dst, Bool)
+      | Void_const -> f (dst, Void)
+      | Alloc ty -> f (dst, Pointer ty)
+    end
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 

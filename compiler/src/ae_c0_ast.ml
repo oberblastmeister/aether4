@@ -74,6 +74,7 @@ type stmt =
 and lvalue = var [@@deriving sexp_of]
 and block = stmt list [@@deriving sexp_of]
 and nullary_op = Alloc of ty
+and unary_op = Deref
 
 and expr =
   | Var of
@@ -90,6 +91,12 @@ and expr =
       { cond : expr
       ; then_expr : expr
       ; else_expr : expr
+      ; ty : ty option
+      ; span : Span.t
+      }
+  | Unary of
+      { expr : expr
+      ; op : unary_op
       ; ty : ty option
       ; span : Span.t
       }
@@ -185,6 +192,7 @@ let expr_span = function
   | Call { span; _ }
   | Int_const { span; _ }
   | Bool_const { span; _ } -> span
+  | Unary { span; _ } -> span
 ;;
 
 let expr_ty_exn = function
@@ -193,6 +201,7 @@ let expr_ty_exn = function
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
   | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
+  | Unary { ty; _ } -> Option.value_exn ty
 ;;
 
 let nop_stmt span = Block { block = []; span }

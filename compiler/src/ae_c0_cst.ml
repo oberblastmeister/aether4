@@ -133,6 +133,7 @@ and unary_op =
   | Neg
   | Bit_not
   | Log_not
+  | Deref
 
 and bin_op =
   | Add

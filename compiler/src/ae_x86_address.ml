@@ -17,10 +17,16 @@ struct
 
     let create index scale = { index; scale }
     let iter_uses { index; scale = _ } ~f = f index
+    let map_uses { index; scale } ~f = { index = f index; scale }
   end
 
   module Base = struct
     type t = Reg of Temp.t [@@deriving sexp_of, variants, equal]
+
+    let map_uses t ~f =
+      match t with
+      | Reg r -> Reg (f r)
+    ;;
 
     let iter_temps base ~f =
       match base with
@@ -43,8 +49,11 @@ struct
     ()
   ;;
 
-  let iter_uses t ~f =
-    iter_uses_with_ty t |> Iter.map ~f:fst ~f;
-    ()
+  let map_uses { base; index; offset } ~f =
+    let base = Base.map_uses base ~f in
+    let index = (Option.map & Index.map_uses) index ~f in
+    { base; index; offset }
   ;;
+
+  let iter_uses t ~f = iter_uses_with_ty t |> Iter.map ~f:fst |> Iter.iter ~f
 end

@@ -124,9 +124,7 @@ let lower_mov ?info st ~dst ~src ~size =
 let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
   let ins = ins ?info:instr.info in
   match instr.i with
-  | Unreachable ->
-    (* TODO: lower this to a panic in debug mode *)
-    empty
+  | Unreachable -> empty +> [ ins (Call "lir_runtime_unreachable") ]
   | Undefined { dst; size } ->
     let dst = lower_operand st dst in
     (* just for safety, remove this in performance mode *)

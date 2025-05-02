@@ -311,6 +311,8 @@ let%expect_test _ =
     {|
     int main() {
       int first = 0;
+      int* p = alloc(int);
+      int bruh = *first;
       assert true;
     }
     |};
@@ -324,8 +326,16 @@ let%expect_test _ =
          (((block
             ((Decl (ty (Int 3:7-10)) (names (((t first) (span 3:11-16))))
               (expr ((Int_const ((t 0) (span 3:19))))) (span 3:7-20))
-             (Assert (expr (Bool_const ((t true) (span 4:14-18)))) (span 4:7-18))))
-           (span [2,16]-[5,6]))))
-        (span [2,5]-[5,6])))))
+             (Decl (ty (Pointer (ty (Int 4:7-10)) (span 4:7-11)))
+              (names (((t p) (span 4:12))))
+              (expr ((Alloc (ty (Int 4:22-25)) (span 4:16-26)))) (span 4:7-26))
+             (Decl (ty (Int 5:7-10)) (names (((t bruh) (span 5:11-15))))
+              (expr
+               ((Unary (op Deref) (expr (Var ((t first) (span 5:19-24))))
+                 (span 5:18-24))))
+              (span 5:7-24))
+             (Assert (expr (Bool_const ((t true) (span 6:14-18)))) (span 6:7-18))))
+           (span [2,16]-[7,6]))))
+        (span [2,5]-[7,6])))))
     |}]
 ;;

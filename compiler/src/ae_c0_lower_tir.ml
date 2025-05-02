@@ -256,6 +256,16 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     in
     let cont = lower_expr st cont cond_dst cond in
     cont
+  | Unary { expr; op; ty; span } -> begin
+    match op with
+    | Deref ->
+      let ty = lower_ty st (Option.value_exn ty) in
+      let pointer_dst = fresh_temp ~name:"pointer" st in
+      let cont =
+        empty +> [ ins (Unary { dst; op = Deref ty; src = pointer_dst }) ] ++ cont
+      in
+      lower_expr st cont pointer_dst expr
+  end
   | Int_const { t = const; span } ->
     let info = Span.to_info span in
     empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ] ++ cont
@@ -317,7 +327,7 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     match op with
     | Alloc ty ->
       let ty = lower_ty st ty in
-      empty +> [ ins (Nullary { dst; op = Alloc ty }) ]
+      empty +> [ ins (Nullary { dst; op = Alloc ty }) ] ++ cont
   end
 ;;
 

@@ -279,14 +279,17 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     Var { var; ty = None }
   | Unary { op; expr; span } ->
     let expr = elab_expr st expr in
-    (match op with
-     | Neg ->
-       Bin { lhs = Int_const { t = 0L; span }; op = Sub; rhs = expr; ty = None; span }
-     | Bit_not ->
-       Bin
-         { lhs = Int_const { t = -1L; span }; op = Bit_xor; rhs = expr; ty = None; span }
-     | Log_not ->
-       Bin { lhs = Bool_const { t = false; span }; op = Eq; rhs = expr; ty = None; span })
+    begin
+      match op with
+      | Neg ->
+        Bin { lhs = Int_const { t = 0L; span }; op = Sub; rhs = expr; ty = None; span }
+      | Bit_not ->
+        Bin
+          { lhs = Int_const { t = -1L; span }; op = Bit_xor; rhs = expr; ty = None; span }
+      | Log_not ->
+        Bin { lhs = Bool_const { t = false; span }; op = Eq; rhs = expr; ty = None; span }
+      | Deref -> Unary { expr; op = Deref; span; ty = None }
+    end
   | Ternary { cond; then_expr; else_expr; span } ->
     let cond = elab_expr st cond in
     let then_expr = elab_expr st then_expr in

@@ -28,11 +28,10 @@ module Operand = struct
     | Stack of Stack_address.t
   [@@deriving sexp_of, variants]
 
-  let iter_mem_regs (o : t) ~f =
+  let iter_mem_uses (o : t) ~f =
     match o with
-    | Reg _ -> ()
-    | Stack _ | Imm _ -> ()
-    | Mem _addr -> todol [%here]
+    | Mem addr -> Address.iter_uses addr ~f
+    | Reg _ | Stack _ | Imm _ -> ()
   ;;
 
   let iter_any_regs (o : t) ~f =
@@ -41,7 +40,7 @@ module Operand = struct
       f r;
       ()
     | Stack _ | Imm _ -> ()
-    | Mem _addr -> todol [%here]
+    | Mem address -> Address.iter_uses address ~f
   ;;
 
   let iter_reg_val (o : t) ~f =
@@ -363,7 +362,7 @@ module Instr = struct
   let iter_uses instr ~f =
     iter_operand_use_defs
       instr
-      ~on_def:(fun (o, _ty) -> Operand.iter_mem_regs o ~f)
+      ~on_def:(fun (o, _ty) -> Operand.iter_mem_uses o ~f)
       ~on_use:(fun o -> Operand.iter_any_regs o ~f)
   ;;
 
@@ -517,16 +516,14 @@ module Instr = struct
     | Unreachable -> ()
   ;;
 
-  let get_jumps _ = todol [%here]
-
   let map_uses instr ~f =
     map_operand_use_defs
       instr
       ~on_def:(function
-        | Mem _m -> todol [%here]
+        | Mem address -> Mem (Address.map_uses address ~f)
         | o -> o)
       ~on_use:(function
-        | Mem _m -> todol [%here]
+        | Mem address -> Mem (Address.map_uses address ~f)
         | Reg r -> Reg (f r)
         | o -> o)
   ;;
@@ -546,7 +543,7 @@ module Instr = struct
   ;;
 
   let is_jump = function
-    | Unreachable _ | Jump _ | Cond_jump _ -> true
+    | Unreachable | Jump _ | Cond_jump _ -> true
     | _ -> false
   ;;
 

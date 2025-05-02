@@ -26,6 +26,9 @@ and iter_expr_uses (expr : Ast.expr) ~f =
   | Var { var; ty = _ } ->
     f var;
     ()
+  | Unary { expr; _ } ->
+    iter_expr_uses expr ~f;
+    ()
   | Nullary _ | Int_const _ | Bool_const _ -> ()
   | Bin { lhs; op = _; rhs; ty = _; span = _ } ->
     iter_expr_uses lhs ~f;

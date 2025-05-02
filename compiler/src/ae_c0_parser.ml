@@ -479,6 +479,11 @@ and parse_unary_expr env : Cst.expr =
    let expr = parse_unary_expr env in
    Cst.Unary { op = Bit_not; expr; span = tilde.span ++ Cst.expr_span expr })
    <|> (fun env ->
+     let star = expect_eq Star env in
+     let expr = parse_unary_expr env in
+     Cst.Unary { op = Deref; expr; span = star.span ++ Cst.expr_span expr}
+   )
+   <|> (fun env ->
    let bang = expect_eq Bang env in
    let expr = parse_unary_expr env in
    Cst.Unary { op = Log_not; expr; span = bang.span ++ Cst.expr_span expr })
