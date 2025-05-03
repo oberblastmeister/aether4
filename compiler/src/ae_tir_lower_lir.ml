@@ -9,8 +9,9 @@ open Bag.Syntax
 open Ae_trace
 
 let empty = Bag.empty
-let label l = First l
 let ins ?ann ?info i = Second (Lir.Instr'.create_unindexed ?ann ?info i)
+let label l = empty +> [ First l; ins (Block_params []) ]
+let bc ?(args = []) label = { Lir.Block_call.label; args }
 
 type st =
   { temp_gen : Temp.Id_gen.t
@@ -37,6 +38,21 @@ let fresh_temp ?(name = "fresh") ?info t : Lir.Temp.t =
 let fresh_label ?(name = "fresh") ?info t : Label.t =
   let id = Label.Id_gen.get t.label_gen in
   Label.create ?info name id
+;;
+
+let make_cond st cond body1 body2 =
+  let then_label = fresh_label ~name:"then" st in
+  let else_label = fresh_label ~name:"else" st in
+  let join_label = fresh_label ~name:"join" st in
+  empty
+  +> [ ins (Cond_jump { cond; b1 = bc then_label; b2 = bc else_label }) ]
+  ++ label then_label
+  ++ body1
+  +> [ ins (Jump (bc join_label)) ]
+  ++ label else_label
+  ++ body2
+  +> [ ins (Jump (bc join_label)) ]
+  ++ label join_label
 ;;
 
 let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
@@ -154,32 +170,55 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
                 ; b1 = { label = alloc_succeed_label; args = [] }
                 ; b2 = { label = alloc_fail_label; args = [] }
                 })
-         ; label alloc_succeed_label (* set the result temporary *)
-         ; ins (Block_params [])
-         ; ins (Unary { dst; op = Copy I64; src = st.hp_temp })
+         ]
+      ++ label alloc_succeed_label
+      +> [ (* set the result temporary *)
+           ins (Unary { dst; op = Copy I64; src = st.hp_temp })
          ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
          ; ins (Jump { label = alloc_join_label; args = [] })
-         ; label alloc_fail_label (* we have to define dst so it is in strict ssa form *)
-         ; ins (Block_params [])
-         ; ins (Nullary { dst; op = Undefined I64 })
-         ; ins
-             (Call
-                { dsts = []
-                ; func = "c0_runtime_alloc_fail"
-                ; args = []
-                ; call_conv = X86_call_conv.sysv
-                })
-         ; ins Unreachable
-         ; label alloc_join_label
-         ; ins (Block_params [])
          ]
+      ++ label alloc_fail_label
+      +>
+      (* we have to define dst so it is in strict ssa form *)
+      [ ins (Nullary { dst; op = Undefined I64 })
+      ; ins
+          (Call
+             { dsts = []
+             ; func = "c0_runtime_alloc_fail"
+             ; args = []
+             ; call_conv = X86_call_conv.sysv
+             })
+      ; ins Unreachable
+      ]
+      ++ label alloc_join_label
   end
   | Unary { dst; op; src } -> begin
     match op with
     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ]
     | Deref ty ->
       let ty = lower_ty ty in
-      empty +> [ ins (Unary { dst; op = Load ty; src }) ]
+      let garbage_temp = fresh_temp ~name:"garbage_temp" st in
+      let body1 =
+        empty
+        +> [ ins
+               (Call
+                  { dsts = [ garbage_temp, I64 ]
+                  ; func = "c0_runtime_deref_fail"
+                  ; args = []
+                  ; call_conv = X86_call_conv.sysv
+                  })
+           ; ins (Nullary { dst; op = Undefined I64 })
+           ; ins Unreachable
+           ]
+      in
+      let body2 = empty +> [ ins (Unary { dst; op = Load ty; src }) ] in
+      let cond_dst = fresh_temp ~name:"is_null_cond" st in
+      let null_temp = fresh_temp ~name:"null" st in
+      empty
+      +> [ ins (Nullary { dst = null_temp; op = Int_const { const = 0L; ty = I64 } })
+         ; ins (Bin { dst = cond_dst; op = Eq I64; src1 = src; src2 = null_temp })
+         ]
+      ++ make_cond st cond_dst body1 body2
   end
   | Bin { dst; op; src1; src2 } ->
     let op = lower_bin_op op in

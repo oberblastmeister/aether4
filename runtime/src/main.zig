@@ -32,7 +32,7 @@ export fn c0_runtime_alloc_fail() void {
 }
 
 export fn c0_runtime_deref_fail() void {
-    std.debug.panic("Failed to dereference pointer", .{});
+    std.debug.panic("Dereferenced null pointer", .{});
 }
 
 export fn lir_runtime_unreachable() void {

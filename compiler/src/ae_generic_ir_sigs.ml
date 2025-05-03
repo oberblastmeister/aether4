@@ -101,6 +101,7 @@ module type Ir_simple = sig
     [@@deriving sexp_of]
 
     val instrs : t -> Instr'.t iarray
+    val set_instrs : Instr'.t iarray -> t -> t
     val iter_fwd : t -> Instr'.t Iter.t
     val iter_bwd : t -> Instr'.t Iter.t
     val find_control : t -> Instr'.t

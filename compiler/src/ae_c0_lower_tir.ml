@@ -1,3 +1,4 @@
+(* TODO: maybe use effects for the spans *)
 open Std
 module Label = Ae_label
 module Ast = Ae_c0_ast
@@ -6,9 +7,11 @@ module Temp = Tir.Temp
 module Bag = Ae_data_bag
 module Span = Ae_span
 open Bag.Syntax
+open Ae_trace
 
 let empty = Bag.empty
-let ins = Tir.Instr'.create_unindexed
+let ins ?ann ?info instr = Second (Tir.Instr'.create_unindexed ?ann ?info instr)
+let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
 let bc ?(args = []) label = { Tir.Block_call.label; args }
 
 type global_st =
@@ -16,7 +19,7 @@ type global_st =
   ; typedefs : Ast.ty Ast.Var.Table.t
   }
 
-type instrs = Tir.Instr'.t Bag.t [@@deriving sexp_of]
+type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
 
 let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
@@ -28,7 +31,6 @@ type st =
   { temp_gen : Temp.Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
   ; label_gen : Label.Id_gen.t
-  ; mutable blocks : Tir.Block.t list
   ; global_st : global_st
   }
 
@@ -36,7 +38,6 @@ let create_state global_st =
   { temp_gen = Temp.Id_gen.create 0
   ; var_to_temp = Ast.Var.Table.create ()
   ; label_gen = Label.Id_gen.create 0
-  ; blocks = []
   ; global_st
   }
 ;;
@@ -58,29 +59,6 @@ let fresh_label ?(name = "fresh") ?info t : Label.t =
   Label.create ?info name id
 ;;
 
-let add_block ?(params = []) ?info t label instrs =
-  (*
-     make sure to add an unreachable instruction at the end so that all blocks have a terminator
-  *)
-  let block =
-    Tir.Block.create
-      label
-      (Bag.to_arrayp
-         (empty
-          +> [ ins ?info (Block_params params) ]
-          ++ instrs
-          +> [ ins ?info Unreachable ]))
-  in
-  t.blocks <- block :: t.blocks;
-  ()
-;;
-
-let add_fresh_block ?name ?info ?params t instrs : Label.t =
-  let label = fresh_label ?name ?info t in
-  add_block ?info ?params t label instrs;
-  label
-;;
-
 let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
   match ty with
   | Int _ -> Int
@@ -92,42 +70,34 @@ let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
     Pointer ty
 ;;
 
-let rec lower_block st (cont : instrs) (block : Ast.block) : instrs =
-  List.fold_right block ~init:cont ~f:(fun stmt cont -> lower_stmt st cont stmt)
+let rec lower_block st (block : Ast.block) : instrs =
+  List.map block ~f:(lower_stmt st) |> Bag.concat
 
-and add_cond_jump ?info st cont cond_temp body1 body2 =
-  let join_label = add_fresh_block ?info ~name:"join" st cont in
-  let body1_label =
-    add_fresh_block
-      ?info
-      ~name:"then"
-      st
-      (body1 (empty +> [ ins ?info (Jump (bc join_label)) ]))
-  in
-  let body2_label =
-    add_fresh_block
-      ?info
-      ~name:"else"
-      st
-      (body2 (empty +> [ ins ?info (Jump (bc join_label)) ]))
-  in
+and make_cond st cond body1 body2 =
+  let then_label = fresh_label ~name:"then" st in
+  let else_label = fresh_label ~name:"else" st in
+  let join_label = fresh_label ~name:"join" st in
   empty
-  +> [ ins
-         ?info
-         (Cond_jump { cond = cond_temp; b1 = bc body1_label; b2 = bc body2_label })
-     ]
+  +> [ ins (Cond_jump { cond; b1 = bc then_label; b2 = bc else_label }) ]
+  ++ label then_label
+  ++ body1
+  +> [ ins (Jump (bc join_label)) ]
+  ++ label else_label
+  ++ body2
+  +> [ ins (Jump (bc join_label)) ]
+  ++ label join_label
 
 (* returns the address of the lvalue *)
-and lower_lvalue st cont dst (lvalue : Ast.lvalue) =
+and lower_lvalue st dst (lvalue : Ast.lvalue) =
   match lvalue with
   | Lvalue_var { var; ty } ->
     let ty = Option.value_exn ty |> lower_ty st in
-    empty +> [ ins (Unary { dst; op = Copy ty; src = var_temp st var }) ] ++ cont
-  | Lvalue_deref { lvalue; span; ty } ->
+    empty +> [ ins (Unary { dst; op = Copy ty; src = var_temp st var }) ]
+  | Lvalue_deref { lvalue; span = _; ty } ->
     let ty = Option.value_exn ty |> lower_ty st in
     let addr_temp = fresh_temp ~name:"lvalue_address" st in
-    let cont = empty +> [ ins (Unary { dst; op = Deref ty; src = addr_temp }) ] ++ cont in
-    lower_lvalue st cont addr_temp lvalue
+    lower_lvalue st addr_temp lvalue
+    +> [ ins (Unary { dst; op = Deref ty; src = addr_temp }) ]
 
 (* invariant:
 
@@ -139,58 +109,53 @@ and lower_lvalue st cont dst (lvalue : Ast.lvalue) =
   
   This means that we *MUST* use the cont variable!
 *)
-and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
+and lower_stmt st (stmt : Ast.stmt) : instrs =
   match stmt with
   | Declare { ty = _; var; span = _ } ->
+    (* this adds it into the map, but ignore the temp *)
     let _ = var_temp st var in
-    empty ++ cont
+    empty
   | Assign { lvalue = Lvalue_var { var; ty }; expr; span = _ } ->
     let temp = var_temp st var in
-    lower_expr st cont temp expr
+    lower_expr st temp expr
   | Assign { lvalue = Lvalue_deref { lvalue; span = _; ty }; expr; span = _ } ->
     let ty = Option.value_exn ty |> lower_ty st in
     let addr_temp = fresh_temp ~name:"lvalue_address" st in
     let garbage_temp = fresh_temp ~name:"garbage" st in
     let expr_dst = fresh_temp ~name:"store_expr" st in
-    let cont =
-      empty
-      +> [ ins
-             (Bin { dst = garbage_temp; op = Store ty; src1 = addr_temp; src2 = expr_dst })
-         ]
-      ++ cont
-    in
-    let cont = lower_expr st cont expr_dst expr in
-    lower_lvalue st cont addr_temp lvalue
-  | Block { block; span = _ } -> lower_block st cont block
+    empty
+    ++ lower_lvalue st addr_temp lvalue
+    ++ lower_expr st expr_dst expr
+    +> [ ins
+           (Bin { dst = garbage_temp; op = Store ty; src1 = addr_temp; src2 = expr_dst })
+       ]
+  | Block { block; span = _ } -> lower_block st block
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
-    lower_expr st cont dst expr
+    lower_expr st dst expr
   | Assert { expr; span } ->
     let garbage_dst = fresh_temp ~name:"assert_garbage_dst" st in
     let cond_dst = fresh_temp ~name:"assert_cond" st in
-    let cont =
-      let t1, t2, t3, t4 =
-        ( fresh_temp ~name:"span_start_line" st
-        , fresh_temp ~name:"span_start_col" st
-        , fresh_temp ~name:"span_end_line" st
-        , fresh_temp ~name:"span_end_col" st )
-      in
-      let int dst i = ins (Nullary { dst; op = Int_const (Int64.of_int i) }) in
-      empty
-      +> [ int t1 span.start.line
-         ; int t2 span.start.col
-         ; int t3 span.stop.line
-         ; int t4 span.stop.col
-         ; ins
-             (Nary
-                { dst = garbage_dst
-                ; op = C0_runtime_assert
-                ; srcs = [ cond_dst; t1; t2; t3; t4 ]
-                })
-         ]
-      ++ cont
+    let t1, t2, t3, t4 =
+      ( fresh_temp ~name:"span_start_line" st
+      , fresh_temp ~name:"span_start_col" st
+      , fresh_temp ~name:"span_end_line" st
+      , fresh_temp ~name:"span_end_col" st )
     in
-    lower_expr st cont cond_dst expr
+    let int dst i = ins (Nullary { dst; op = Int_const (Int64.of_int i) }) in
+    empty
+    ++ lower_expr st cond_dst expr
+    +> [ int t1 span.start.line
+       ; int t2 span.start.col
+       ; int t3 span.stop.line
+       ; int t4 span.stop.col
+       ; ins
+           (Nary
+              { dst = garbage_dst
+              ; op = C0_runtime_assert
+              ; srcs = [ cond_dst; t1; t2; t3; t4 ]
+              })
+       ]
   | Return { expr; span } ->
     let dst = fresh_temp ~name:"ret" st in
     begin
@@ -204,39 +169,34 @@ and lower_stmt st (cont : instrs) (stmt : Ast.stmt) : instrs =
       | Some expr ->
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
-        (* important: we override the continuation here because nothing should be after a Ret *)
         let ty = lower_ty st ty in
-        let cont = empty +> [ ins ~info (Ret { src = dst; ty }) ] in
-        lower_expr st cont dst expr
+        empty ++ lower_expr st dst expr +> [ ins ~info (Ret { src = dst; ty }) ]
     end
   | If { cond; body1; body2; span } ->
     let info = Span.to_info span in
     let cond_temp = fresh_temp ~info ~name:"cond" st in
-    let body1 cont = lower_stmt st cont body1 in
-    let body2 cont = Option.value_map body2 ~f:(lower_stmt st cont) ~default:cont in
-    let cont = add_cond_jump ~info st cont cond_temp body1 body2 in
-    lower_expr st cont cond_temp cond
+    let body1 = lower_stmt st body1 in
+    let body2 = Option.value_map body2 ~f:(lower_stmt st) ~default:empty in
+    lower_expr st cond_temp cond ++ make_cond st cond_temp body1 body2
   | While { cond; body; span } ->
     let info = Span.to_info span in
-    let done_label = add_fresh_block ~info ~name:"done" st cont in
+    let done_label = fresh_label ~name:"done" st in
     let cond_temp = fresh_temp ~info ~name:"cond" st in
     let loop_label = fresh_label ~info ~name:"loop" st in
-    let body = lower_stmt st (empty +> [ ins ~info (Jump (bc loop_label)) ]) body in
-    let body_label = add_fresh_block ~info ~name:"body" st body in
-    add_block
-      ~info
-      st
-      loop_label
-      (lower_expr
-         st
-         (empty
-          +> [ ins
-                 ~info
-                 (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label })
-             ])
-         cond_temp
-         cond);
-    empty +> [ ins ~info (Jump (bc loop_label)) ]
+    let body_label = fresh_label ~name:"body" st in
+    let body = lower_stmt st body in
+    empty
+    +> [ ins ~info (Jump (bc loop_label)) ]
+    ++ label loop_label
+    ++ lower_expr st cond_temp cond
+    +> [ ins
+           ~info
+           (Cond_jump { cond = cond_temp; b1 = bc body_label; b2 = bc done_label })
+       ]
+    ++ label body_label
+    ++ body
+    +> [ ins ~info (Jump (bc loop_label)) ]
+    ++ label done_label
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
@@ -266,38 +226,29 @@ and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   
   This means that we *MUST* use the cont variable!
 *)
-and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
+and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
   match expr with
   | Ternary { cond; then_expr; else_expr; ty = _; span } ->
     let info = Span.to_info span in
     let cond_dst = fresh_temp ~info ~name:"cond" st in
-    let cont =
-      add_cond_jump
-        ~info
-        st
-        cont
-        cond_dst
-        (fun cont -> lower_expr st cont dst then_expr)
-        (fun cont -> lower_expr st cont dst else_expr)
-    in
-    let cont = lower_expr st cont cond_dst cond in
-    cont
+    let body1 = lower_expr st dst then_expr in
+    let body2 = lower_expr st dst else_expr in
+    empty ++ lower_expr st cond_dst cond ++ make_cond st cond_dst body1 body2
   | Unary { expr; op; ty; span } -> begin
     match op with
     | Deref ->
       let ty = lower_ty st (Option.value_exn ty) in
       let pointer_dst = fresh_temp ~name:"pointer" st in
-      let cont =
-        empty +> [ ins (Unary { dst; op = Deref ty; src = pointer_dst }) ] ++ cont
-      in
-      lower_expr st cont pointer_dst expr
+      empty
+      ++ lower_expr st pointer_dst expr
+      +> [ ins (Unary { dst; op = Deref ty; src = pointer_dst }) ]
   end
   | Int_const { t = const; span } ->
     let info = Span.to_info span in
-    empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ] ++ cont
+    empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ]
   | Bool_const { t = const; span } ->
     let info = Span.to_info span in
-    empty +> [ ins ~info (Nullary { dst; op = Bool_const const }) ] ++ cont
+    empty +> [ ins ~info (Nullary { dst; op = Bool_const const }) ]
   | Bin { lhs; op; rhs; ty = _; span } ->
     let info = Span.to_info span in
     let op : Tir.Bin_op.t =
@@ -309,16 +260,14 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
     in
     let src1 = fresh_temp ~info ~name:"lhs" st in
     let src2 = fresh_temp ~info ~name:"rhs" st in
-    let cont = empty +> [ ins ~info (Bin { dst; src1; op; src2 }) ] ++ cont in
-    let cont = lower_expr st cont src2 rhs in
-    let cont = lower_expr st cont src1 lhs in
-    cont
+    empty
+    ++ lower_expr st src1 lhs
+    ++ lower_expr st src2 rhs
+    +> [ ins ~info (Bin { dst; src1; op; src2 }) ]
   | Var { var; ty } ->
     let src = var_temp st var in
     let ty = lower_ty st (Option.value_exn ty) in
-    empty
-    +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
-    ++ cont
+    empty +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
   | Call { func; args; ty; span } ->
     let ty = Option.value_exn ty in
     let info = Span.to_info span in
@@ -327,56 +276,49 @@ and lower_expr st (cont : instrs) (dst : Temp.t) (expr : Ast.expr) : instrs =
       List.mapi args ~f:(fun i _arg ->
         fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
     in
-    let cont =
-      let ty = lower_ty st ty in
-      empty
-      +> [ ins
-             (Call
-                { dst
-                ; ty
-                ; func = func.name
-                ; args =
-                    List.zip_exn arg_temps func_sig.params
-                    |> List.map ~f:(fun (arg, param) -> arg, lower_ty st param.ty)
-                ; is_extern = func_sig.is_extern
-                })
-         ]
-      ++ cont
-    in
-    let cont =
+    let ty = lower_ty st ty in
+    let args =
       List.zip_exn arg_temps args
-      |> List.fold_right ~init:cont ~f:(fun (arg_temp, arg_expr) cont ->
-        lower_expr st cont arg_temp arg_expr)
+      |> List.map ~f:(fun (arg_temp, arg_expr) -> lower_expr st arg_temp arg_expr)
+      |> Bag.concat
     in
-    cont
+    empty
+    ++ args
+    +> [ ins
+           (Call
+              { dst
+              ; ty
+              ; func = func.name
+              ; args =
+                  List.zip_exn arg_temps func_sig.params
+                  |> List.map ~f:(fun (arg, param) -> arg, lower_ty st param.ty)
+              ; is_extern = func_sig.is_extern
+              })
+       ]
   | Nullary { op; span = _ } -> begin
     match op with
     | Alloc ty ->
       let ty = lower_ty st ty in
-      empty +> [ ins (Nullary { dst; op = Alloc ty }) ] ++ cont
+      empty +> [ ins (Nullary { dst; op = Alloc ty }) ]
   end
 ;;
 
 let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let st = create_state st in
-  let start_instrs = lower_block st empty defn.body in
-  let start_label =
-    let params =
-      List.map defn.params ~f:(fun param ->
-        { Tir.Block_param.param = var_temp st param.var; ty = lower_ty st param.ty })
-    in
-    add_fresh_block ~info:(Span.to_info defn.span) ~name:"start" ~params st start_instrs
+  let start_label = fresh_label ~name:"start" st in
+  let params =
+    List.map defn.params ~f:(fun param ->
+      { Tir.Block_param.param = var_temp st param.var; ty = lower_ty st param.ty })
   in
+  let linearized =
+    empty ++ label ~params start_label ++ lower_block st defn.body +> [ ins Unreachable ]
+  in
+  let blocks = Tir.Linearized.to_blocks_exn (Bag.to_list linearized) in
+  trace_s [%message (blocks : Tir.Blocks.t)];
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in
-  let blocks = st.blocks in
   let func : Tir.Func.t =
-    { name = defn.name.name
-    ; blocks = blocks |> List.map ~f:(fun b -> b.label, b) |> Label.Map.of_alist_exn
-    ; start = start_label
-    ; next_temp_id
-    ; next_label_id
-    }
+    { name = defn.name.name; blocks; start = start_label; next_temp_id; next_label_id }
   in
   func
 ;;
@@ -400,5 +342,6 @@ let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
 let lower_program (program : Ast.program) : Tir.Program.t =
   let st = create_global_state program in
   let funcs = List.filter_map ~f:(lower_global_decl st) program in
+  trace_s [%message (funcs : Tir.Func.t list)];
   { funcs }
 ;;

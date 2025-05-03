@@ -60,6 +60,7 @@ module Make (Arg : Intf.Arg) : Intf.S with module Arg := Arg = struct
 
     include T
 
+    let set_instrs instrs t = { t with body = instrs }
     let iter_fwd t ~f = Arrayp.iter t.body ~f
     let iter_bwd t ~f = Arrayp.iteri_rev t.body ~f:(fun _ x -> f x)
 

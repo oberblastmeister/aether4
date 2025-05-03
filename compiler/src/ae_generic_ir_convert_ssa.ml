@@ -1,5 +1,6 @@
 open Std
 open Ae_generic_ir_import
+open Ae_trace
 
 module Make (Ir : Ir) = struct
   open Ir
@@ -11,6 +12,7 @@ module Make (Ir : Ir) = struct
   end
 
   module Liveness = Ae_generic_ir_liveness.Make (Ir)
+  module Remove_dead_blocks = Ae_generic_ir_remove_dead_blocks.Make (Ir)
 
   let get_num_definitions func =
     let table = Temp.Table.create () in
@@ -40,7 +42,7 @@ module Make (Ir : Ir) = struct
         Dominators.Frontier.find_iter dom_front def_in_label
         |> Iter.filter ~f:(fun l ->
           (*
-            we only want to insert phis where the variable is actually *live*,
+             we only want to insert phis where the variable is actually *live*,
             this is pruned SSA
           *)
           Liveness.Live_set.find live_in l |> Fn.flip Set.mem def)
@@ -59,7 +61,15 @@ module Make (Ir : Ir) = struct
   ;;
 
   let convert ?renumber (func : Func.t) =
+    (*
+       very important that we remove dead blocks.
+      The dominator tree does not contain info about dead blocks,
+      so the conversion won't work properly as the we don't know
+      where to insert the phi functions.
+    *)
+    let func = Remove_dead_blocks.run func in
     let idoms = Func.compute_idoms func in
+    trace_s [%message (idoms : Dominators.t)];
     let dom_tree = Dominators.Tree.of_immediate idoms in
     let def_to_ty = Func.get_ty_table func in
     let block_to_phis = compute_phi_placements func in
@@ -137,15 +147,7 @@ module Make (Ir : Ir) = struct
       end
     in
     rename_block Temp.Map.empty (Func.start_block func);
-    let new_blocks =
-      Func.blocks func
-      (*
-         The unreachable blocks were not in the dominator tree, so were not converted at all.
-      Just remove them here.
-      *)
-      |> Map.filteri ~f:(fun ~key ~data:_ -> Dominators.is_reachable idoms key)
-      |> Multi_edit.apply_blocks ~no_sort:() multi_edit
-    in
+    let new_blocks = Func.blocks func |> Multi_edit.apply_blocks ~no_sort:() multi_edit in
     Func.set_blocks func new_blocks |> Func.apply_temp_gen ?renumber temp_gen
   ;;
 end
