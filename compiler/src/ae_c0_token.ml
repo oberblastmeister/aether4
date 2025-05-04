@@ -8,6 +8,7 @@ type t =
   | Semi
   | Extern
   | Typedef
+  | Struct
   | Colon
   | Plus
   | Question

@@ -11,4 +11,5 @@ int run() {
 
 void main() {}
 ----
-("Parse error" ((((t Semi) (span 7:23))) "expected closing RParen"))
+("Parse error"
+ ((((t Semi) (span 7:23))) ("expected closing " (delimiter LParen))))

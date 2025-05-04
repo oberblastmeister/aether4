@@ -105,18 +105,21 @@ let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
 let parse_ty_ident env = Parser.expect (Spanned.map_option ~f:Token.tyident_val) env
 let parse_general_ident env = (parse_ident <|> parse_ty_ident) env
 
-let spanned_parens p env =
-  let lparen = expect_eq LParen env in
+let spanned_delim ~left ~right p env =
+  let delim = expect_eq left env in
   let res = p env in
-  let rparen =
-    expect_eq RParen
-    |> Parser.cut (Sexp [%message "expected closing RParen"])
+  let delim =
+    expect_eq right
+    |> Parser.cut (Sexp [%message "expected closing " ~delimiter:(delim.t : Token.t)])
     |> Fn.( |> ) env
   in
-  { Spanned.t = res; span = Span.Syntax.(lparen.span ++ rparen.span) }
+  { Spanned.t = res; span = Span.Syntax.(delim.span ++ delim.span) }
 ;;
 
+let spanned_parens p env = spanned_delim ~left:LParen ~right:RParen p env
+let spanned_braces p env = spanned_delim ~left:LBrace ~right:RBrace p env
 let parens p env = (Spanned.value <$> spanned_parens p) env
+let braces p env = (Spanned.value <$> spanned_braces p) env
 
 let chainl ~expr:parse_expr ~op:parse_op ~f env =
   let rec loop lhs env =
@@ -169,7 +172,14 @@ let parse_ty_var env =
   Cst.Ty_var var
 ;;
 
-let rec parse_atom_ty env = (parse_int <|> parse_bool <|> parse_void <|> parse_ty_var) env
+let parse_struct_ty env =
+  let struct_tok = expect_eq Struct env in
+  let name = parse_general_ident env in
+  Cst.Ty_struct { name; span = Span.Syntax.(struct_tok.span ++ name.span) }
+;;
+
+let rec parse_atom_ty env =
+  (parse_struct_ty <|> parse_int <|> parse_bool <|> parse_void <|> parse_ty_var) env
 
 and parse_ty env =
   let ty = parse_atom_ty env in
@@ -567,6 +577,41 @@ let parse_func env : Cst.global_decl =
     }
 ;;
 
+let parse_field env : Cst.field =
+  let ty = parse_ty env in
+  let name = parse_general_ident env in
+  let semi = expect_eq Semi env in
+  { name; ty; span = Span.Syntax.(Cst.ty_span ty ++ name.span ++ semi.span) }
+;;
+
+let parse_struct_part env : Cst.strukt =
+  let fields = spanned_braces (Parser.many parse_field) env in
+  { fields = fields.t; span = fields.span }
+;;
+
+let parse_struct env : Cst.global_decl =
+  let strukt_tok = expect_eq Struct env in
+  Parser.cut
+    (Sexp [%message "invalid struct"])
+    (fun env ->
+       let name = parse_general_ident env in
+       let strukt = Parser.optional parse_struct_part env in
+       expect_eq_ Semi env;
+       Cst.Struct
+         { name
+         ; strukt
+         ; span =
+             Span.Syntax.(
+               let span = strukt_tok.span ++ name.span in
+               span
+               ++ Option.value_map
+                    strukt
+                    ~f:(fun strukt -> span ++ strukt.span)
+                    ~default:span)
+         })
+    env
+;;
+
 let parse_typedef env : Cst.global_decl =
   let typedef = expect_eq Typedef env in
   Parser.cut
@@ -580,7 +625,10 @@ let parse_typedef env : Cst.global_decl =
     env
 ;;
 
-let parse_global_decl env : Cst.global_decl = (parse_func <|> parse_typedef) env
+let parse_global_decl env : Cst.global_decl =
+  (* the func has to go first because it conflicts with struct but takes precedence *)
+  (parse_func <|> parse_struct <|> parse_typedef) env
+;;
 
 let rec parse_program env : Cst.program =
   ((fun env ->

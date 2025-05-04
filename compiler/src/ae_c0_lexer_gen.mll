@@ -60,6 +60,7 @@ rule lex =
   | "assert" { Token.Assert }
   | "extern" { Token.Extern }
   | "typedef" { Token.Typedef }
+  | "struct" { Token.Struct }
   | "return" { Token.Return }
   | "if" { Token.If }
   | "else" { Token.Else }

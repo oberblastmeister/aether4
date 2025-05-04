@@ -8,6 +8,7 @@ type st =
   { context : Ast.ty Ast.Var.Map.t
   ; declared_funcs : Ast.func_sig Ast.Var.Map.t
   ; defined_funcs : Ast.Var.Set.t
+  ; defined_structs : Ast.strukt Ast.Var.Map.t
   ; typedefs : Ast.ty Ast.Var.Map.t
   ; return_ty : Ast.ty
   }
@@ -16,6 +17,7 @@ let create_state () =
   { context = Ast.Var.Map.empty
   ; declared_funcs = Ast.Var.Map.empty
   ; defined_funcs = Ast.Var.Set.empty
+  ; defined_structs = Ast.Var.Map.empty
   ; typedefs = Ast.Var.Map.empty
   ; return_ty = Ast.void_ty
   }
@@ -46,8 +48,21 @@ let rec is_ty_eq st ty ty' =
   | Int _, Int _ -> true
   | Bool _, Bool _ -> true
   | Void _, Void _ -> true
+  | Ty_struct s1, Ty_struct s2 -> if Ast.Var.equal s1.name s2.name then true else false
   | Pointer { ty = ty1; span = _ }, Pointer { ty = ty2; span = _ } -> is_ty_eq st ty1 ty2
   | _ -> false
+;;
+
+let is_small_ty st ty =
+  let ty = eval_ty st ty in
+  match ty with
+  | Ty_struct _ -> false
+  | _ -> true
+;;
+
+let check_ty_small st span ty =
+  if not (is_small_ty st ty)
+  then throw_s [%message "Expected small type" (span : Span.t) (ty : Ast.ty)]
 ;;
 
 let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
@@ -60,6 +75,18 @@ let check_ty_is_pointer st (ty : Ast.ty) span =
   match ty with
   | Pointer _ -> ()
   | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
+;;
+
+let is_ty_relevant st ty =
+  let ty = eval_ty st ty in
+  match ty with
+  | Ty_struct _ -> false
+  | _ -> true
+;;
+
+let check_ty_relevant st ty =
+  if not (is_ty_relevant st ty)
+  then throw_s [%message "Size of type was not known" (ty : Ast.ty)]
 ;;
 
 let rec infer_lvalue st (lvalue : Ast.lvalue) : Ast.lvalue =
@@ -107,7 +134,10 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
      | Eq ->
        let lhs = infer_expr st lhs in
        let rhs = infer_expr st rhs in
-       check_ty_eq st span (Ast.expr_ty_exn lhs) (Ast.expr_ty_exn rhs);
+       let lhs_ty = Ast.expr_ty_exn lhs in
+       let rhs_ty = Ast.expr_ty_exn rhs in
+       check_ty_small st span lhs_ty;
+       check_ty_eq st span lhs_ty rhs_ty;
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
   | Call { func; args; ty = _; span } ->
     let func_sig = Map.find_exn st.declared_funcs func in
@@ -125,7 +155,9 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     Call { func; args; ty = Some func_sig.ty; span }
   | Nullary { op; span = _ } -> begin
     match op with
-    | Alloc _ -> expr
+    | Alloc ty ->
+      check_ty_relevant st ty;
+      expr
   end
 
 and check_expr_pointer st (expr : Ast.expr) =
@@ -163,6 +195,8 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   end
   | Effect expr ->
     let expr = infer_expr st expr in
+    let ty = Ast.expr_ty_exn expr in
+    check_ty_small st (Ast.expr_span expr) ty;
     Effect expr
   | Assert { expr; span } ->
     let expr = check_expr st expr (Bool span) in
@@ -171,6 +205,7 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   | Assign { lvalue; expr; span } ->
     let lvalue = infer_lvalue st lvalue in
     let ty = Ast.lvalue_ty_exn lvalue in
+    check_ty_small st span ty;
     let expr = check_expr st expr ty in
     Assign { lvalue; expr; span }
 
@@ -182,7 +217,8 @@ and check_block st (block : Ast.block) : Ast.block =
       let stmt = check_stmt st stmt in
       let st' =
         match stmt with
-        | Declare { ty; var; span = _ } ->
+        | Declare { ty; var; span } ->
+          check_ty_small st span ty;
           { st with context = Map.add_exn st.context ~key:var ~data:ty }
         | _ -> st
       in
@@ -221,6 +257,12 @@ let define_func st name =
   { st with defined_funcs = Set.add st.defined_funcs name }
 ;;
 
+let check_func_sig st (func_sig : Ast.func_sig) =
+  check_ty_small st func_sig.span func_sig.ty;
+  List.iter func_sig.params ~f:(fun param -> check_ty_small st param.span param.ty);
+  ()
+;;
+
 let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st =
   match global_decl with
   | Ast.Extern_func_defn { name; ty } ->
@@ -228,9 +270,11 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
     let st = define_func st name in
     global_decl, st
   | Ast.Func_decl { name; ty } ->
+    check_func_sig st ty;
     let st = declare_func st name ty in
     global_decl, st
   | Ast.Func_defn func ->
+    check_func_sig st (Ast.func_defn_to_ty func);
     let st = declare_func st func.name (Ast.func_defn_to_ty func) in
     let st = define_func st func.name in
     let st_with_params =
@@ -250,6 +294,25 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
   | Ast.Typedef typedef ->
     ( global_decl
     , { st with typedefs = Map.add_exn st.typedefs ~key:typedef.name ~data:typedef.ty } )
+  | Struct { name; strukt; _ } ->
+    ( global_decl
+    , Option.value_map
+        strukt
+        ~f:(fun strukt ->
+          { st with
+            defined_structs =
+              Map.update
+                st.defined_structs
+                name
+                ~f:
+                  (Option.value_map ~default:strukt ~f:(fun strukt ->
+                     throw_s
+                       [%message
+                         "Cannot define struct twice"
+                           (name : Ast.var)
+                           (strukt : Ast.strukt)]))
+          })
+        ~default:st )
 ;;
 
 let check_program st (prog : Ast.program) =

@@ -28,6 +28,10 @@ type ty =
   | Bool of Span.t
   | Void of Span.t
   | Ty_var of var
+  | Ty_struct of
+      { name : var
+      ; span : Span.t
+      }
   | Pointer of
       { ty : ty
       ; span : Span.t
@@ -168,6 +172,19 @@ type func_defn =
   }
 [@@deriving sexp_of]
 
+type field =
+  { ty : ty
+  ; name : string Spanned.t
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
+type strukt =
+  { fields : field String.Map.t
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
 type global_decl =
   | Extern_func_defn of
       { name : var
@@ -183,11 +200,16 @@ type global_decl =
       ; name : var
       ; span : Span.t
       }
+  | Struct of
+      { name : var
+      ; strukt : strukt option
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 type program = global_decl list [@@deriving sexp_of]
 
-let func_defn_to_ty func =
+let func_defn_to_ty (func : func_defn) =
   { ty = func.ty; params = func.params; span = func.span; is_extern = false }
 ;;
 
@@ -235,7 +257,7 @@ let get_func_ty_map program =
     | Extern_func_defn { name; ty } -> Some (name, ty)
     | Func_decl { name; ty } -> Some (name, ty)
     | Func_defn ({ name; _ } as defn) -> Some (name, func_defn_to_ty defn)
-    | Typedef _ -> None)
+    | Struct _ | Typedef _ -> None)
   |> Var.Map.of_alist_exn
 ;;
 

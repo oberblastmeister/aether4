@@ -1,0 +1,12 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+struct first;
+
+bool bad(struct first *p1, struct first *p2) {
+    return *p1 == *p2;
+}
+----
+("Expected small type" (span 8:12-22)
+ (ty (Ty_struct (name first@0) (span 7:10-22))))

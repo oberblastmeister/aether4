@@ -8,6 +8,10 @@ type ty =
   | Int of Span.t
   | Bool of Span.t
   | Ty_var of var
+  | Ty_struct of
+      { name : var
+      ; span : Span.t
+      }
   | Void of Span.t
   | Pointer of
       { ty : ty
@@ -179,11 +183,29 @@ type func =
   }
 [@@deriving sexp_of]
 
+type field =
+  { name : var
+  ; ty : ty
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
+type strukt =
+  { fields : field list
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
 type global_decl =
   | Func of func
   | Typedef of
       { ty : ty
       ; name : var
+      ; span : Span.t
+      }
+  | Struct of
+      { name : var
+      ; strukt : strukt option
       ; span : Span.t
       }
 [@@deriving sexp_of]
@@ -218,7 +240,12 @@ let stmt_span (stmt : stmt) =
 
 let ty_span (ty : ty) =
   match ty with
-  | Bool span | Int span | Void span | Pointer { span; _ } | Ty_var { span; _ } -> span
+  | Ty_struct { span; _ }
+  | Bool span
+  | Int span
+  | Void span
+  | Pointer { span; _ }
+  | Ty_var { span; _ } -> span
 ;;
 
 let lvalue_span (lvalue : lvalue) =

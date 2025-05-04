@@ -340,3 +340,35 @@ let%expect_test _ =
         (span [2,5]-[7,6])))))
     |}]
 ;;
+
+let%expect_test "struct" =
+  check
+    {|
+    struct bruh {
+      int first;
+      int second;
+    };
+    
+    struct another;
+    
+    struct bruh main() {
+    
+    }
+  |};
+  [%expect {|
+    (Ok
+     ((Struct (name ((t bruh) (span 2:12-16)))
+       (strukt
+        (((fields
+           (((name ((t first) (span 3:11-16))) (ty (Int 3:7-10)) (span 3:7-17))
+            ((name ((t second) (span 4:11-17))) (ty (Int 4:7-10)) (span 4:7-18))))
+          (span 5:5))))
+       (span [2,5]-[5,6]))
+      (Struct (name ((t another) (span 7:12-19))) (strukt ()) (span 7:5-19))
+      (Func
+       ((is_extern false)
+        (ty (Ty_struct (name ((t bruh) (span 9:12-16))) (span 9:5-16)))
+        (name ((t main) (span 9:17-21))) (params ())
+        (body (((block ()) (span [9,24]-[11,6])))) (span [9,5]-[11,6])))))
+    |}]
+;;

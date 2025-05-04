@@ -1,0 +1,11 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+struct first;
+
+void main() {
+    struct first *p = alloc(struct first);
+}
+----
+("Size of type was not known" (ty (Ty_struct (name first@0) (span 8:29-41))))

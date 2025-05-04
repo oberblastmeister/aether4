@@ -1,0 +1,13 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+struct first;
+
+struct first bad() {
+}
+
+void main() { }
+----
+("Expected small type" (span [7,1]-[8,2])
+ (ty (Ty_struct (name first@0) (span 7:1-13))))

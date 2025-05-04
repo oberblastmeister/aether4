@@ -68,6 +68,7 @@ let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
   | Pointer { ty; span = _ } ->
     let ty = lower_ty st ty in
     Pointer ty
+  | Ty_struct { name; span = _ } -> todol [%here]
 ;;
 
 let rec lower_block st (block : Ast.block) : instrs =
@@ -337,6 +338,7 @@ let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
   | Typedef { ty; name; span = _ } ->
     Hashtbl.set st.typedefs ~key:name ~data:ty;
     None
+  | Struct _ -> todol [%here]
 ;;
 
 let lower_program (program : Ast.program) : Tir.Program.t =

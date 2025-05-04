@@ -19,7 +19,7 @@ and stmt_returns (stmt : Ast.stmt) =
 
 let check_global_decl (global_decl : Ast.global_decl) =
   match global_decl with
-  | Ast.Extern_func_defn _ | Ast.Func_decl _ | Ast.Typedef _ -> ()
+  | Ast.Extern_func_defn _ | Ast.Func_decl _ | Ast.Typedef _ | Ast.Struct _ -> ()
   | Ast.Func_defn func ->
     let does_return = block_returns func.body in
     if not does_return

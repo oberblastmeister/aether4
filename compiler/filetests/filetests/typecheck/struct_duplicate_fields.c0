@@ -1,0 +1,12 @@
+/*
+( (kind (CompileFail)) )
+*/
+
+struct first {
+  int first;
+  int first;
+};
+
+void main() {}
+----
+("Duplicate struct field" (field first))

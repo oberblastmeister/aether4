@@ -14,19 +14,31 @@ type st =
   { next_temp_id : int ref
   ; next_func_id : int ref
   ; next_type_id : int ref
+  ; next_struct_id : int ref
   ; context : Ast.var String.Map.t
   ; func_context : Ast.var String.Map.t
   ; typedef_context : Ast.var String.Map.t
+  ; struct_context : Ast.var String.Map.t
   }
 
 let create_state () =
   let next_temp_id = ref 0 in
   let next_func_id = ref 0 in
   let next_type_id = ref 0 in
+  let next_struct_id = ref 0 in
   let context = String.Map.empty in
   let func_context = String.Map.empty in
   let typedef_context = String.Map.empty in
-  { next_temp_id; next_func_id; next_type_id; context; func_context; typedef_context }
+  let struct_context = String.Map.empty in
+  { next_temp_id
+  ; next_func_id
+  ; next_type_id
+  ; next_struct_id
+  ; context
+  ; func_context
+  ; typedef_context
+  ; struct_context
+  }
 ;;
 
 let throw_s s = raise (Exn s)
@@ -35,6 +47,16 @@ let elab_var st (var : Cst.var) : Ast.var =
   Map.find st.context var.t
   |> Option.value_or_thunk ~default:(fun () ->
     throw_s [%message "Variable not found" (var : Cst.var)])
+;;
+
+(*
+   TODO: we don't implement the implicit struct declarations.
+  It makes the implementation more annoying because we have to thread the state around here.
+*)
+let elab_struct_var st (var : Cst.var) : Ast.var =
+  Map.find st.struct_context var.t
+  |> Option.value_or_thunk ~default:(fun () ->
+    throw_s [%message "Struct variable not found" (var : Cst.var)])
 ;;
 
 let elab_func_var st (func_var : Cst.var) : Ast.var =
@@ -61,6 +83,12 @@ let fresh_typedef_var st (var : Cst.var) : Ast.var =
   { name = var.t; id; span = var.span }
 ;;
 
+let fresh_struct_var st (var : Cst.var) : Ast.var =
+  let id : int = !(st.next_struct_id) in
+  st.next_struct_id := id + 1;
+  { name = var.t; id; span = var.span }
+;;
+
 let declare_typedef_var st (var : Cst.var) : Ast.var * st =
   assert (Map.is_empty st.context);
   if Map.mem st.func_context var.t
@@ -84,6 +112,15 @@ let declare_var st (var : Cst.var) : Ast.var * st =
   var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
 ;;
 
+let declare_struct_var st (var : Cst.var) : Ast.var * st =
+  (* we can declare structs multiple times *)
+  match Map.find st.struct_context var.t with
+  | Some t -> t, st
+  | None ->
+    let var' = fresh_struct_var st var in
+    var', { st with struct_context = Map.add_exn st.struct_context ~key:var.t ~data:var' }
+;;
+
 let declare_func_var st (var : Cst.var) : Ast.var * st =
   if Map.mem st.typedef_context var.t
   then throw_s [%message "Cannot declare func with same name as typedef" (var : Cst.var)];
@@ -105,6 +142,9 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
   | Pointer { ty; span } ->
     let ty = elab_ty st ty in
     Pointer { ty; span }
+  | Ty_struct { name; span } ->
+    let name = elab_struct_var st name in
+    Ty_struct { name; span }
 ;;
 
 let rec elab_lvalue st (lvalue : Cst.lvalue) : Ast.lvalue =
@@ -391,6 +431,25 @@ let elab_defn_params st params =
   res, !st
 ;;
 
+let elab_field st (field : Cst.field) : Ast.field =
+  let ty = elab_ty st field.ty in
+  { ty; name = field.name; span = field.span }
+;;
+
+let elab_struct st (strukt : Cst.strukt) : Ast.strukt =
+  let fields =
+    List.map strukt.fields ~f:(elab_field st)
+    |> List.map ~f:(fun field -> field.name.t, field)
+    |> String.Map.of_alist
+  in
+  let fields =
+    match fields with
+    | `Duplicate_key field -> throw_s [%message "Duplicate struct field" (field : string)]
+    | `Ok t -> t
+  in
+  { fields; span = strukt.span }
+;;
+
 let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
   match decl with
   | Cst.Func func ->
@@ -419,6 +478,10 @@ let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
     let ty = elab_ty st typedef.ty in
     let name, st = declare_var st typedef.name in
     Ast.Typedef { ty; name; span = typedef.span }, st
+  | Struct { name; strukt; span } ->
+    let name, st = declare_struct_var st name in
+    let strukt = Option.map strukt ~f:(elab_struct st) in
+    Struct { name; strukt; span }, st
 ;;
 
 let elab_program st (prog : Cst.program) : Ast.program =
