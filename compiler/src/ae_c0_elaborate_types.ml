@@ -61,6 +61,7 @@ let is_small_ty st ty =
 ;;
 
 let check_ty_small st span ty =
+  let ty = eval_ty st ty in
   if not (is_small_ty st ty)
   then throw_s [%message "Expected small type" (span : Span.t) (ty : Ast.ty)]
 ;;
@@ -72,6 +73,7 @@ let check_ty_eq st span (ty : Ast.ty) (ty' : Ast.ty) =
 ;;
 
 let check_ty_is_pointer st (ty : Ast.ty) span =
+  let ty = eval_ty st ty in
   match ty with
   | Pointer _ -> ()
   | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
@@ -87,6 +89,13 @@ let is_ty_relevant st ty =
 let check_ty_relevant st ty =
   if not (is_ty_relevant st ty)
   then throw_s [%message "Size of type was not known" (ty : Ast.ty)]
+;;
+
+let check_not_void st span (ty : Ast.ty) =
+  let ty = eval_ty st ty in
+  match ty with
+  | Void _ -> throw_s [%message "Unexpected void type" (span : Span.t)]
+  | _ -> ()
 ;;
 
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
@@ -206,7 +215,10 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   | Assert { expr; span } ->
     let expr = check_expr st expr (Bool span) in
     Assert { expr; span }
-  | Declare _ -> stmt
+  | Declare { ty; var = _; span } ->
+    check_ty_small st span ty;
+    check_not_void st span ty;
+    stmt
   | Assign { lvalue; expr; span } ->
     let lvalue = infer_expr st lvalue in
     let ty = Ast.expr_ty_exn lvalue in
@@ -223,7 +235,6 @@ and check_block st (block : Ast.block) : Ast.block =
       let st' =
         match stmt with
         | Declare { ty; var; span } ->
-          check_ty_small st span ty;
           { st with context = Map.add_exn st.context ~key:var ~data:ty }
         | _ -> st
       in
@@ -264,7 +275,10 @@ let define_func st name =
 
 let check_func_sig st (func_sig : Ast.func_sig) =
   check_ty_small st func_sig.span func_sig.ty;
-  List.iter func_sig.params ~f:(fun param -> check_ty_small st param.span param.ty);
+  List.iter func_sig.params ~f:(fun param ->
+    check_ty_small st param.span param.ty;
+    check_not_void st param.span param.ty;
+    ());
   ()
 ;;
 
@@ -300,6 +314,11 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
     ( global_decl
     , { st with typedefs = Map.add_exn st.typedefs ~key:typedef.name ~data:typedef.ty } )
   | Struct { name; strukt; _ } ->
+    begin
+      let@: strukt = Option.iter strukt in
+      let@: field = List.iter strukt.fields in
+      check_not_void st field.span field.ty
+    end;
     ( global_decl
     , Option.value_map
         strukt

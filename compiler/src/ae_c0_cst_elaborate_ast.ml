@@ -159,10 +159,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     let stmts =
       let@: name = List.map names in
       let st = !st_ref in
-      (match ty with
-       | Void span ->
-         throw_s [%message "Variable declarations cannot have type void" (span : Span.t)]
-       | _ -> ());
+      (* TODO: this is wrong, should be doing this in the typechecker because there may be typedefs *)
       let var, st' = declare_var st name in
       let ty = elab_ty st' ty in
       let stmts =

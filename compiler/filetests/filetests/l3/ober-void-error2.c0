@@ -12,4 +12,4 @@ int run() {
 
 void main() {}
 ----
-("Variable declarations cannot have type void" (span 8:5-9))
+("Unexpected void type" (span 8:5-9))

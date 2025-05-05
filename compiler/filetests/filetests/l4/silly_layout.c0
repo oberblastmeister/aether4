@@ -1,0 +1,19 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct layout {
+    bool first;
+    bool second;
+    bool third;
+};
+
+void main() {
+    struct layout *p = alloc(struct layout);
+    (*p).first = true;
+    assert (!(*p).second);
+    assert ((*p).first);
+}
+----

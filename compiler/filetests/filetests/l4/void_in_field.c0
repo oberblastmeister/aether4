@@ -1,0 +1,15 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct bad {
+    void bad;
+};
+
+void main() {
+}
+----
+("Filetest failed"
+ ("Could not compile test" ("Unexpected void type" (span 8:5-14))))

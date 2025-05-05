@@ -19,3 +19,4 @@ void main() {
     struct weird **p0 = alloc(struct weird *);
     struct weird *p1 = *p0;
 }
+----
