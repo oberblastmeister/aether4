@@ -80,7 +80,7 @@ let check_ty_is_pointer st (ty : Ast.ty) span =
 let is_ty_relevant st ty =
   let ty = eval_ty st ty in
   match ty with
-  | Ty_struct _ -> false
+  | Ty_struct { name; _ } -> Map.mem st.defined_structs name
   | _ -> true
 ;;
 
@@ -89,32 +89,37 @@ let check_ty_relevant st ty =
   then throw_s [%message "Size of type was not known" (ty : Ast.ty)]
 ;;
 
-let rec infer_lvalue st (lvalue : Ast.lvalue) : Ast.lvalue =
-  match lvalue with
-  | Lvalue_var ({ var; ty = _ } as p) ->
-    let ty = var_ty st var in
-    Lvalue_var { p with ty = Some ty }
-  | Lvalue_deref ({ lvalue; span; ty = _ } as p) ->
-    let lvalue = infer_lvalue st lvalue in
-    let ty = Ast.lvalue_ty_exn lvalue in
-    check_ty_is_pointer st ty span;
-    let fail () = assert false in
-    let%fail (Pointer { ty; _ }) = ty in
-    Lvalue_deref { p with lvalue; ty = Some ty }
-;;
-
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
-  | Var { var; ty = _ } -> Var { var; ty = Some (var_ty st var) }
-  | Unary ({ expr; op; ty = _; span } as p) -> begin
-    match op with
-    | Deref ->
-      let expr = check_expr_pointer st expr in
-      let fail () = assert false in
-      let%fail (Pointer { ty; span = _ }) = Ast.expr_ty_exn expr in
-      Unary { p with expr; ty = Some ty }
-  end
   | Int_const _ | Bool_const _ -> expr
+  | Var ({ var; ty = _ } as p) ->
+    let ty = var_ty st var in
+    Var { p with ty = Some ty }
+  | Deref ({ expr; span; ty = _ } as p) ->
+    let expr = infer_expr st expr in
+    let ty = Ast.expr_ty_exn expr in
+    check_ty_is_pointer st ty span;
+    let%fail_exn (Pointer { ty; _ }) = ty in
+    Deref { p with expr; ty = Some ty }
+  | Field_access ({ expr; field; span; ty } as p) ->
+    let expr = infer_expr st expr in
+    let ty = Ast.expr_ty_exn expr in
+    let fail () =
+      throw_s [%message "Expected struct type" (span : Span.t) (ty : Ast.ty)]
+    in
+    let%fail (Ty_struct { name = struct_name; _ }) = ty in
+    let strukt = Map.find_exn st.defined_structs struct_name in
+    let field =
+      Map.find strukt.field_map field.t
+      |> Option.value_or_thunk ~default:(fun () ->
+        throw_s
+          [%message
+            "Could not find field in struct type"
+              (span : Span.t)
+              (ty : Ast.ty)
+              ~field:(field.t : string)])
+    in
+    Field_access { p with expr; ty = Some field.ty }
   | Ternary { cond; then_expr; else_expr; ty = _; span } ->
     let cond = check_expr st cond Ast.bool_ty in
     let then_expr = infer_expr st then_expr in
@@ -203,8 +208,8 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
     Assert { expr; span }
   | Declare _ -> stmt
   | Assign { lvalue; expr; span } ->
-    let lvalue = infer_lvalue st lvalue in
-    let ty = Ast.lvalue_ty_exn lvalue in
+    let lvalue = infer_expr st lvalue in
+    let ty = Ast.expr_ty_exn lvalue in
     check_ty_small st span ty;
     let expr = check_expr st expr ty in
     Assign { lvalue; expr; span }

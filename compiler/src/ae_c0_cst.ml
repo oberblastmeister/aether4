@@ -36,7 +36,7 @@ and stmt =
   | Assign of assign
   | Effect of expr
   | Post of
-      { lvalue : lvalue
+      { lvalue : expr
       ; op : post_op
       ; span : Span.t
       }
@@ -74,19 +74,11 @@ and for_paren =
 [@@deriving sexp_of]
 
 and assign =
-  { lvalue : lvalue
+  { lvalue : expr
   ; op : assign_op
   ; expr : expr
   ; span : Span.t
   }
-[@@deriving sexp_of]
-
-and lvalue =
-  | Lvalue_var of var
-  | Lvalue_deref of
-      { lvalue : lvalue
-      ; span : Span.t
-      }
 [@@deriving sexp_of]
 
 and assign_op =
@@ -110,7 +102,6 @@ and post_op =
 and expr =
   | Int_const of Z.t Spanned.t
   | Bool_const of bool Spanned.t
-  | Var of var
   | Unary of
       { op : unary_op
       ; expr : expr
@@ -137,13 +128,22 @@ and expr =
       { ty : ty
       ; span : Span.t
       }
+  | Var of var
+  | Deref of
+      { expr : expr
+      ; span : Span.t
+      }
+  | Field_access of
+      { expr : expr
+      ; field : string Spanned.t
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and unary_op =
   | Neg
   | Bit_not
   | Log_not
-  | Deref
 
 and bin_op =
   | Add
@@ -212,15 +212,17 @@ type global_decl =
 
 type program = global_decl list [@@deriving sexp_of]
 
-let expr_span (expr : expr) =
+let rec expr_span (expr : expr) =
   match expr with
   | Int_const { span; _ }
   | Bool_const { span; _ }
-  | Var { span; _ }
   | Unary { span; _ }
   | Bin { span; _ }
   | Ternary { span; _ }
   | Call { span; _ }
+  | Var { span; _ }
+  | Deref { span; _ }
+  | Field_access { span; _ }
   | Alloc { span; _ } -> span
 ;;
 
@@ -246,12 +248,6 @@ let ty_span (ty : ty) =
   | Void span
   | Pointer { span; _ }
   | Ty_var { span; _ } -> span
-;;
-
-let lvalue_span (lvalue : lvalue) =
-  match lvalue with
-  | Lvalue_var { span; _ } -> span
-  | Lvalue_deref { span; _ } -> span
 ;;
 
 let var v = Var v

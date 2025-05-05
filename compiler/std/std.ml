@@ -82,7 +82,16 @@ end
 
 type 'a iarray = ('a, immutable) Arrayp.t
 
-let sexp_of_iarray f (t : _ iarray) = Array.Permissioned.sexp_of_t f sexp_of_opaque t
+let sexp_of_iarray f t = Array.Permissioned.sexp_of_t f sexp_of_immutable t
+
+let equal_iarray f (t1 : _ iarray) (t2 : _ iarray) : bool =
+  Array.Permissioned.equal f t1 t2
+;;
+
+let compare_iarray f (t1 : _ iarray) (t2 : _ iarray) : int =
+  Array.Permissioned.compare f compare_immutable t1 t2
+;;
+
 let ( .@() ) = Arrayp.get
 let ( .@()<- ) = Arrayp.set
 

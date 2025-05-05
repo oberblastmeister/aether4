@@ -33,6 +33,22 @@ let fail_expander ~ctxt (expr : expression) =
       "pattern match must be a let binding"
 ;;
 
+let fail_exn_expander ~ctxt (expr : expression) =
+  let loc = Expansion_context.Extension.extension_point_loc ctxt in
+  match expr with
+  | [%expr
+      let [%p? pat] = [%e? rhs] in
+      [%e? body]] ->
+    [%expr
+      match [%e rhs] with
+      | [%p pat] -> [%e body]
+      | _ -> raise_s [%message "Pattern match failed" [%here]]]
+  | _ ->
+    Location.raise_errorf
+      ~loc:(Expansion_context.Extension.extension_point_loc ctxt)
+      "pattern match must be a let binding"
+;;
+
 (* let like_expander ~ctxt (modul : module_expr) =
   let loc = Expansion_context.Extension.extension_point_loc ctxt in
   () *)
@@ -43,6 +59,14 @@ let fail_extension =
     Extension.Context.expression
     Ast_pattern.(single_expr_payload __)
     fail_expander
+;;
+
+let fail_exn_extension =
+  Extension.V3.declare
+    "fail_exn"
+    Extension.Context.expression
+    Ast_pattern.(single_expr_payload __)
+    fail_exn_expander
 ;;
 
 let bind_fail_extension =
@@ -57,6 +81,7 @@ let () =
   Driver.register_transformation
     ~rules:
       [ Context_free.Rule.extension fail_extension
+      ; Context_free.Rule.extension fail_exn_extension
       ; Context_free.Rule.extension bind_fail_extension
       ]
     "ppx_pattern"

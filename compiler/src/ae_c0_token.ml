@@ -26,6 +26,7 @@ type t =
   | SlashEq
   | PercentEq
   | Comma
+  | Dot
   | PlusPlus
   | DashDash
   | Langle

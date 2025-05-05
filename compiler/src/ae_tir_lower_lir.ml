@@ -61,6 +61,7 @@ let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
   | Bool -> I1
   | Void -> I64
   | Pointer _ -> I64
+  | Struct _ -> todol [%here]
 ;;
 
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
@@ -147,7 +148,7 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
     | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
     | Alloc ty ->
-      let size = Tir.Ty.get_byte_size ty in
+      let size = Tir.Ty.size_of ty in
       let size_temp = fresh_temp ~name:"size" st in
       let alloc_succeed_label = fresh_label ~name:"alloc_suceeed" st in
       let alloc_fail_label = fresh_label ~name:"alloc_fail" st in
@@ -195,31 +196,28 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
   | Unary { dst; op; src } -> begin
     match op with
     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ]
+    | Is_null _ty ->
+      let const = fresh_temp ~name:"const" st in
+      empty
+      +> [ ins (Nullary { dst = const; op = Int_const { const = 0L; ty = I64 } })
+         ; ins (Bin { dst; op = Eq I64; src1 = src; src2 = const })
+         ]
     | Deref ty ->
       let ty = lower_ty ty in
-      let garbage_temp = fresh_temp ~name:"garbage_temp" st in
-      let body1 =
-        empty
-        +> [ ins
-               (Call
-                  { dsts = [ garbage_temp, I64 ]
-                  ; func = "c0_runtime_deref_fail"
-                  ; args = []
-                  ; call_conv = X86_call_conv.sysv
-                  })
-           ; ins (Nullary { dst; op = Undefined I64 })
-           ; ins Unreachable
-           ]
-      in
-      let body2 = empty +> [ ins (Unary { dst; op = Load ty; src }) ] in
-      let cond_dst = fresh_temp ~name:"is_null_cond" st in
-      let null_temp = fresh_temp ~name:"null" st in
+      empty +> [ ins (Unary { dst; op = Load ty; src }) ]
+    | Offset_of { ty; field } ->
+      let field = ty.fields.@(field) in
+      let offset_temp = fresh_temp ~name:"offset" st in
       empty
-      +> [ ins (Nullary { dst = null_temp; op = Int_const { const = 0L; ty = I64 } })
-         ; ins (Bin { dst = cond_dst; op = Eq I64; src1 = src; src2 = null_temp })
+      +> [ ins
+             (Nullary
+                { dst = offset_temp
+                ; op = Int_const { const = Int64.of_int field.offset; ty = I64 }
+                })
+         ; ins (Bin { dst; op = Add; src1 = src; src2 = offset_temp })
          ]
-      ++ make_cond st cond_dst body1 body2
   end
+  (* TODO: lower store with if statement check *)
   | Bin { dst; op; src1; src2 } ->
     let op = lower_bin_op op in
     let instr = ins (Bin { dst; op; src1; src2 }) in
@@ -233,9 +231,16 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
         ~func:"c0_runtime_assert"
         ~args:[ t0, Bool; t1, Int; t2, Int; t3, Int; t4, Int ]
         ~is_extern:true
-    | C0_runtime_assert, _ -> raise_s [%message "Invalid operation configuration"]
+    | C0_runtime_null_pointer_panic, [] ->
+      lower_call
+        st
+        ~dsts:[ dst, Void ]
+        ~func:"c0_runtime_null_pointer_panic"
+        ~args:[]
+        ~is_extern:true
+    | (C0_runtime_assert | C0_runtime_null_pointer_panic), _ ->
+      raise_s [%message "Invalid operation configuration"]
   end
-  | Getelementptr _ -> todol [%here]
   | Ret { src; ty } ->
     let ty = lower_ty ty in
     empty

@@ -147,13 +147,6 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
     Ty_struct { name; span }
 ;;
 
-let rec elab_lvalue st (lvalue : Cst.lvalue) : Ast.lvalue =
-  match lvalue with
-  | Lvalue_var var -> Lvalue_var { var = elab_var st var; ty = None }
-  | Lvalue_deref { lvalue; span } ->
-    Lvalue_deref { lvalue = elab_lvalue st lvalue; span; ty = None }
-;;
-
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
   | Assert { expr; span } ->
@@ -181,10 +174,10 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
           empty
           +> Ast.
                [ Declare { ty; var = tmp; span }
-               ; Assign { lvalue = Lvalue_var { var = tmp; ty = None }; expr; span }
+               ; Assign { lvalue = Var { var = tmp; ty = None }; expr; span }
                ; Declare { ty; var; span }
                ; Assign
-                   { lvalue = Lvalue_var { var; ty = None }
+                   { lvalue = Var { var; ty = None }
                    ; expr = Var { var = tmp; ty = None }
                    ; span
                    }
@@ -197,7 +190,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   | Block { block; span } ->
     (empty +> Ast.[ Block { block = elab_block st block; span } ]), st
   | Post { lvalue; op; span } ->
-    let lvalue = elab_lvalue st lvalue in
+    let lvalue = elab_expr st lvalue in
     let expr =
       match op with
       | Incr -> Ast.Int_const { t = 1L; span }
@@ -208,14 +201,7 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       +> Ast.
            [ Assign
                { lvalue
-               ; expr =
-                   Bin
-                     { lhs = Ast.lvalue_to_expr lvalue
-                     ; op = Add
-                     ; rhs = expr
-                     ; ty = None
-                     ; span
-                     }
+               ; expr = Bin { lhs = lvalue; op = Add; rhs = expr; ty = None; span }
                ; span
                }
            ]
@@ -226,10 +212,8 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     (empty +> Ast.[ Effect e ]), st
   | Assign { lvalue; op; expr; span } ->
     let expr = elab_expr st expr in
-    let lvalue = elab_lvalue st lvalue in
-    let bin_expr op =
-      Ast.(Bin { lhs = Ast.lvalue_to_expr lvalue; op; rhs = expr; ty = None; span })
-    in
+    let lvalue = elab_expr st lvalue in
+    let bin_expr op = Ast.(Bin { lhs = lvalue; op; rhs = expr; ty = None; span }) in
     let expr =
       match op with
       | Id_assign -> expr
@@ -294,6 +278,10 @@ and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
 
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
+  | Var var -> Var { var = elab_var st var; ty = None }
+  | Deref { expr; span } -> Deref { expr = elab_expr st expr; span; ty = None }
+  | Field_access { expr; field; span } ->
+    Field_access { expr = elab_expr st expr; field; span; ty = None }
   | Int_const { t = i; span } ->
     (match Z.to_int64 i with
      | None ->
@@ -305,9 +293,6 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
        else throw_s [%message "Int did not fit in 64 bits" (i : Z.t)]
      | Some i -> Int_const { t = i; span })
   | Bool_const { t = b; span } -> Bool_const { t = b; span }
-  | Var var ->
-    let var = elab_var st var in
-    Var { var; ty = None }
   | Unary { op; expr; span } ->
     let expr = elab_expr st expr in
     begin
@@ -319,7 +304,6 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
           { lhs = Int_const { t = -1L; span }; op = Bit_xor; rhs = expr; ty = None; span }
       | Log_not ->
         Bin { lhs = Bool_const { t = false; span }; op = Eq; rhs = expr; ty = None; span }
-      | Deref -> Unary { expr; op = Deref; span; ty = None }
     end
   | Ternary { cond; then_expr; else_expr; span } ->
     let cond = elab_expr st cond in
@@ -437,17 +421,16 @@ let elab_field st (field : Cst.field) : Ast.field =
 ;;
 
 let elab_struct st (strukt : Cst.strukt) : Ast.strukt =
-  let fields =
-    List.map strukt.fields ~f:(elab_field st)
-    |> List.map ~f:(fun field -> field.name.t, field)
-    |> String.Map.of_alist
+  let fields = List.map strukt.fields ~f:(elab_field st) in
+  let fields_map =
+    List.map fields ~f:(fun field -> field.name.t, field) |> String.Map.of_alist
   in
-  let fields =
-    match fields with
+  let field_map =
+    match fields_map with
     | `Duplicate_key field -> throw_s [%message "Duplicate struct field" (field : string)]
     | `Ok t -> t
   in
-  { fields; span = strukt.span }
+  ({ field_map; fields; span = strukt.span } : Ast.strukt)
 ;;
 
 let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =

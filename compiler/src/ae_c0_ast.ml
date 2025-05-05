@@ -65,7 +65,7 @@ type stmt =
       ; span : Span.t
       }
   | Assign of
-      { lvalue : lvalue
+      { lvalue : expr
       ; expr : expr
       ; span : Span.t
       }
@@ -75,27 +75,10 @@ type stmt =
       }
 [@@deriving sexp_of]
 
-and lvalue =
-  | Lvalue_var of
-      { var : var
-      ; ty : ty option
-      }
-  | Lvalue_deref of
-      { lvalue : lvalue
-      ; span : Span.t
-      ; ty : ty option
-      }
-[@@deriving sexp_of]
-
 and block = stmt list [@@deriving sexp_of]
 and nullary_op = Alloc of ty
-and unary_op = Deref
 
 and expr =
-  | Var of
-      { var : var
-      ; ty : ty option
-      }
   | Int_const of int64 Spanned.t
   | Bool_const of bool Spanned.t
   | Nullary of
@@ -106,12 +89,6 @@ and expr =
       { cond : expr
       ; then_expr : expr
       ; else_expr : expr
-      ; ty : ty option
-      ; span : Span.t
-      }
-  | Unary of
-      { expr : expr
-      ; op : unary_op
       ; ty : ty option
       ; span : Span.t
       }
@@ -127,6 +104,21 @@ and expr =
       ; args : expr list
       ; ty : ty option
       ; span : Span.t
+      }
+  | Var of
+      { var : var
+      ; ty : ty option
+      }
+  | Field_access of
+      { expr : expr
+      ; field : string Spanned.t
+      ; span : Span.t
+      ; ty : ty option
+      }
+  | Deref of
+      { expr : expr
+      ; span : Span.t
+      ; ty : ty option
       }
 [@@deriving sexp_of]
 
@@ -180,7 +172,8 @@ type field =
 [@@deriving sexp_of]
 
 type strukt =
-  { fields : field String.Map.t
+  { field_map : field String.Map.t
+  ; fields : field list
   ; span : Span.t
   }
 [@@deriving sexp_of]
@@ -219,34 +212,24 @@ let void_ty = Void Span.none
 
 let expr_span = function
   | Ternary { span; _ }
-  | Var { var = { span; _ }; _ }
   | Bin { span; _ }
   | Nullary { span; _ }
   | Call { span; _ }
   | Int_const { span; _ }
+  | Var { var = { span; _ }; _ }
+  | Field_access { span; _ }
+  | Deref { span; _ }
   | Bool_const { span; _ } -> span
-  | Unary { span; _ } -> span
 ;;
 
 let expr_ty_exn = function
-  | Ternary { ty; _ } | Var { ty; _ } | Bin { ty; _ } | Call { ty; _ } ->
-    Option.value_exn ty
+  | Ternary { ty; _ } | Bin { ty; _ } | Call { ty; _ } -> Option.value_exn ty
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
   | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
-  | Unary { ty; _ } -> Option.value_exn ty
-;;
-
-let lvalue_span (lvalue : lvalue) =
-  match lvalue with
-  | Lvalue_var { var = { span; _ }; _ } -> span
-  | Lvalue_deref { span; _ } -> span
-;;
-
-let lvalue_ty_exn (lvalue : lvalue) =
-  match lvalue with
-  | Lvalue_var { ty; _ } -> Option.value_exn ty
-  | Lvalue_deref { ty; _ } -> Option.value_exn ty
+  | Field_access { ty; _ } -> Option.value_exn ty
+  | Deref { ty; _ } -> Option.value_exn ty
+  | Var { ty; _ } -> Option.value_exn ty
 ;;
 
 let nop_stmt span = Block { block = []; span }
@@ -259,11 +242,4 @@ let get_func_ty_map program =
     | Func_defn ({ name; _ } as defn) -> Some (name, func_defn_to_ty defn)
     | Struct _ | Typedef _ -> None)
   |> Var.Map.of_alist_exn
-;;
-
-let rec lvalue_to_expr lvalue : expr =
-  match lvalue with
-  | Lvalue_var { var; ty } -> Var { var; ty }
-  | Lvalue_deref { lvalue; span; ty } ->
-    Unary { expr = lvalue_to_expr lvalue; op = Deref; span; ty }
 ;;

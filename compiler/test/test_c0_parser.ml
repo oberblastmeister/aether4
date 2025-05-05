@@ -154,9 +154,8 @@ let%expect_test "simple control flow" =
                (Block
                 ((block
                   ((Assign
-                    ((lvalue (Lvalue_var ((t another) (span 5:9-16))))
-                     (op Id_assign) (expr (Int_const ((t 1243) (span 5:19-23))))
-                     (span 5:9-23)))))
+                    ((lvalue (Var ((t another) (span 5:9-16)))) (op Id_assign)
+                     (expr (Int_const ((t 1243) (span 5:19-23)))) (span 5:9-23)))))
                  (span [4,14]-[6,8]))))
               (body2 ()) (span [4,7]-[6,8]))))
            (span [2,16]-[7,6]))))
@@ -181,13 +180,13 @@ let%expect_test "simple assign" =
         (body
          (((block
             ((Assign
-              ((lvalue (Lvalue_var ((t first) (span 3:9-14)))) (op Mul_assign)
+              ((lvalue (Var ((t first) (span 3:9-14)))) (op Mul_assign)
                (expr
                 (Bin (lhs (Int_const ((t 12) (span 3:18-20)))) (op Add)
                  (rhs (Int_const ((t 12) (span 3:23-25)))) (span 3:18-25)))
                (span 3:9-25)))
              (Assign
-              ((lvalue (Lvalue_var ((t another) (span 4:11-18)))) (op Mod_assign)
+              ((lvalue (Var ((t another) (span 4:11-18)))) (op Mod_assign)
                (expr
                 (Bin (lhs (Int_const ((t 12) (span 4:24-26)))) (op Div)
                  (rhs (Int_const ((t 12) (span 4:29-31)))) (span 4:24-31)))
@@ -332,8 +331,7 @@ let%expect_test _ =
               (expr ((Alloc (ty (Int 4:22-25)) (span 4:16-26)))) (span 4:7-26))
              (Decl (ty (Int 5:7-10)) (names (((t bruh) (span 5:11-15))))
               (expr
-               ((Unary (op Deref) (expr (Var ((t first) (span 5:19-24))))
-                 (span 5:18-24))))
+               ((Deref (expr (Var ((t first) (span 5:19-24)))) (span 5:18-24))))
               (span 5:7-24))
              (Assert (expr (Bool_const ((t true) (span 6:14-18)))) (span 6:7-18))))
            (span [2,16]-[7,6]))))

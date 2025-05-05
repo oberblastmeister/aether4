@@ -373,8 +373,7 @@ let pop_callee_saved =
 ;;
 
 let c0_main_export_instructions =
-  let fail () = assert false in
-  let%fail (arg1_reg :: arg2_reg :: _) = X86_call_conv.c0.call_args in
+  let%fail_exn (arg1_reg :: arg2_reg :: _) = X86_call_conv.c0.call_args in
   Flat_x86.Line.[ Directive ".globl c0_main_export"; Label "c0_main_export" ]
   @ push_callee_saved
   @ Flat_x86.Line.

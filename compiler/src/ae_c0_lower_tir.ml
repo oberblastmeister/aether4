@@ -14,9 +14,16 @@ let ins ?ann ?info instr = Second (Tir.Instr'.create_unindexed ?ann ?info instr)
 let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
 let bc ?(args = []) label = { Tir.Block_call.label; args }
 
+type struct_info =
+  { lowered_ty : Tir.Struct.t
+  ; field_name_to_index : int String.Table.t
+  ; strukt : Ast.strukt
+  }
+
 type global_st =
   { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t
   ; typedefs : Ast.ty Ast.Var.Table.t
+  ; structs : struct_info Ast.Var.Table.t
   }
 
 type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
@@ -24,7 +31,8 @@ type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
 let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
   let typedefs = Ast.Var.Table.create () in
-  { func_ty_map; typedefs }
+  let structs = Ast.Var.Table.create () in
+  { func_ty_map; typedefs; structs }
 ;;
 
 type st =
@@ -64,11 +72,13 @@ let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
   | Int _ -> Int
   | Bool _ -> Bool
   | Void _ -> Void
-  | Ty_var var -> lower_ty st (Hashtbl.find_exn st.global_st.typedefs var)
+  | Ty_var var -> lower_ty st (Hashtbl.find_exn st.typedefs var)
   | Pointer { ty; span = _ } ->
     let ty = lower_ty st ty in
     Pointer ty
-  | Ty_struct { name; span = _ } -> todol [%here]
+  | Ty_struct { name; span = _ } ->
+    let struct_info = Hashtbl.find_exn st.structs name in
+    Struct struct_info.lowered_ty
 ;;
 
 let rec lower_block st (block : Ast.block) : instrs =
@@ -89,16 +99,39 @@ and make_cond st cond body1 body2 =
   ++ label join_label
 
 (* returns the address of the lvalue *)
-and lower_lvalue st dst (lvalue : Ast.lvalue) =
+and lower_lvalue_address st dst (lvalue : Ast.expr) =
   match lvalue with
-  | Lvalue_var { var; ty } ->
-    let ty = Option.value_exn ty |> lower_ty st in
-    empty +> [ ins (Unary { dst; op = Copy ty; src = var_temp st var }) ]
-  | Lvalue_deref { lvalue; span = _; ty } ->
-    let ty = Option.value_exn ty |> lower_ty st in
-    let addr_temp = fresh_temp ~name:"lvalue_address" st in
-    lower_lvalue st addr_temp lvalue
-    +> [ ins (Unary { dst; op = Deref ty; src = addr_temp }) ]
+  | Deref { expr; span = _; ty } ->
+    let ty = Option.value_exn ty |> lower_ty st.global_st in
+    let cond = fresh_temp ~name:"cond" st in
+    let garbage_temp = fresh_temp ~name:"garbage" st in
+    let body1 =
+      empty
+      +> [ ins
+             (Nary { dst = garbage_temp; op = C0_runtime_null_pointer_panic; srcs = [] })
+         ; ins Unreachable
+         ]
+    in
+    let body2 = empty in
+    empty
+    ++ lower_expr st dst expr
+    +> [ ins (Unary { dst = cond; op = Is_null ty; src = dst }) ]
+    ++ make_cond st cond body1 body2
+  | Field_access { expr; field; span = _; ty = _res_ty } ->
+    let%fail_exn (Ty_struct { name; _ }) = Ast.expr_ty_exn expr in
+    let struct_info = Hashtbl.find_exn st.global_st.structs name in
+    let struct_ty = struct_info.lowered_ty in
+    let field = Hashtbl.find_exn struct_info.field_name_to_index field.t in
+    let address = fresh_temp ~name:"address" st in
+    (* need to check that the pointer is not null *)
+    empty
+    ++ lower_lvalue_address st address expr
+    +> [ ins (Unary { dst; src = address; op = Offset_of { ty = struct_ty; field } }) ]
+  | _ ->
+    raise_s
+      [%message
+        "Should not get here, lvalues addresses should be a specific syntactic class"
+          (lvalue : Ast.expr)]
 
 (* invariant:
 
@@ -116,19 +149,18 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     (* this adds it into the map, but ignore the temp *)
     let _ = var_temp st var in
     empty
-  | Assign { lvalue = Lvalue_var { var; ty }; expr; span = _ } ->
+  | Assign { lvalue = Var { var; ty = _ }; expr; span = _ } ->
     let temp = var_temp st var in
     lower_expr st temp expr
-  | Assign { lvalue = Lvalue_deref { lvalue; span = _; ty }; expr; span = _ } ->
-    let ty = Option.value_exn ty |> lower_ty st in
-    let addr_temp = fresh_temp ~name:"lvalue_address" st in
+  | Assign { lvalue; expr; span = _ } ->
+    let ty = Ast.expr_ty_exn lvalue |> lower_ty st.global_st in
+    let address = fresh_temp ~name:"address" st in
     let garbage_temp = fresh_temp ~name:"garbage" st in
     let expr_dst = fresh_temp ~name:"store_expr" st in
     empty
-    ++ lower_lvalue st addr_temp lvalue
+    ++ lower_lvalue_address st address lvalue
     ++ lower_expr st expr_dst expr
-    +> [ ins
-           (Bin { dst = garbage_temp; op = Store ty; src1 = addr_temp; src2 = expr_dst })
+    +> [ ins (Bin { dst = garbage_temp; op = Store ty; src1 = address; src2 = expr_dst })
        ]
   | Block { block; span = _ } -> lower_block st block
   | Effect expr ->
@@ -170,7 +202,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
       | Some expr ->
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
-        let ty = lower_ty st ty in
+        let ty = lower_ty st.global_st ty in
         empty ++ lower_expr st dst expr +> [ ins ~info (Ret { src = dst; ty }) ]
     end
   | If { cond; body1; body2; span } ->
@@ -235,15 +267,6 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let body1 = lower_expr st dst then_expr in
     let body2 = lower_expr st dst else_expr in
     empty ++ lower_expr st cond_dst cond ++ make_cond st cond_dst body1 body2
-  | Unary { expr; op; ty; span } -> begin
-    match op with
-    | Deref ->
-      let ty = lower_ty st (Option.value_exn ty) in
-      let pointer_dst = fresh_temp ~name:"pointer" st in
-      empty
-      ++ lower_expr st pointer_dst expr
-      +> [ ins (Unary { dst; op = Deref ty; src = pointer_dst }) ]
-  end
   | Int_const { t = const; span } ->
     let info = Span.to_info span in
     empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ]
@@ -255,7 +278,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let op : Tir.Bin_op.t =
       match op with
       | Eq ->
-        let ty = lower_ty st (Ast.expr_ty_exn lhs) in
+        let ty = lower_ty st.global_st (Ast.expr_ty_exn lhs) in
         Eq ty
       | _ -> lower_bin_op op
     in
@@ -267,8 +290,15 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     +> [ ins ~info (Bin { dst; src1; op; src2 }) ]
   | Var { var; ty } ->
     let src = var_temp st var in
-    let ty = lower_ty st (Option.value_exn ty) in
+    let ty = lower_ty st.global_st (Option.value_exn ty) in
     empty +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
+  | Deref _ | Field_access _ ->
+    let lvalue = expr in
+    let address = fresh_temp ~name:"address" st in
+    let ty = Ast.expr_ty_exn lvalue |> lower_ty st.global_st in
+    empty
+    ++ lower_lvalue_address st address lvalue
+    +> [ ins (Unary { dst; op = Deref ty; src = address }) ]
   | Call { func; args; ty; span } ->
     let ty = Option.value_exn ty in
     let info = Span.to_info span in
@@ -277,7 +307,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
       List.mapi args ~f:(fun i _arg ->
         fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
     in
-    let ty = lower_ty st ty in
+    let ty = lower_ty st.global_st ty in
     let args =
       List.zip_exn arg_temps args
       |> List.map ~f:(fun (arg_temp, arg_expr) -> lower_expr st arg_temp arg_expr)
@@ -292,14 +322,14 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
               ; func = func.name
               ; args =
                   List.zip_exn arg_temps func_sig.params
-                  |> List.map ~f:(fun (arg, param) -> arg, lower_ty st param.ty)
+                  |> List.map ~f:(fun (arg, param) -> arg, lower_ty st.global_st param.ty)
               ; is_extern = func_sig.is_extern
               })
        ]
   | Nullary { op; span = _ } -> begin
     match op with
     | Alloc ty ->
-      let ty = lower_ty st ty in
+      let ty = lower_ty st.global_st ty in
       empty +> [ ins (Nullary { dst; op = Alloc ty }) ]
   end
 ;;
@@ -309,13 +339,14 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let start_label = fresh_label ~name:"start" st in
   let params =
     List.map defn.params ~f:(fun param ->
-      { Tir.Block_param.param = var_temp st param.var; ty = lower_ty st param.ty })
+      { Tir.Block_param.param = var_temp st param.var
+      ; ty = lower_ty st.global_st param.ty
+      })
   in
   let linearized =
     empty ++ label ~params start_label ++ lower_block st defn.body +> [ ins Unreachable ]
   in
   let blocks = Tir.Linearized.to_blocks_exn (Bag.to_list linearized) in
-  trace_s [%message (blocks : Tir.Blocks.t)];
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in
   let func : Tir.Func.t =
@@ -336,14 +367,26 @@ let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
     Hashtbl.set st.func_ty_map ~key:defn.name ~data:(Ast.func_defn_to_ty defn);
     Some (lower_func_defn st defn)
   | Typedef { ty; name; span = _ } ->
-    Hashtbl.set st.typedefs ~key:name ~data:ty;
+    Hashtbl.add_exn st.typedefs ~key:name ~data:ty;
     None
-  | Struct _ -> todol [%here]
+  | Struct { name; strukt; span = _ } ->
+    begin
+      let@: strukt = Option.iter strukt in
+      let lowered_ty =
+        List.map strukt.fields ~f:(fun field -> lower_ty st field.ty) |> Tir.Struct.create
+      in
+      let field_name_to_index =
+        List.mapi strukt.fields ~f:(fun i field -> field.name.t, i)
+        |> String.Table.of_alist_exn
+      in
+      let struct_info = { lowered_ty; field_name_to_index; strukt } in
+      Hashtbl.add_exn st.structs ~key:name ~data:struct_info
+    end;
+    None
 ;;
 
 let lower_program (program : Ast.program) : Tir.Program.t =
   let st = create_global_state program in
   let funcs = List.filter_map ~f:(lower_global_decl st) program in
-  trace_s [%message (funcs : Tir.Func.t list)];
   { funcs }
 ;;

@@ -24,10 +24,11 @@ and iter_expr_uses (expr : Ast.expr) ~f =
     iter_expr_uses then_expr ~f;
     iter_expr_uses else_expr ~f;
     ()
-  | Var { var; ty = _ } ->
-    f var;
+  | Var { var; _ } -> f var
+  | Deref { expr; ty = _; span = _ } ->
+    iter_expr_uses expr ~f;
     ()
-  | Unary { expr; _ } ->
+  | Field_access { expr; field = _; ty = _; span = _ } ->
     iter_expr_uses expr ~f;
     ()
   | Nullary _ | Int_const _ | Bool_const _ -> ()
@@ -39,15 +40,14 @@ and iter_expr_uses (expr : Ast.expr) ~f =
     (List.iter @> iter_expr_uses) args ~f;
     ()
 
-and iter_lvalue_uses (lvalue : Ast.lvalue) ~f =
+(* and iter_lvalue_uses (lvalue : Ast.lvalue) ~f =
   match lvalue with
   | Ast.Lvalue_var { var; _ } -> f var
   | Ast.Lvalue_deref { lvalue; _ } -> iter_lvalue_uses lvalue ~f
+  | Ast.Lvalue_field { lvalue; _ } -> iter_lvalue_uses lvalue ~f
+  | Ast.Lvalue_expr expr -> iter_expr_uses expr ~f *)
 
 and expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_list
-
-and lvalue_uses_set lvalue =
-  iter_lvalue_uses lvalue |> Iter.to_list |> Ast.Var.Set.of_list
 
 and check_stmt live (stmt : Ast.stmt) =
   match stmt with
@@ -70,10 +70,10 @@ and check_stmt live (stmt : Ast.stmt) =
     if Set.mem live var
     then throw_s [%message "Variable was used before initialized" (var : Ast.var)]
     else live
-  | Assign { lvalue = Lvalue_var { var; _ }; expr; span = _ } ->
+  | Assign { lvalue = Var { var; _ }; expr; span = _ } ->
     live |> Fn.flip Set.remove var |> Set.union (expr_uses_set expr)
-  | Assign { lvalue = Lvalue_deref _ as lvalue; expr; _ } ->
-    live |> Set.union (lvalue_uses_set lvalue) |> Set.union (expr_uses_set expr)
+  | Assign { lvalue; expr; _ } ->
+    live |> Set.union (expr_uses_set lvalue) |> Set.union (expr_uses_set expr)
 ;;
 
 let check_global_decl (decl : Ast.global_decl) =

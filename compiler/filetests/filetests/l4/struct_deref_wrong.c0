@@ -1,0 +1,21 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct inner {
+    int x;
+    int y;
+};
+
+struct weird {
+    int x;
+    int y;
+    struct inner inner;
+};
+
+void main() {
+    struct weird **p0 = alloc(struct weird *);
+    struct weird *p1 = *p0;
+}

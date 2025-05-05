@@ -1,0 +1,22 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct point {
+    int x;
+    int y;
+};
+
+struct line {
+    struct point start;
+    struct point end;
+};
+
+void main() {
+    struct line *line = alloc(struct line);
+    (*line).start.x = 1243;
+    assert((*line).start.x == 1243);
+}
+----

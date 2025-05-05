@@ -69,7 +69,6 @@ module Make (Ir : Ir) = struct
     *)
     let func = Remove_dead_blocks.run func in
     let idoms = Func.compute_idoms func in
-    trace_s [%message (idoms : Dominators.t)];
     let dom_tree = Dominators.Tree.of_immediate idoms in
     let def_to_ty = Func.get_ty_table func in
     let block_to_phis = compute_phi_placements func in

@@ -21,6 +21,7 @@ rule lex =
   | ';' { Token.Semi }
   | '+' { Token.Plus }
   | '*' { Token.Star }
+  | '.' { Token.Dot }
   | '=' { Token.Eq }
   | "==" { Token.EqEq }
   | "!=" { Token.BangEq }

@@ -6,6 +6,7 @@ open Std
 
 open struct
   module Generic_ir = Ae_generic_ir_std
+  module Struct_layout = Ae_struct_layout
 end
 
 module Temp = Ae_temp
@@ -17,15 +18,63 @@ module Ty = struct
     | Bool
     | Void
     | Pointer of t
-  [@@deriving sexp_of, equal, compare]
+    | Struct of strukt
 
-  let get_byte_size ty =
+  and struct_field =
+    { ty : t
+    ; offset : int [@equal.ignore] [@compare.ignore]
+    }
+
+  and strukt =
+    { fields : struct_field iarray
+    ; align : int
+    ; size : int
+    }
+  [@@deriving sexp_of, compare, equal]
+
+  let size_of ty =
     match ty with
     | Int -> 8
     | Bool -> 1
     (* TODO: make this zero some time, so allocating Void will not allocate anything *)
     | Void -> 1
     | Pointer _ -> 8
+    | Struct { size; _ } -> size
+  ;;
+
+  let align_of ty =
+    match ty with
+    | Int -> 8
+    | Bool -> 1
+    | Void -> 1
+    | Pointer _ -> 8
+    | Struct { align; _ } -> align
+  ;;
+end
+
+module Struct_field = struct
+  type t = Ty.struct_field =
+    { ty : Ty.t
+    ; offset : int
+    }
+  [@@deriving sexp_of, equal, compare]
+end
+
+module Struct = struct
+  type t = Ty.strukt [@@deriving sexp_of, equal, compare]
+
+  let create tys : t =
+    let layout =
+      List.map tys ~f:(fun ty ->
+        Struct_layout.Field.{ size = Ty.size_of ty; align = Ty.align_of ty })
+      |> Struct_layout.calculate
+    in
+    let tys = Arrayp.of_list tys in
+    let fields =
+      Arrayp.zip_exn tys layout.offsets
+      |> Arrayp.map ~f:(fun (ty, offset) -> { Struct_field.ty; offset })
+    in
+    { fields; align = layout.align; size = layout.size }
   ;;
 end
 
@@ -73,6 +122,11 @@ module Unary_op = struct
   type t =
     | Copy of Ty.t
     | Deref of Ty.t
+    | Offset_of of
+        { ty : Struct.t
+        ; field : int
+        }
+    | Is_null of Ty.t
   [@@deriving sexp_of]
 end
 
@@ -86,7 +140,10 @@ module Nullary_op = struct
 end
 
 module Nary_op = struct
-  type t = C0_runtime_assert [@@deriving sexp_of]
+  type t =
+    | C0_runtime_assert
+    | C0_runtime_null_pointer_panic
+  [@@deriving sexp_of]
 end
 
 module Block_param = struct
@@ -148,12 +205,6 @@ module Instr = struct
         ; args : (Temp.t * Ty.t) list
         ; is_extern : bool
         }
-    | Getelementptr of
-        { dst : Temp.t
-        ; src : Temp.t (* this is the inner type of the source pointer *)
-        ; ty : Ty.t
-        ; places : Place.t list
-        }
     | Unreachable
   [@@deriving sexp_of, variants]
 
@@ -174,10 +225,6 @@ module Instr = struct
   let iter_uses (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
-    | Getelementptr { dst = _; src; places; ty = _ } ->
-      f src;
-      (List.iter @> Place.iter_uses) places ~f;
-      ()
     | Call { args; _ } -> (List.iter @> Fold.of_fn fst) args ~f
     | Bin { dst = _; op = _; src1; src2 } ->
       f src1;
@@ -206,13 +253,9 @@ module Instr = struct
   let iter_uses_with_known_ty (instr : t) ~f =
     match instr with
     | Unreachable | Block_params _ | Nop -> ()
-    | Getelementptr { dst = _; src; ty; places } ->
-      f (src, ty);
-      (List.iter @> Place.iter_uses_with_known_ty) places ~f;
-      ()
     | Call _ -> ()
     | Bin { dst = _; op = Store ty; src1; src2 } ->
-      f (src1, Pointer ty);
+      f (src1, Ty.Pointer ty);
       f (src2, ty)
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
@@ -241,6 +284,8 @@ module Instr = struct
       match op with
       | Copy ty -> f (src, ty)
       | Deref ty -> f (src, Pointer ty)
+      | Offset_of { ty; field = _ } -> f (src, Pointer (Struct ty))
+      | Is_null ty -> f (src, Pointer ty)
     end
     | Nullary { dst = _; op = _ } -> ()
     | Jump _b -> ()
@@ -256,7 +301,9 @@ module Instr = struct
         f (t3, Int);
         f (t4, Int);
         ()
-      | C0_runtime_assert, _ -> raise_s [%message "Invalid Nary operation"]
+      | C0_runtime_null_pointer_panic, [] -> ()
+      | (C0_runtime_assert | C0_runtime_null_pointer_panic), _ ->
+        raise_s [%message "Invalid Nary operation"]
     end
     | Ret { src; ty } ->
       f (src, ty);
@@ -266,12 +313,10 @@ module Instr = struct
   let iter_defs_with_ty t ~f =
     match t with
     | Block_params params -> (List.iter @> Fold.of_fn Block_param.to_tuple2) params ~f
-    | Getelementptr { dst; src = _; places; ty } ->
-      if not (List.is_empty places) then todol [%here];
-      f (dst, ty)
     | Nary { dst; op; srcs = _ } -> begin
       match op with
       | C0_runtime_assert -> f (dst, Void)
+      | C0_runtime_null_pointer_panic -> f (dst, Void)
     end
     | Nop -> ()
     | Call { dst; ty; _ } ->
@@ -289,6 +334,10 @@ module Instr = struct
       match op with
       | Copy ty -> f (dst, ty)
       | Deref ty -> f (dst, ty)
+      | Offset_of { ty; field } ->
+        let field_ty = ty.fields.@(field).ty in
+        f (dst, Pointer field_ty)
+      | Is_null _ -> f (dst, Bool)
     end
     | Nullary { dst; op } -> begin
       match op with
@@ -312,10 +361,6 @@ module Instr = struct
   let map_uses (instr : t) ~f =
     match instr with
     | Unreachable -> Unreachable
-    | Getelementptr ({ dst = _; src; places; ty = _ } as p) ->
-      let src = f src in
-      let places = (List.map & Place.map_uses) places ~f in
-      Getelementptr { p with src; places }
     | Nop -> Nop
     | Block_params _ -> instr
     | Call p ->
@@ -348,9 +393,6 @@ module Instr = struct
   let map_defs (instr : t) ~f =
     match instr with
     | Unreachable -> Unreachable
-    | Getelementptr ({ dst; _ } as p) ->
-      let dst = f dst in
-      Getelementptr { p with dst }
     | Block_params params ->
       Block_params ((List.map & Traverse.of_field Block_param.Fields.param) params ~f)
     | Nop -> Nop

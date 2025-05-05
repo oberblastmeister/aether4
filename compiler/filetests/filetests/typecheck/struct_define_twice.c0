@@ -8,4 +8,4 @@ struct first { };
 ("Filetest failed"
  ("Could not compile test"
   ("Cannot define struct twice" (name first@0)
-   (strukt ((fields ()) (span 5:16))))))
+   (strukt ((field_map ()) (fields ()) (span 5:16))))))

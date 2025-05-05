@@ -348,7 +348,7 @@ and parse_post env : Cst.stmt =
   let open Span.Syntax in
   let lvalue = parse_lvalue env in
   let op = parse_post_op env in
-  Cst.Post { lvalue; op = op.t; span = Cst.lvalue_span lvalue ++ op.span }
+  Cst.Post { lvalue; op = op.t; span = Cst.expr_span lvalue ++ op.span }
 
 and parse_post_op env : Cst.post_op Spanned.t =
   ((Parser.map & Spanned.map) (expect_eq PlusPlus) ~f:(Fn.const Cst.Incr)
@@ -360,7 +360,7 @@ and parse_assign env : Cst.stmt =
   let lvalue = parse_lvalue env in
   let op = parse_assign_op env in
   let expr = parse_expr env in
-  Cst.Assign { lvalue; op; expr; span = Cst.lvalue_span lvalue ++ Cst.expr_span expr }
+  Cst.Assign { lvalue; op; expr; span = Cst.expr_span lvalue ++ Cst.expr_span expr }
 
 and parse_assign_op env : Cst.assign_op =
   (Cst.Mul_assign
@@ -377,18 +377,31 @@ and parse_assign_op env : Cst.assign_op =
    <|> (Cst.Id_assign <$ expect_eq_ Eq))
     env
 
-and parse_lvalue env : Cst.lvalue =
-  ((fun env ->
-     expect_eq_ LParen env;
-     let lvalue = parse_lvalue env in
-     expect_eq_ RParen env;
-     lvalue)
-   <|> (fun env ->
-   let star = expect_eq Star env in
-   let lvalue = parse_lvalue env in
-   Lvalue_deref { lvalue; span = Span.Syntax.(star.span ++ Cst.lvalue_span lvalue) })
-   <|> ((fun v -> Cst.Lvalue_var v) <$> parse_ident))
-    env
+and parse_lvalue env : Cst.expr =
+  let lvalue =
+    ((fun env ->
+       expect_eq_ LParen env;
+       let lvalue = parse_lvalue env in
+       expect_eq_ RParen env;
+       lvalue)
+     <|> (fun env ->
+     let star = expect_eq Star env in
+     let expr = parse_lvalue env in
+     Cst.Deref { expr; span = Span.Syntax.(star.span ++ Cst.expr_span expr) })
+     <|> ((fun v -> Cst.Var v) <$> parse_ident))
+      env
+  in
+  let fields =
+    Parser.many
+      (fun env ->
+         expect_eq_ Dot env;
+         let field = parse_general_ident env in
+         field)
+      env
+  in
+  List.fold_left fields ~init:lvalue ~f:(fun lvalue field ->
+    Cst.Field_access
+      { expr = lvalue; field; span = Span.Syntax.(Cst.expr_span lvalue ++ field.span) })
 
 and parse_expr env : Cst.expr =
   let expr =
@@ -495,13 +508,27 @@ and parse_unary_expr env : Cst.expr =
    <|> (fun env ->
    let star = expect_eq Star env in
    let expr = parse_unary_expr env in
-   Cst.Unary { op = Deref; expr; span = star.span ++ Cst.expr_span expr })
+   Deref { expr; span = star.span ++ Cst.expr_span expr })
    <|> (fun env ->
    let bang = expect_eq Bang env in
    let expr = parse_unary_expr env in
    Cst.Unary { op = Log_not; expr; span = bang.span ++ Cst.expr_span expr })
-   <|> parse_atom)
+   <|> parse_field_access)
     env
+
+and parse_field_access env : Cst.expr =
+  let expr = parse_atom env in
+  let fields =
+    Parser.many
+      (fun env ->
+         expect_eq_ Dot env;
+         let field = parse_general_ident env in
+         field)
+      env
+  in
+  List.fold_left fields ~init:expr ~f:(fun expr field ->
+    Cst.Field_access
+      { expr; field; span = Span.Syntax.(Cst.expr_span expr ++ field.span) })
 
 and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)

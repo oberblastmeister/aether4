@@ -31,8 +31,8 @@ export fn c0_runtime_alloc_fail() void {
     std.debug.panic("Failed to allocate memory", .{});
 }
 
-export fn c0_runtime_deref_fail() void {
-    std.debug.panic("Dereferenced null pointer", .{});
+export fn c0_runtime_null_pointer_panic() void {
+    std.debug.panic("Unexpected null pointer", .{});
 }
 
 export fn lir_runtime_unreachable() void {
