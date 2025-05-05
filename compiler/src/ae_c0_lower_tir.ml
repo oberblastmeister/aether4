@@ -267,6 +267,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let body1 = lower_expr st dst then_expr in
     let body2 = lower_expr st dst else_expr in
     empty ++ lower_expr st cond_dst cond ++ make_cond st cond_dst body1 body2
+  | Null _ -> todol [%here]
   | Int_const { t = const; span } ->
     let info = Span.to_info span in
     empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ]

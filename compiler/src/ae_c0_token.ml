@@ -40,6 +40,7 @@ type t =
   | CaretEq
   | LangleLangleEq
   | RangleRangleEq
+  | DashLangle
   | LParen
   | RParen
   | LBrace
@@ -63,5 +64,6 @@ type t =
   | Unknown of string
   | Assert
   | Alloc
+  | Null
   | Eof
 [@@deriving sexp_of, equal, compare, variants]

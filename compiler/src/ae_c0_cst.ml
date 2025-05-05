@@ -128,6 +128,7 @@ and expr =
       { ty : ty
       ; span : Span.t
       }
+  | Null of Span.t
   | Var of var
   | Deref of
       { expr : expr
@@ -137,6 +138,7 @@ and expr =
       { expr : expr
       ; field : string Spanned.t
       ; span : Span.t
+      ; deref : bool
       }
 [@@deriving sexp_of]
 
@@ -223,6 +225,7 @@ let rec expr_span (expr : expr) =
   | Var { span; _ }
   | Deref { span; _ }
   | Field_access { span; _ }
+  | Null span
   | Alloc { span; _ } -> span
 ;;
 

@@ -178,6 +178,11 @@ let parse_struct_ty env =
   Cst.Ty_struct { name; span = Span.Syntax.(struct_tok.span ++ name.span) }
 ;;
 
+let parse_field_suffix env =
+  let deref = (false <$ expect_eq_ Dot <|> (true <$ expect_eq_ DashLangle)) env in
+  deref, parse_general_ident env
+;;
+
 let rec parse_atom_ty env =
   (parse_struct_ty <|> parse_int <|> parse_bool <|> parse_void <|> parse_ty_var) env
 
@@ -391,17 +396,14 @@ and parse_lvalue env : Cst.expr =
      <|> ((fun v -> Cst.Var v) <$> parse_ident))
       env
   in
-  let fields =
-    Parser.many
-      (fun env ->
-         expect_eq_ Dot env;
-         let field = parse_general_ident env in
-         field)
-      env
-  in
-  List.fold_left fields ~init:lvalue ~f:(fun lvalue field ->
+  let fields = Parser.many parse_field_suffix env in
+  List.fold_left fields ~init:lvalue ~f:(fun lvalue (deref, field) ->
     Cst.Field_access
-      { expr = lvalue; field; span = Span.Syntax.(Cst.expr_span lvalue ++ field.span) })
+      { expr = lvalue
+      ; field
+      ; span = Span.Syntax.(Cst.expr_span lvalue ++ field.span)
+      ; deref
+      })
 
 and parse_expr env : Cst.expr =
   let expr =
@@ -518,21 +520,15 @@ and parse_unary_expr env : Cst.expr =
 
 and parse_field_access env : Cst.expr =
   let expr = parse_atom env in
-  let fields =
-    Parser.many
-      (fun env ->
-         expect_eq_ Dot env;
-         let field = parse_general_ident env in
-         field)
-      env
-  in
-  List.fold_left fields ~init:expr ~f:(fun expr field ->
+  let fields = Parser.many parse_field_suffix env in
+  List.fold_left fields ~init:expr ~f:(fun expr (deref, field) ->
     Cst.Field_access
-      { expr; field; span = Span.Syntax.(Cst.expr_span expr ++ field.span) })
+      { expr; field; span = Span.Syntax.(Cst.expr_span expr ++ field.span); deref })
 
 and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)
    <$> parse_num
+   <|> parse_null
    <|> parens parse_expr
    <|> (Cst.bool_const <$> parse_true)
    <|> (Cst.bool_const <$> parse_false)
@@ -545,6 +541,10 @@ and parse_alloc env : Cst.expr =
   let alloc = expect_eq Alloc env in
   let ty = spanned_parens parse_ty env in
   Cst.Alloc { ty = ty.t; span = Span.Syntax.(alloc.span ++ ty.span) }
+
+and parse_null env : Cst.expr =
+  let null = expect_eq Null env in
+  Null null.span
 
 and parse_args env : Cst.expr list = Parser.sep try_parse_expr ~by:(expect_eq_ Comma) env
 

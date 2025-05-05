@@ -46,6 +46,8 @@ rule lex =
   | ">=" { Token.RangleEq }
   | "<<" { Token.LangleLangle }
   | ">>" { Token.RangleRangle }
+  | "->" { Token.DashLangle }
+  | "null" { Token.Null }
   | '~' { Token.Tilde }
   | '^' { Token.Caret }
   | '&' { Token.Ampersand }

@@ -120,6 +120,10 @@ and expr =
       ; span : Span.t
       ; ty : ty option
       }
+  | Null of
+      { span : Span.t
+      ; ty : ty option
+      }
 [@@deriving sexp_of]
 
 and bin_op =
@@ -219,6 +223,7 @@ let expr_span = function
   | Var { var = { span; _ }; _ }
   | Field_access { span; _ }
   | Deref { span; _ }
+  | Null { span; _ }
   | Bool_const { span; _ } -> span
 ;;
 
@@ -228,7 +233,7 @@ let expr_ty_exn = function
   | Bool_const _ -> Bool Span.none
   | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
   | Field_access { ty; _ } -> Option.value_exn ty
-  | Deref { ty; _ } -> Option.value_exn ty
+  | Null { ty; _ } | Deref { ty; _ } -> Option.value_exn ty
   | Var { ty; _ } -> Option.value_exn ty
 ;;
 

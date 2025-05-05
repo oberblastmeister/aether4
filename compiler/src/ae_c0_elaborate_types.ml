@@ -101,6 +101,8 @@ let check_not_void st span (ty : Ast.ty) =
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Int_const _ | Bool_const _ -> expr
+  (* TODO: figure out how to integrate null *)
+  | Null { span; ty } -> todol [%here]
   | Var ({ var; ty = _ } as p) ->
     let ty = var_ty st var in
     Var { p with ty = Some ty }

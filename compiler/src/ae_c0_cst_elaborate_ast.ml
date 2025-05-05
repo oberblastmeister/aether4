@@ -276,9 +276,12 @@ and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
   | Var var -> Var { var = elab_var st var; ty = None }
+  | Null span -> Null { span; ty = None }
   | Deref { expr; span } -> Deref { expr = elab_expr st expr; span; ty = None }
-  | Field_access { expr; field; span } ->
-    Field_access { expr = elab_expr st expr; field; span; ty = None }
+  | Field_access { expr; field; span; deref } ->
+    let expr = elab_expr st expr in
+    let expr = if deref then Ast.Deref { expr; span; ty = None } else expr in
+    Field_access { expr; field; span; ty = None }
   | Int_const { t = i; span } ->
     (match Z.to_int64 i with
      | None ->
