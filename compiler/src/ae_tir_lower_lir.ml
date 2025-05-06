@@ -149,14 +149,34 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
     | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
     | Alloc { size; align } ->
+      assert (Int.is_pow2 align);
       (* TODO: properly use the alignment *)
       let size_temp = fresh_temp ~name:"size" st in
-      let alloc_succeed_label = fresh_label ~name:"alloc_suceeed" st in
-      let alloc_fail_label = fresh_label ~name:"alloc_fail" st in
-      let alloc_join_label = fresh_label ~name:"alloc_join_label" st in
       let hp_lim = fresh_temp ~name:"HP_LIM" st in
       let hp_cmp = fresh_temp ~name:"hp_cmp" st in
       let new_hp = fresh_temp ~name:"new_hp" st in
+      let alloc_success =
+        empty
+        +> [ (* set the result temporary *)
+             ins (Unary { dst; op = Copy I64; src = st.hp_temp })
+           ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
+           ]
+      in
+      let alloc_fail =
+        empty
+        +>
+        (* we have to define dst so it is in strict ssa form *)
+        [ ins (Nullary { dst; op = Undefined I64 })
+        ; ins
+            (Call
+               { dsts = []
+               ; func = "c0_runtime_alloc_fail"
+               ; args = []
+               ; call_conv = X86_call_conv.sysv
+               })
+        ; ins Unreachable
+        ]
+      in
       empty
       +> [ ins
              (Nullary
@@ -166,33 +186,8 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
          ; ins (Bin { dst = new_hp; op = Add; src1 = st.hp_temp; src2 = size_temp })
          ; ins (Unary { dst = hp_lim; op = Load I64; src = st.cx_temp })
          ; ins (Bin { dst = hp_cmp; op = Le; src1 = new_hp; src2 = hp_lim })
-         ; ins
-             (Cond_jump
-                { cond = hp_cmp
-                ; b1 = { label = alloc_succeed_label; args = [] }
-                ; b2 = { label = alloc_fail_label; args = [] }
-                })
          ]
-      ++ label alloc_succeed_label
-      +> [ (* set the result temporary *)
-           ins (Unary { dst; op = Copy I64; src = st.hp_temp })
-         ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
-         ; ins (Jump { label = alloc_join_label; args = [] })
-         ]
-      ++ label alloc_fail_label
-      +>
-      (* we have to define dst so it is in strict ssa form *)
-      [ ins (Nullary { dst; op = Undefined I64 })
-      ; ins
-          (Call
-             { dsts = []
-             ; func = "c0_runtime_alloc_fail"
-             ; args = []
-             ; call_conv = X86_call_conv.sysv
-             })
-      ; ins Unreachable
-      ]
-      ++ label alloc_join_label
+      ++ make_cond st hp_cmp alloc_success alloc_fail
   end
   | Unary { dst; op; src } -> begin
     match op with

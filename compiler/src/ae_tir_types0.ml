@@ -13,6 +13,7 @@ module Temp = Ae_temp
 module Label = Ae_label
 
 module Ty = struct
+  (* TODO: maybe add a struct type because it is still useful *)
   type t =
     | Int
     | Bool
