@@ -89,8 +89,8 @@ let%expect_test "smoke" =
            ((label join@3)
             (body
              (((i (Block_params ())) (index 0) (info ()) (ann ()))
-              ((i (Nullary (dst ret@13) (op Void_const))) (index 1)
-               (info ([2,7]-[13,12])) (ann ()))
+              ((i (Nullary (dst ret@13) (op Void_const))) (index 1) (info ())
+               (ann ()))
               ((i (Ret (src ret@13) (ty Void))) (index 2) (info ([2,7]-[13,12]))
                (ann ()))))))))
         (start start@0) (next_temp_id 18) (next_label_id 4)))))
@@ -167,8 +167,8 @@ let%expect_test "while" =
            ((label join@3)
             (body
              (((i (Block_params ())) (index 0) (info ()) (ann ()))
-              ((i (Nullary (dst ret@11) (op Void_const))) (index 1)
-               (info ([2,5]-[12,6])) (ann ()))
+              ((i (Nullary (dst ret@11) (op Void_const))) (index 1) (info ())
+               (ann ()))
               ((i (Ret (src ret@11) (ty Void))) (index 2) (info ([2,5]-[12,6]))
                (ann ()))))))))
         (start start@0) (next_temp_id 14) (next_label_id 4)))))

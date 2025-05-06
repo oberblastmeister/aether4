@@ -142,6 +142,9 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
   | Pointer { ty; span } ->
     let ty = elab_ty st ty in
     Pointer { ty; span }
+  | Array { ty; span } ->
+    let ty = elab_ty st ty in
+    Array { ty; span }
   | Ty_struct { name; span } ->
     let name = elab_struct_var st name in
     Ty_struct { name; span }
@@ -348,6 +351,10 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     let ty = elab_ty st ty in
     let expr = elab_expr st expr in
     Alloc_array { arg_ty = ty; expr; span; ty = None }
+  | Index { expr; index; span } ->
+    let expr = elab_expr st expr in
+    let index = elab_expr st index in
+    Ast.Index { expr; index; span; ty = None }
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with

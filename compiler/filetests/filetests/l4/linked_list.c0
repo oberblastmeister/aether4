@@ -1,0 +1,44 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct node;
+
+struct node {
+    int value;
+    struct node *next;
+};
+
+// TODO: fix this error, we need to unfold types in the elaborator
+// typedef node struct node;
+// 
+// void make_long_list(int n) {
+//     node *p = alloc(node);
+//     for (int i = 0; i < n; i++) {
+//         node *next = alloc(node);
+//         p->value = i;
+//     }
+// }
+
+struct node *make_long_list(int n) {
+    struct node *p = alloc(struct node);
+    struct node *head = p;
+    for (int i = 100; i < n + 100; i++) {
+        struct node *next = alloc(struct node);
+        p->value = i;
+        p->next = next;
+        p = next;
+    }
+    return head;
+}
+
+void main() {
+    struct node *list = make_long_list(2000);
+    assert (list->value == 100);
+    assert (list->next->value == 101);
+    assert (list->next->next->value == 102);
+    assert (list->next->next->next->value == 103);
+}
+----

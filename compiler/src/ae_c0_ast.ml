@@ -147,6 +147,12 @@ and expr =
       ; span : Span.t
       ; ty : ty option
       }
+  | Index of
+      { expr : expr
+      ; index : expr
+      ; span : Span.t
+      ; ty : ty option
+      }
 [@@deriving sexp_of]
 
 and bin_op =
@@ -248,6 +254,7 @@ let expr_span = function
   | Deref { span; _ }
   | Null { span; _ }
   | Alloc_array { span; _ }
+  | Index { span; _ }
   | Bool_const { span; _ } -> span
 ;;
 
@@ -262,6 +269,7 @@ let expr_ty_exn = function
   | Null { ty; _ }
   | Deref { ty; _ }
   | Alloc_array { ty; _ }
+  | Index { ty; _ }
   | Var { ty; _ } -> Option.value_exn ty
 ;;
 

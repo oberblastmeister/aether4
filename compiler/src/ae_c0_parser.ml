@@ -102,6 +102,7 @@ let expect_eq_ token env =
 ;;
 
 let parse_ident env = Parser.expect (Spanned.map_option ~f:Token.ident_val) env
+let parse_var env = (Cst.var <$> parse_ident) env
 let parse_ty_ident env = Parser.expect (Spanned.map_option ~f:Token.tyident_val) env
 let parse_general_ident env = (parse_ident <|> parse_ty_ident) env
 
@@ -132,6 +133,11 @@ let chainl ~expr:parse_expr ~op:parse_op ~f env =
   in
   let lhs = parse_expr env in
   loop lhs env
+;;
+
+let chain_post ~post x env =
+  let rec loop t env = ((fun env -> loop (post t env) env) <|> Parser.pure t) env in
+  loop x env
 ;;
 
 let scoped p env =
@@ -188,15 +194,18 @@ let rec parse_atom_ty env =
 
 and parse_ty env =
   let ty = parse_atom_ty env in
-  (* print_s (Stream.sexp (Parser.stream env)); *)
-  let rec loop ty env =
-    ((fun env ->
-       let tok = expect_eq Star env in
-       loop (Cst.Pointer { ty; span = Span.Syntax.(Cst.ty_span ty ++ tok.span) }) env)
-     <|> Parser.pure ty)
-      env
+  let post ty env =
+    let pointer env =
+      let tok = expect_eq Star env in
+      Cst.Pointer { ty; span = Span.Syntax.(Cst.ty_span ty ++ tok.span) }
+    in
+    let array env =
+      let tok = expect_eq LBrackRBrack env in
+      Cst.Array { ty; span = Span.Syntax.(Cst.ty_span ty ++ tok.span) }
+    in
+    (pointer <|> array) env
   in
-  loop ty env
+  chain_post ~post ty env
 ;;
 
 let rec parse_block env : Cst.block =
@@ -383,27 +392,30 @@ and parse_assign_op env : Cst.assign_op =
     env
 
 and parse_lvalue env : Cst.expr =
-  let lvalue =
-    ((fun env ->
-       expect_eq_ LParen env;
-       let lvalue = parse_lvalue env in
-       expect_eq_ RParen env;
-       lvalue)
-     <|> (fun env ->
-     let star = expect_eq Star env in
-     let expr = parse_lvalue env in
-     Cst.Deref { expr; span = Span.Syntax.(star.span ++ Cst.expr_span expr) })
-     <|> ((fun v -> Cst.Var v) <$> parse_ident))
-      env
-  in
-  let fields = Parser.many parse_field_suffix env in
-  List.fold_left fields ~init:lvalue ~f:(fun lvalue (deref, field) ->
-    Cst.Field_access
-      { expr = lvalue
-      ; field
-      ; span = Span.Syntax.(Cst.expr_span lvalue ++ field.span)
-      ; deref
-      })
+  let lvalue = (parens parse_lvalue <|> parse_lvalue_deref <|> parse_lvalue_post) env in
+  chain_post ~post:parse_post_chain lvalue env
+
+and parse_lvalue_post env : Cst.expr =
+  let lvalue = parse_var env in
+  chain_post ~post:parse_post_chain lvalue env
+
+and parse_post_chain expr env = (parse_post_field expr <|> parse_post_index expr) env
+
+and parse_post_field expr env =
+  let deref, field = parse_field_suffix env in
+  Cst.Field_access
+    { expr; field; span = Span.Syntax.(Cst.expr_span expr ++ field.span); deref }
+
+and parse_post_index expr env =
+  let _lbrack = expect_eq LBrack env in
+  let index = parse_expr env in
+  let rbrack = expect_eq RBrack env in
+  Cst.Index { expr; index; span = Span.Syntax.(Cst.expr_span expr ++ rbrack.span) }
+
+and parse_lvalue_deref env : Cst.expr =
+  let star = expect_eq Star env in
+  let expr = parse_lvalue env in
+  Cst.Deref { expr; span = Span.Syntax.(star.span ++ Cst.expr_span expr) }
 
 and parse_expr env : Cst.expr =
   let expr =
@@ -515,15 +527,12 @@ and parse_unary_expr env : Cst.expr =
    let bang = expect_eq Bang env in
    let expr = parse_unary_expr env in
    Cst.Unary { op = Log_not; expr; span = bang.span ++ Cst.expr_span expr })
-   <|> parse_field_access)
+   <|> parse_expr_post)
     env
 
-and parse_field_access env : Cst.expr =
+and parse_expr_post env : Cst.expr =
   let expr = parse_atom env in
-  let fields = Parser.many parse_field_suffix env in
-  List.fold_left fields ~init:expr ~f:(fun expr (deref, field) ->
-    Cst.Field_access
-      { expr; field; span = Span.Syntax.(Cst.expr_span expr ++ field.span); deref })
+  chain_post ~post:parse_post_chain expr env
 
 and parse_atom env : Cst.expr =
   ((fun d -> Cst.Int_const d)
@@ -533,8 +542,9 @@ and parse_atom env : Cst.expr =
    <|> (Cst.bool_const <$> parse_true)
    <|> (Cst.bool_const <$> parse_false)
    <|> parse_alloc
+   <|> parse_alloc_array
    <|> parse_call
-   <|> (Cst.var <$> parse_ident))
+   <|> parse_var)
     env
 
 and parse_alloc env : Cst.expr =
@@ -548,6 +558,7 @@ and parse_alloc_array env : Cst.expr =
     spanned_parens
       (fun env ->
          let ty = parse_ty env in
+         expect_eq_ Comma env;
          let expr = parse_expr env in
          ty, expr)
       env

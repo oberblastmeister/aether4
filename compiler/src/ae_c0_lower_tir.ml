@@ -10,10 +10,45 @@ module Struct_layout = Ae_struct_layout
 open Bag.Syntax
 open Ae_trace
 
-let empty = Bag.empty
-let ins ?ann ?info instr = Second (Tir.Instr'.create_unindexed ?ann ?info instr)
-let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
-let bc ?(args = []) label = { Tir.Block_call.label; args }
+module Api = struct
+  let empty = Bag.empty
+  let ins ?ann ?info instr = Second (Tir.Instr'.create_unindexed ?ann ?info instr)
+  let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
+  let bc ?(args = []) label = { Tir.Block_call.label; args }
+  let const_int ?ann ?info dst i = ins ?ann ?info (Nullary { dst; op = Int_const i })
+  let const_null ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Null_ptr })
+  let const_void ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Void_const })
+
+  open struct
+    let bin (op : Tir.Bin_op.t) ?ann ?info dst src1 src2 =
+      ins ?ann ?info (Bin { dst; op; src1; src2 })
+    ;;
+
+    let unary (op : Tir.Unary_op.t) ?ann ?info dst src =
+      ins ?ann ?info (Unary { dst; op; src })
+    ;;
+  end
+
+  let add = bin Add
+  let mul = bin Mul
+  let sub = bin Sub
+  let div = bin Div
+  let eq_ptr = bin (Eq Ptr)
+  let eq_int = bin (Eq Int)
+  let offset_ptr = bin Offset_ptr
+  let lt = bin Lt
+  let copy_int = unary (Copy Int)
+  let load_int = unary (Deref Int)
+  let nary ?ann ?info dst op srcs = ins ?ann ?info (Nary { dst; op; srcs })
+  let unreachable = ins Unreachable
+  let deref ?ann ?info dst src ty = ins ?ann ?info (Unary { dst; op = Deref ty; src })
+
+  let call ~dst:(dst, ty) ~is_extern func args =
+    ins (Call { dst; ty; func; args; is_extern })
+  ;;
+end
+
+open Api
 
 type struct_info =
   { field_name_to_index : int String.Table.t
@@ -78,7 +113,7 @@ let rec lower_ty st ty =
     | Ty_var var -> go (Hashtbl.find_exn st.typedefs var)
     | Pointer _ -> `Small Ptr
     | Ty_struct { name; _ } -> `Large name
-    | Array _ -> todol [%here]
+    | Array _ -> `Small Ptr
   in
   go ty
 
@@ -102,6 +137,8 @@ and lower_small_ty_exn st ty =
    These structures are uninhabited, because they reference each other.
    They also have an unbounded size.
    So it is crucial that we check that structs are not cyclic in the semantic analyzer.
+   
+   TODO: maybe add a already visited check here just to be extra sure it terminates.
 *)
 and size_of st (ty : Ast.ty) : int =
   match lower_ty st ty with
@@ -128,10 +165,7 @@ and calculate_struct_layout st (name : Ast.var) : Struct_layout.t =
     |> Struct_layout.calculate)
 ;;
 
-let rec lower_block st (block : Ast.block) : instrs =
-  List.map block ~f:(lower_stmt st) |> Bag.concat
-
-and make_cond st cond body1 body2 =
+let make_cond st cond body1 body2 =
   let then_label = fresh_label ~name:"then" st in
   let else_label = fresh_label ~name:"else" st in
   let join_label = fresh_label ~name:"join" st in
@@ -144,38 +178,80 @@ and make_cond st cond body1 body2 =
   ++ body2
   +> [ ins (Jump (bc join_label)) ]
   ++ label join_label
+;;
+
+let check_not_null st temp =
+  let cond = fresh_temp ~name:"cond" st in
+  let garbage_temp = fresh_temp ~name:"garbage" st in
+  let null = fresh_temp ~name:"null" st in
+  empty
+  +> [ const_null null; eq_ptr cond temp null ]
+  ++ make_cond
+       st
+       cond
+       (empty +> [ nary garbage_temp C0_runtime_null_pointer_panic []; ins Unreachable ])
+       empty
+;;
+
+let check_bounds st ~array ~index =
+  let cond = fresh_temp ~name:"cond" st in
+  let len = fresh_temp ~name:"len" st in
+  let garbage_temp = fresh_temp ~name:"garbage" st in
+  empty
+  +> [ load_int len array; lt cond index len ]
+  ++ make_cond
+       st
+       cond
+       empty
+       (empty
+        +> [ call
+               ~dst:(garbage_temp, Void)
+               ~is_extern:true
+               "c0_runtime_out_of_bounds_panic"
+               []
+           ; unreachable
+           ])
+;;
+
+let rec lower_block st (block : Ast.block) : instrs =
+  List.map block ~f:(lower_stmt st) |> Bag.concat
 
 (* returns the address of the lvalue *)
 and lower_lvalue_address st dst (lvalue : Ast.expr) =
   match lvalue with
   | Deref { expr; span = _; ty = _ } ->
-    let cond = fresh_temp ~name:"cond" st in
-    let garbage_temp = fresh_temp ~name:"garbage" st in
-    let body1 =
-      empty
-      +> [ ins
-             (Nary { dst = garbage_temp; op = C0_runtime_null_pointer_panic; srcs = [] })
-         ; ins Unreachable
-         ]
-    in
-    let body2 = empty in
-    let null = fresh_temp ~name:"null" st in
-    empty
-    ++ lower_expr st dst expr
-    +> [ ins (Nullary { dst = null; op = Null_ptr })
-       ; ins (Bin { dst = cond; op = Eq Ptr; src1 = dst; src2 = null })
-       ]
-    ++ make_cond st cond body1 body2
+    empty ++ lower_expr st dst expr ++ check_not_null st dst
   | Field_access { expr; field; span = _; ty = _res_ty } ->
+    (* TODO: issue here with evaluating ty. Let's just unfold all types in the elaborator *)
     let%fail_exn (Ty_struct { name; _ }) = Ast.expr_ty_exn expr in
     let struct_info = Hashtbl.find_exn st.global_st.structs name in
     let field_index = Hashtbl.find_exn struct_info.field_name_to_index field.t in
     let layout = calculate_struct_layout st.global_st name in
     let offset = layout.offsets.@(field_index) in
+    let offset_temp = fresh_temp ~name:"offset" st in
     let address = fresh_temp ~name:"address" st in
     empty
     ++ lower_lvalue_address st address expr
-    +> [ ins (Unary { dst; src = address; op = Offset_ptr offset }) ]
+    +> [ const_int offset_temp (Int64.of_int offset); offset_ptr dst address offset_temp ]
+  | Index { expr; index; span = _; ty = _ } ->
+    let%fail_exn (Array { ty = inner_ty; span = _ }) = Ast.expr_ty_exn expr in
+    let size = size_of st.global_st inner_ty |> Int64.of_int in
+    let size_temp = fresh_temp ~name:"size" st in
+    let array_temp = fresh_temp ~name:"array" st in
+    let index_temp = fresh_temp ~name:"index" st in
+    let offset_temp = fresh_temp ~name:"offset" st in
+    let const_temp = fresh_temp ~name:"temp" st in
+    empty
+    ++ lower_expr st array_temp expr
+    ++ check_not_null st array_temp
+    ++ lower_expr st index_temp index
+    ++ check_bounds st ~array:array_temp ~index:index_temp
+    +> [ const_int size_temp size
+       ; mul offset_temp size_temp index_temp
+       ; const_int const_temp 8L
+       ; add offset_temp offset_temp const_temp
+       ; offset_ptr dst array_temp offset_temp
+       ]
   | _ ->
     raise_s
       [%message
@@ -224,13 +300,13 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
       , fresh_temp ~name:"span_end_line" st
       , fresh_temp ~name:"span_end_col" st )
     in
-    let int dst i = ins (Nullary { dst; op = Int_const (Int64.of_int i) }) in
+    let const_int dst i = const_int dst (Int64.of_int i) in
     empty
     ++ lower_expr st cond_dst expr
-    +> [ int t1 span.start.line
-       ; int t2 span.start.col
-       ; int t3 span.stop.line
-       ; int t4 span.stop.col
+    +> [ const_int t1 span.start.line
+       ; const_int t2 span.start.col
+       ; const_int t3 span.stop.line
+       ; const_int t4 span.stop.col
        ; ins
            (Nary
               { dst = garbage_dst
@@ -244,10 +320,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
       match expr with
       | None ->
         let info = Span.to_info span in
-        empty
-        +> [ ins ~info (Nullary { dst; op = Void_const })
-           ; ins ~info (Ret { src = dst; ty = Void })
-           ]
+        empty +> [ const_void dst; ins ~info (Ret { src = dst; ty = Void }) ]
       | Some expr ->
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
@@ -342,13 +415,11 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let src = var_temp st var in
     let ty = lower_small_ty_exn st.global_st (Option.value_exn ty) in
     empty +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
-  | Deref _ | Field_access _ ->
+  | Deref _ | Field_access _ | Index _ ->
     let lvalue = expr in
     let address = fresh_temp ~name:"address" st in
     let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn st.global_st in
-    empty
-    ++ lower_lvalue_address st address lvalue
-    +> [ ins (Unary { dst; op = Deref ty; src = address }) ]
+    empty ++ lower_lvalue_address st address lvalue +> [ deref dst address ty ]
   | Call { func; args; ty; span } ->
     let ty = Option.value_exn ty in
     let info = Span.to_info span in
@@ -384,7 +455,13 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
       let align = align_of st.global_st ty in
       empty +> [ ins (Nullary { dst; op = Alloc { size; align } }) ]
   end
-  | Alloc_array { arg_ty; expr; span; ty } -> todol [%here]
+  | Alloc_array { arg_ty; expr; span = _; ty = _ } ->
+    let amount = fresh_temp ~name:"amount" st in
+    let size = size_of st.global_st arg_ty in
+    let align = align_of st.global_st arg_ty in
+    empty
+    ++ lower_expr st amount expr
+    +> [ ins (Unary { dst; op = Alloc_array { size; align }; src = amount }) ]
 ;;
 
 let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =

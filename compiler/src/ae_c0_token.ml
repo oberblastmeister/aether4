@@ -45,6 +45,9 @@ type t =
   | RParen
   | LBrace
   | RBrace
+  | LBrack
+  | RBrack
+  | LBrackRBrack
   | Return
   | Tilde
   | Caret

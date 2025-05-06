@@ -39,6 +39,10 @@ export fn lir_runtime_unreachable() void {
     std.debug.panic("Executed unreachable instruction", .{});
 }
 
+export fn c0_runtime_out_of_bounds_panic() void {
+    std.debug.panic("Array out of bounds", .{});
+}
+
 fn run() !void {
     var act = std.os.linux.Sigaction{
         .handler = .{ .handler = std.os.linux.SIG.DFL },

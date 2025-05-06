@@ -17,6 +17,10 @@ type ty =
       { ty : ty
       ; span : Span.t
       }
+  | Array of
+      { ty : ty
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 type block =
@@ -145,6 +149,11 @@ and expr =
       ; span : Span.t
       ; deref : bool
       }
+  | Index of
+      { expr : expr
+      ; index : expr
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and unary_op =
@@ -232,6 +241,7 @@ let rec expr_span (expr : expr) =
   | Field_access { span; _ }
   | Null span
   | Alloc { span; _ }
+  | Index { span; _ }
   | Alloc_array { span; _ } -> span
 ;;
 
@@ -256,6 +266,7 @@ let ty_span (ty : ty) =
   | Int span
   | Void span
   | Pointer { span; _ }
+  | Array { span; _ }
   | Ty_var { span; _ } -> span
 ;;
 

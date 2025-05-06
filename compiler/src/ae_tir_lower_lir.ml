@@ -8,10 +8,47 @@ module X86_call_conv = Ae_x86_call_conv
 open Bag.Syntax
 open Ae_trace
 
-let empty = Bag.empty
-let ins ?ann ?info i = Second (Lir.Instr'.create_unindexed ?ann ?info i)
-let label l = empty +> [ First l; ins (Block_params []) ]
-let bc ?(args = []) label = { Lir.Block_call.label; args }
+module Api = struct
+  let empty = Bag.empty
+  let ins ?ann ?info i = Second (Lir.Instr'.create_unindexed ?ann ?info i)
+  let label l = empty +> [ First l; ins (Block_params []) ]
+  let bc ?(args = []) label = { Lir.Block_call.label; args }
+
+  let const_i1 ?ann ?info dst const =
+    ins ?ann ?info (Nullary { dst; op = Int_const { const; ty = I1 } })
+  ;;
+
+  let const_i64 ?ann ?info dst const =
+    ins ?ann ?info (Nullary { dst; op = Int_const { const; ty = I64 } })
+  ;;
+
+  open struct
+    let bin (op : Lir.Bin_op.t) ?ann ?info dst src1 src2 =
+      ins ?ann ?info (Bin { dst; op; src1; src2 })
+    ;;
+
+    let unary (op : Lir.Unary_op.t) ?ann ?info dst src =
+      ins ?ann ?info (Unary { dst; op; src })
+    ;;
+  end
+
+  let undefined ty ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Undefined ty })
+  let undefined_i64 = undefined I64
+  let add = bin Add
+  let mul = bin Mul
+  let sub = bin Sub
+  let div = bin Div
+  let le = bin Le
+  let copy_i64 = unary (Copy I64)
+  let load_i64 = unary (Load I64)
+  let store_i64 = bin (Store I64)
+  let call ~dsts ~call_conv func args = ins (Call { dsts; func; args; call_conv })
+  let eq_i64 = bin (Eq I64)
+  let eq_i1 = bin (Eq I1)
+  let unreachable = ins Unreachable
+end
+
+open Api
 
 type st =
   { temp_gen : Temp.Id_gen.t
@@ -81,6 +118,7 @@ let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
   | Lshift -> Lshift
   | Rshift -> Rshift
   | Store ty -> Store (lower_ty ty)
+  | Offset_ptr -> Add
 ;;
 
 let lower_block_call (b : Tir.Block_call.t) : Lir.Block_call.t =
@@ -101,13 +139,49 @@ let lower_call st ~dsts ~func ~args ~is_extern =
   empty +> [ ins (Call { dsts; func; args; call_conv }) ]
 ;;
 
+let lower_align st align dst src =
+  let align_temp = fresh_temp ~name:"align" st in
+  let align_temp' = fresh_temp ~name:"align'" st in
+  empty
+  +> [ const_i64 align_temp (Int64.of_int_exn align)
+     ; const_i64 align_temp' (Int64.of_int_exn (align - 1))
+     ; add dst src align_temp'
+     ; div dst dst align_temp
+     ; mul dst dst align_temp
+     ]
+;;
+
+let lower_check_hp st new_hp =
+  let hp_lim = fresh_temp ~name:"HP_LIM" st in
+  let hp_cmp = fresh_temp ~name:"hp_cmp" st in
+  empty
+  +> [ load_i64 hp_lim st.cx_temp; le hp_cmp new_hp hp_lim ]
+  ++ make_cond
+       st
+       hp_cmp
+       empty
+       (empty
+        +> [ call ~dsts:[] ~call_conv:X86_call_conv.sysv "c0_runtime_alloc_fail" []
+           ; unreachable
+           ])
+;;
+
+let lower_alloc st dst ~size ~align =
+  let new_hp = fresh_temp ~name:"HP'" st in
+  empty
+  ++ lower_align st align dst st.hp_temp
+  +> [ add new_hp dst size ]
+  ++ lower_check_hp st new_hp
+  +> [ copy_i64 st.hp_temp new_hp ]
+;;
+
 let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
   let ins = ins ?info:instr.info in
   match instr.i with
   | Nop -> empty
   | Call { dst; ty; func; args; is_extern } ->
     lower_call st ~dsts:[ dst, ty ] ~func ~args ~is_extern
-  | Unreachable -> empty +> [ ins Unreachable ]
+  | Unreachable -> empty +> [ unreachable ]
   | Jump b ->
     let b = lower_block_call b in
     empty +> [ ins (Jump b) ]
@@ -136,58 +210,22 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
        ]
   | Nullary { dst; op } -> begin
     match op with
-    | Null_ptr ->
-      empty +> [ ins (Nullary { dst; op = Int_const { const = 0L; ty = I64 } }) ]
-    | Int_const const ->
-      empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I64 } }) ]
+    | Null_ptr -> empty +> [ const_i64 dst 0L ]
+    | Int_const const -> empty +> [ const_i64 dst const ]
     | Bool_const const ->
       let const =
         match const with
         | true -> 1L
         | false -> 0L
       in
-      empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
-    | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
+      empty +> [ const_i1 dst const ]
+    | Void_const -> empty +> [ undefined_i64 dst ]
     | Alloc { size; align } ->
       assert (Int.is_pow2 align);
-      (* TODO: properly use the alignment *)
-      let size_temp = fresh_temp ~name:"size" st in
-      let hp_lim = fresh_temp ~name:"HP_LIM" st in
-      let hp_cmp = fresh_temp ~name:"hp_cmp" st in
-      let new_hp = fresh_temp ~name:"new_hp" st in
-      let alloc_success =
-        empty
-        +> [ (* set the result temporary *)
-             ins (Unary { dst; op = Copy I64; src = st.hp_temp })
-           ; ins (Unary { dst = st.hp_temp; op = Copy I64; src = new_hp })
-           ]
-      in
-      let alloc_fail =
-        empty
-        +>
-        (* we have to define dst so it is in strict ssa form *)
-        [ ins (Nullary { dst; op = Undefined I64 })
-        ; ins
-            (Call
-               { dsts = []
-               ; func = "c0_runtime_alloc_fail"
-               ; args = []
-               ; call_conv = X86_call_conv.sysv
-               })
-        ; ins Unreachable
-        ]
-      in
+      let const_temp = fresh_temp ~name:"const" st in
       empty
-      +> [ ins
-             (Nullary
-                { dst = size_temp
-                ; op = Int_const { const = Int64.of_int size; ty = I64 }
-                })
-         ; ins (Bin { dst = new_hp; op = Add; src1 = st.hp_temp; src2 = size_temp })
-         ; ins (Unary { dst = hp_lim; op = Load I64; src = st.cx_temp })
-         ; ins (Bin { dst = hp_cmp; op = Le; src1 = new_hp; src2 = hp_lim })
-         ]
-      ++ make_cond st hp_cmp alloc_success alloc_fail
+      +> [ const_i64 const_temp (Int64.of_int_exn size) ]
+      ++ lower_alloc st dst ~size:const_temp ~align
   end
   | Unary { dst; op; src } -> begin
     match op with
@@ -195,18 +233,21 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
     | Deref ty ->
       let ty = lower_ty ty in
       empty +> [ ins (Unary { dst; op = Load ty; src }) ]
-    | Offset_ptr offset ->
-      let offset_temp = fresh_temp ~name:"offset" st in
+    | Alloc_array { size = elem_size; align } ->
+      assert (Int.is_pow2 align);
+      let elem_size_temp = fresh_temp ~name:"const" st in
+      let size_temp = fresh_temp ~name:"size" st in
+      let word_temp = fresh_temp ~name:"word" st in
+      let garbage_temp = fresh_temp ~name:"garbage" st in
       empty
-      +> [ ins
-             (Nullary
-                { dst = offset_temp
-                ; op = Int_const { const = Int64.of_int offset; ty = I64 }
-                })
-         ; ins (Bin { dst; op = Add; src1 = src; src2 = offset_temp })
+      +> [ const_i64 elem_size_temp (Int64.of_int_exn elem_size)
+         ; mul size_temp src elem_size_temp
+         ; const_i64 word_temp 8L
+         ; add size_temp size_temp word_temp
          ]
+      ++ lower_alloc st dst ~size:size_temp ~align:(max align 8)
+      +> [ store_i64 garbage_temp dst src ]
   end
-  (* TODO: lower store with if statement check *)
   | Bin { dst; op; src1; src2 } ->
     let op = lower_bin_op op in
     let instr = ins (Bin { dst; op; src1; src2 }) in

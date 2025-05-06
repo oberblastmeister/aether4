@@ -75,6 +75,7 @@ module Bin_op = struct
     | Lshift
     | Rshift
     | Store of Ty.t
+    | Offset_ptr
   [@@deriving sexp_of]
 end
 
@@ -101,7 +102,10 @@ module Unary_op = struct
   type t =
     | Copy of Ty.t
     | Deref of Ty.t
-    | Offset_ptr of int
+    | Alloc_array of
+        { size : int
+        ; align : int
+        }
   [@@deriving sexp_of]
 end
 
@@ -236,6 +240,10 @@ module Instr = struct
     | Bin { dst = _; op = Store ty; src1; src2 } ->
       f (src1, Ty.Ptr);
       f (src2, ty)
+    | Bin { dst = _; op = Offset_ptr; src1; src2 } ->
+      f (src1, Ptr);
+      f (src2, Int);
+      ()
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
         match op with
@@ -254,7 +262,7 @@ module Instr = struct
         | Le
         | Ge -> Int
         | Eq ty -> ty
-        | Store _ -> assert false
+        | Store _ | Offset_ptr -> assert false
       in
       f (src1, ty);
       f (src2, ty);
@@ -263,7 +271,7 @@ module Instr = struct
       match op with
       | Copy ty -> f (src, ty)
       | Deref _ty -> f (src, Ptr)
-      | Offset_ptr _offset -> f (src, Ptr)
+      | Alloc_array _ -> f (src, Int)
     end
     | Nullary { dst = _; op = _ } -> ()
     | Jump _b -> ()
@@ -306,13 +314,14 @@ module Instr = struct
         | Add | Sub | Mul | Div | Mod | And | Or | Xor | Lshift | Rshift -> Int
         | Eq _ | Lt | Gt | Le | Ge -> Bool
         | Store _ -> Void
+        | Offset_ptr -> Ptr
       in
       f (dst, ty)
     | Unary { dst; op; src = _ } -> begin
       match op with
       | Copy ty -> f (dst, ty)
       | Deref ty -> f (dst, ty)
-      | Offset_ptr _offset -> f (dst, Ptr)
+      | Alloc_array _ -> f (dst, Ptr)
     end
     | Nullary { dst; op } -> begin
       match op with

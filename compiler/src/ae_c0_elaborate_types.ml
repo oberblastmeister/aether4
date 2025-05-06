@@ -50,6 +50,7 @@ let rec is_ty_eq st ty ty' =
   | Bool _, Bool _ -> true
   | Void _, Void _ -> true
   | Ty_struct s1, Ty_struct s2 -> if Ast.Var.equal s1.name s2.name then true else false
+  | Array { ty = ty1; span = _ }, Array { ty = ty2; span = _ } -> is_ty_eq st ty1 ty2
   | Pointer { ty = ty1; span = _ }, Pointer { ty = ty2; span = _ } -> is_ty_eq st ty1 ty2
   | _ -> false
 ;;
@@ -78,6 +79,13 @@ let check_ty_is_pointer st (ty : Ast.ty) span =
   match ty with
   | Pointer _ -> ()
   | _ -> throw_s [%message "Expected pointer" (span : Span.t)]
+;;
+
+let expect_array st (ty : Ast.ty) span =
+  let ty = eval_ty st ty in
+  match ty with
+  | Array { ty; span = _ } -> ty
+  | _ -> throw_s [%message "expected array" (ty : Ast.ty) (span : Span.t)]
 ;;
 
 let is_ty_relevant st ty =
@@ -109,13 +117,13 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     Var { p with ty = Some ty }
   | Deref ({ expr; span; ty = _ } as p) ->
     let expr = infer_expr st expr in
-    let ty = Ast.expr_ty_exn expr in
+    let ty = Ast.expr_ty_exn expr |> eval_ty st in
     check_ty_is_pointer st ty span;
     let%fail_exn (Pointer { ty; _ }) = ty in
     Deref { p with expr; ty = Some ty }
   | Field_access ({ expr; field; span; ty } as p) ->
     let expr = infer_expr st expr in
-    let ty = Ast.expr_ty_exn expr in
+    let ty = Ast.expr_ty_exn expr |> eval_ty st in
     let fail () =
       throw_s [%message "Expected struct type" (span : Span.t) (ty : Ast.ty)]
     in
@@ -176,11 +184,17 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
       check_ty_relevant st ty;
       expr
   end
-  | Alloc_array _ -> todol [%here]
+  | Alloc_array ({ arg_ty; expr; span; ty = _ } as p) ->
+    let expr = check_expr st expr (Int span) in
+    Alloc_array { p with expr; ty = Some (Array { ty = arg_ty; span }) }
+  | Index ({ expr; index; span; ty = _ } as p) ->
+    let expr = infer_expr st expr in
+    let ty = expect_array st (Ast.expr_ty_exn expr) span in
+    let index = check_expr st index (Int span) in
+    Index { p with expr; index; ty = Some ty }
 
 and check_expr_pointer st (expr : Ast.expr) =
   let expr = infer_expr st expr in
-  let span = Ast.expr_span expr in
   let ty = Ast.expr_ty_exn expr in
   check_ty_is_pointer st ty (Ast.expr_span expr);
   expr

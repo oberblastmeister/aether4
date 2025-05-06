@@ -60,6 +60,9 @@ rule lex =
   | ')' { Token.RParen }
   | '{' { Token.LBrace }
   | '}' { Token.RBrace }
+  | "[]" { Token.LBrackRBrack }
+  | '[' { Token.LBrack }
+  | ']' { Token.RBrack }
   | "assert" { Token.Assert }
   | "extern" { Token.Extern }
   | "typedef" { Token.Typedef }
