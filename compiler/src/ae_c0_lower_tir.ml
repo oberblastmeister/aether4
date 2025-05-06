@@ -6,6 +6,7 @@ module Tir = Ae_tir_types
 module Temp = Tir.Temp
 module Bag = Ae_data_bag
 module Span = Ae_span
+module Struct_layout = Ae_struct_layout
 open Bag.Syntax
 open Ae_trace
 
@@ -15,8 +16,7 @@ let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
 let bc ?(args = []) label = { Tir.Block_call.label; args }
 
 type struct_info =
-  { lowered_ty : Tir.Struct.t
-  ; field_name_to_index : int String.Table.t
+  { field_name_to_index : int String.Table.t
   ; strukt : Ast.strukt
   }
 
@@ -24,6 +24,7 @@ type global_st =
   { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t
   ; typedefs : Ast.ty Ast.Var.Table.t
   ; structs : struct_info Ast.Var.Table.t
+  ; struct_layouts : Struct_layout.t Ast.Var.Table.t
   }
 
 type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
@@ -32,7 +33,8 @@ let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
   let typedefs = Ast.Var.Table.create () in
   let structs = Ast.Var.Table.create () in
-  { func_ty_map; typedefs; structs }
+  let struct_layouts = Ast.Var.Table.create () in
+  { func_ty_map; typedefs; structs; struct_layouts }
 ;;
 
 type st =
@@ -67,18 +69,63 @@ let fresh_label ?(name = "fresh") ?info t : Label.t =
   Label.create ?info name id
 ;;
 
-let rec lower_ty st (ty : Ast.ty) : Tir.Ty.t =
-  match ty with
-  | Int _ -> Int
-  | Bool _ -> Bool
-  | Void _ -> Void
-  | Ty_var var -> lower_ty st (Hashtbl.find_exn st.typedefs var)
-  | Pointer { ty; span = _ } ->
-    let ty = lower_ty st ty in
-    Pointer ty
-  | Ty_struct { name; span = _ } ->
+let rec lower_ty st ty =
+  let rec go (ty : Ast.ty) =
+    match ty with
+    | Int _ -> `Small Tir.Ty.Int
+    | Bool _ -> `Small Bool
+    | Void _ -> `Small Void
+    | Ty_var var -> go (Hashtbl.find_exn st.typedefs var)
+    | Pointer _ -> `Small Ptr
+    | Ty_struct { name; _ } -> `Large name
+    | Array _ -> todol [%here]
+  in
+  go ty
+
+and lower_small_ty_exn st ty =
+  match lower_ty st ty with
+  | `Small ty -> ty
+  | `Large _ -> raise_s [%message "Expected small type" (ty : Ast.ty)]
+
+(*
+   These functions could infinitely recurse because structs can be uninhabited when they mutually recurse.
+   For example,
+   
+   struct bad2;
+   struct bad1 {
+      struct bad2 bad;
+   };
+   struct bad2 {
+      struct bad1 bad;
+   };
+   
+   These structures are uninhabited, because they reference each other.
+   They also have an unbounded size.
+   So it is crucial that we check that structs are not cyclic in the semantic analyzer.
+*)
+and size_of st (ty : Ast.ty) : int =
+  match lower_ty st ty with
+  | `Small ty -> Tir.Ty.size_of ty
+  | `Large name ->
+    let layout = calculate_struct_layout st name in
+    layout.size
+
+and align_of st (ty : Ast.ty) : int =
+  match lower_ty st ty with
+  | `Small ty -> Tir.Ty.align_of ty
+  | `Large name ->
+    let layout = calculate_struct_layout st name in
+    layout.align
+
+and calculate_struct_layout st (name : Ast.var) : Struct_layout.t =
+  (* memoize this calculation *)
+  Hashtbl.find_or_add st.struct_layouts name ~default:(fun () ->
     let struct_info = Hashtbl.find_exn st.structs name in
-    Struct struct_info.lowered_ty
+    List.map struct_info.strukt.fields ~f:(fun field ->
+      let size = size_of st field.ty in
+      let align = align_of st field.ty in
+      Struct_layout.Field.{ size; align })
+    |> Struct_layout.calculate)
 ;;
 
 let rec lower_block st (block : Ast.block) : instrs =
@@ -101,8 +148,7 @@ and make_cond st cond body1 body2 =
 (* returns the address of the lvalue *)
 and lower_lvalue_address st dst (lvalue : Ast.expr) =
   match lvalue with
-  | Deref { expr; span = _; ty } ->
-    let ty = Option.value_exn ty |> lower_ty st.global_st in
+  | Deref { expr; span = _; ty = _ } ->
     let cond = fresh_temp ~name:"cond" st in
     let garbage_temp = fresh_temp ~name:"garbage" st in
     let body1 =
@@ -113,20 +159,23 @@ and lower_lvalue_address st dst (lvalue : Ast.expr) =
          ]
     in
     let body2 = empty in
+    let null = fresh_temp ~name:"null" st in
     empty
     ++ lower_expr st dst expr
-    +> [ ins (Unary { dst = cond; op = Is_null ty; src = dst }) ]
+    +> [ ins (Nullary { dst = null; op = Null_ptr })
+       ; ins (Bin { dst = cond; op = Eq Ptr; src1 = dst; src2 = null })
+       ]
     ++ make_cond st cond body1 body2
   | Field_access { expr; field; span = _; ty = _res_ty } ->
     let%fail_exn (Ty_struct { name; _ }) = Ast.expr_ty_exn expr in
     let struct_info = Hashtbl.find_exn st.global_st.structs name in
-    let struct_ty = struct_info.lowered_ty in
-    let field = Hashtbl.find_exn struct_info.field_name_to_index field.t in
+    let field_index = Hashtbl.find_exn struct_info.field_name_to_index field.t in
+    let layout = calculate_struct_layout st.global_st name in
+    let offset = layout.offsets.@(field_index) in
     let address = fresh_temp ~name:"address" st in
-    (* need to check that the pointer is not null *)
     empty
     ++ lower_lvalue_address st address expr
-    +> [ ins (Unary { dst; src = address; op = Offset_of { ty = struct_ty; field } }) ]
+    +> [ ins (Unary { dst; src = address; op = Offset_ptr offset }) ]
   | _ ->
     raise_s
       [%message
@@ -153,7 +202,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     let temp = var_temp st var in
     lower_expr st temp expr
   | Assign { lvalue; expr; span = _ } ->
-    let ty = Ast.expr_ty_exn lvalue |> lower_ty st.global_st in
+    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn st.global_st in
     let address = fresh_temp ~name:"address" st in
     let garbage_temp = fresh_temp ~name:"garbage" st in
     let expr_dst = fresh_temp ~name:"store_expr" st in
@@ -202,7 +251,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
       | Some expr ->
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
-        let ty = lower_ty st.global_st ty in
+        let ty = lower_small_ty_exn st.global_st ty in
         empty ++ lower_expr st dst expr +> [ ins ~info (Ret { src = dst; ty }) ]
     end
   | If { cond; body1; body2; span } ->
@@ -279,7 +328,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let op : Tir.Bin_op.t =
       match op with
       | Eq ->
-        let ty = lower_ty st.global_st (Ast.expr_ty_exn lhs) in
+        let ty = lower_small_ty_exn st.global_st (Ast.expr_ty_exn lhs) in
         Eq ty
       | _ -> lower_bin_op op
     in
@@ -291,12 +340,12 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     +> [ ins ~info (Bin { dst; src1; op; src2 }) ]
   | Var { var; ty } ->
     let src = var_temp st var in
-    let ty = lower_ty st.global_st (Option.value_exn ty) in
+    let ty = lower_small_ty_exn st.global_st (Option.value_exn ty) in
     empty +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
   | Deref _ | Field_access _ ->
     let lvalue = expr in
     let address = fresh_temp ~name:"address" st in
-    let ty = Ast.expr_ty_exn lvalue |> lower_ty st.global_st in
+    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn st.global_st in
     empty
     ++ lower_lvalue_address st address lvalue
     +> [ ins (Unary { dst; op = Deref ty; src = address }) ]
@@ -308,7 +357,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
       List.mapi args ~f:(fun i _arg ->
         fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
     in
-    let ty = lower_ty st.global_st ty in
+    let ty = lower_small_ty_exn st.global_st ty in
     let args =
       List.zip_exn arg_temps args
       |> List.map ~f:(fun (arg_temp, arg_expr) -> lower_expr st arg_temp arg_expr)
@@ -323,16 +372,19 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
               ; func = func.name
               ; args =
                   List.zip_exn arg_temps func_sig.params
-                  |> List.map ~f:(fun (arg, param) -> arg, lower_ty st.global_st param.ty)
+                  |> List.map ~f:(fun (arg, param) ->
+                    arg, lower_small_ty_exn st.global_st param.ty)
               ; is_extern = func_sig.is_extern
               })
        ]
   | Nullary { op; span = _ } -> begin
     match op with
     | Alloc ty ->
-      let ty = lower_ty st.global_st ty in
-      empty +> [ ins (Nullary { dst; op = Alloc ty }) ]
+      let size = size_of st.global_st ty in
+      let align = align_of st.global_st ty in
+      empty +> [ ins (Nullary { dst; op = Alloc { size; align } }) ]
   end
+  | Alloc_array { arg_ty; expr; span; ty } -> todol [%here]
 ;;
 
 let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
@@ -341,7 +393,7 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let params =
     List.map defn.params ~f:(fun param ->
       { Tir.Block_param.param = var_temp st param.var
-      ; ty = lower_ty st.global_st param.ty
+      ; ty = lower_small_ty_exn st.global_st param.ty
       })
   in
   let linearized =
@@ -373,14 +425,11 @@ let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
   | Struct { name; strukt; span = _ } ->
     begin
       let@: strukt = Option.iter strukt in
-      let lowered_ty =
-        List.map strukt.fields ~f:(fun field -> lower_ty st field.ty) |> Tir.Struct.create
-      in
       let field_name_to_index =
         List.mapi strukt.fields ~f:(fun i field -> field.name.t, i)
         |> String.Table.of_alist_exn
       in
-      let struct_info = { lowered_ty; field_name_to_index; strukt } in
+      let struct_info = { strukt; field_name_to_index } in
       Hashtbl.add_exn st.structs ~key:name ~data:struct_info
     end;
     None

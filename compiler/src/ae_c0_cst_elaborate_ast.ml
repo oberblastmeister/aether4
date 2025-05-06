@@ -344,6 +344,10 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
   | Alloc { ty; span } ->
     let ty = elab_ty st ty in
     Nullary { op = Alloc ty; span }
+  | Alloc_array { ty; expr; span } ->
+    let ty = elab_ty st ty in
+    let expr = elab_expr st expr in
+    Alloc_array { arg_ty = ty; expr; span; ty = None }
 
 and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   match op with

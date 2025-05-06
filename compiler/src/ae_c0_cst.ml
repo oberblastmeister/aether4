@@ -128,6 +128,11 @@ and expr =
       { ty : ty
       ; span : Span.t
       }
+  | Alloc_array of
+      { ty : ty
+      ; expr : expr
+      ; span : Span.t
+      }
   | Null of Span.t
   | Var of var
   | Deref of
@@ -226,7 +231,8 @@ let rec expr_span (expr : expr) =
   | Deref { span; _ }
   | Field_access { span; _ }
   | Null span
-  | Alloc { span; _ } -> span
+  | Alloc { span; _ }
+  | Alloc_array { span; _ } -> span
 ;;
 
 let stmt_span (stmt : stmt) =

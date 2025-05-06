@@ -4,6 +4,8 @@ open Ae_intable
 open struct
   module Id_table = Ae_id_table
   module Id_gen = Ae_id_gen
+  module Id_bitvec = Ae_id_bitvec
+  module Signatures = Ae_signatures
 end
 
 module type S = sig
@@ -11,6 +13,12 @@ module type S = sig
   include Comparable.S_plain with type t := t
   include Hashable.S_plain with type t := t
   module Table : Id_table.S with type Key.t = t
+  module Bitvec : Id_bitvec.S with type Key.t = t
+
+  module Mutable_map :
+    Signatures.Mutable_map with type 'a t = 'a Table.t and type Key.t = t
+
+  module Mutable_set : Signatures.Mutable_set with type t = Bitvec.t and type Key.t = t
 
   module Id_gen : sig
     type t
@@ -37,6 +45,22 @@ module Make (Id : Intable) = struct
   include Comparable.Make_plain (T)
   include Hashable.Make_plain (T)
   module Table = Id_table.Make (T)
+  module Bitvec = Id_bitvec.Make (T)
+
+  module Mutable_map :
+    Signatures.Mutable_map with type 'a t = 'a Table.t and type Key.t = Id.t = struct
+    include Table
+
+    let create ?growth_allowed ?size () = create ()
+  end
+
+  module Mutable_set :
+    Signatures.Mutable_set with type t = Bitvec.t and type Key.t = Id.t = struct
+    include Bitvec
+
+    let create ?growth_allowed ?size () = create ()
+  end
+
   include Table.Syntax
 end
 

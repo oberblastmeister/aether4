@@ -64,6 +64,7 @@ type t =
   | Unknown of string
   | Assert
   | Alloc
+  | AllocArray
   | Null
   | Eof
 [@@deriving sexp_of, equal, compare, variants]

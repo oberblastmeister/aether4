@@ -75,6 +75,7 @@ rule lex =
   | "true" { Token.True }
   | "false" { Token.False }
   | "alloc" { Token.Alloc }
+  | "alloc_array" { Token.AllocArray }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }

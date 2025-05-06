@@ -1,0 +1,18 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+struct bruh;
+
+struct bruh {
+    int x;
+};
+
+void main() {
+    struct bruh *p = alloc(struct bruh);
+    p->x = 1234;
+    assert(p-> x == 1234);
+}
+----

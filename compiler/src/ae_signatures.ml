@@ -13,7 +13,7 @@ module type Mutable_map = sig
     type t
   end
 
-  val create : unit -> 'a t
+  val create : ?growth_allowed:bool -> ?size:int -> unit -> 'a t
   val find : 'a t -> Key.t -> 'a option
   val set : 'a t -> key:Key.t -> data:'a -> unit
   val remove : 'a t -> Key.t -> unit
@@ -27,7 +27,7 @@ module type Mutable_set = sig
     type t
   end
 
-  val create : unit -> t
+  val create : ?growth_allowed:bool -> ?size:int -> unit -> t
   val add : t -> Key.t -> unit
   val remove : t -> Key.t -> unit
   val mem : t -> Key.t -> bool

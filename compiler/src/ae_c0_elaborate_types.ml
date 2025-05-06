@@ -1,6 +1,7 @@
 open Std
 module Ast = Ae_c0_ast
 module Span = Ae_span
+module Graph = Ae_data_graph_std
 
 exception Exn of Sexp.t
 
@@ -101,7 +102,7 @@ let check_not_void st span (ty : Ast.ty) =
 let rec infer_expr st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Int_const _ | Bool_const _ -> expr
-  (* TODO: figure out how to integrate null *)
+  (* TODO: figure out how to integrate null, probably we need to add a casting operation in tir *)
   | Null { span; ty } -> todol [%here]
   | Var ({ var; ty = _ } as p) ->
     let ty = var_ty st var in
@@ -175,6 +176,7 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
       check_ty_relevant st ty;
       expr
   end
+  | Alloc_array _ -> todol [%here]
 
 and check_expr_pointer st (expr : Ast.expr) =
   let expr = infer_expr st expr in
@@ -341,6 +343,29 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
         ~default:st )
 ;;
 
+let check_structs_not_cyclic st =
+  let graph =
+    st.defined_structs
+    |> Map.map ~f:(fun strukt ->
+      let referenced_structs =
+        List.filter_map strukt.fields ~f:(fun field ->
+          let open Option.Let_syntax in
+          let fail () = None in
+          let field_ty = eval_ty st field.ty in
+          let%bind_fail (Ast.Ty_struct { name; span = _ }) = return field_ty in
+          return name)
+      in
+      Ast.Var.Set.of_list referenced_structs)
+    |> Graph.of_map_set
+  in
+  let module Dfs = Graph.Dfs_gen.Make (Ast.Var.Mutable_map) (Ast.Var.Mutable_set) in
+  let cycle = Dfs.find_cycle ~equal:Ast.Var.equal graph in
+  begin
+    let@: _, _, cycle = Option.iter cycle in
+    throw_s [%message "found cycle in struct declarations" (cycle : Ast.var list)]
+  end
+;;
+
 let check_program st (prog : Ast.program) =
   let res, st =
     let st = ref st in
@@ -355,6 +380,7 @@ let check_program st (prog : Ast.program) =
   Map.iter_keys st.declared_funcs ~f:(fun declared_func ->
     if not (Set.mem st.defined_funcs declared_func)
     then throw_s [%message "Declared function was not defined" (declared_func : Ast.var)]);
+  check_structs_not_cyclic st;
   res
 ;;
 

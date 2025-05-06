@@ -542,6 +542,24 @@ and parse_alloc env : Cst.expr =
   let ty = spanned_parens parse_ty env in
   Cst.Alloc { ty = ty.t; span = Span.Syntax.(alloc.span ++ ty.span) }
 
+and parse_alloc_array env : Cst.expr =
+  let alloc_array = expect_eq AllocArray env in
+  let { Spanned.t = ty, expr; span = parens_span } =
+    spanned_parens
+      (fun env ->
+         let ty = parse_ty env in
+         let expr = parse_expr env in
+         ty, expr)
+      env
+  in
+  Cst.Alloc_array
+    { ty
+    ; expr
+    ; span =
+        Span.Syntax.(
+          alloc_array.span ++ Cst.ty_span ty ++ Cst.expr_span expr ++ parens_span)
+    }
+
 and parse_null env : Cst.expr =
   let null = expect_eq Null env in
   Null null.span

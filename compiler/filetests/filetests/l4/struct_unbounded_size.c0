@@ -1,0 +1,21 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+   
+struct bad2;
+struct bad1 {
+    struct bad2 bad;
+};
+
+struct bad2 {
+    struct bad1 bad;
+};
+
+void main() {
+}
+----
+("Filetest failed"
+ ("Could not compile test"
+  ("found cycle in struct declarations" (cycle (bad2@0 bad1@1 bad2@0)))))

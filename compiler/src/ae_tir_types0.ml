@@ -17,20 +17,8 @@ module Ty = struct
     | Int
     | Bool
     | Void
-    | Pointer of t
-    | Struct of strukt
-
-  and struct_field =
-    { ty : t
-    ; offset : int [@equal.ignore] [@compare.ignore]
-    }
-
-  and strukt =
-    { fields : struct_field iarray
-    ; align : int
-    ; size : int
-    }
-  [@@deriving sexp_of, compare, equal]
+    | Ptr
+  [@@deriving sexp_of, equal, compare]
 
   let size_of ty =
     match ty with
@@ -38,8 +26,7 @@ module Ty = struct
     | Bool -> 1
     (* TODO: make this zero some time, so allocating Void will not allocate anything *)
     | Void -> 1
-    | Pointer _ -> 8
-    | Struct { size; _ } -> size
+    | Ptr -> 8
   ;;
 
   let align_of ty =
@@ -47,20 +34,11 @@ module Ty = struct
     | Int -> 8
     | Bool -> 1
     | Void -> 1
-    | Pointer _ -> 8
-    | Struct { align; _ } -> align
+    | Ptr -> 8
   ;;
 end
 
-module Struct_field = struct
-  type t = Ty.struct_field =
-    { ty : Ty.t
-    ; offset : int
-    }
-  [@@deriving sexp_of, equal, compare]
-end
-
-module Struct = struct
+(* module Struct = struct
   type t = Ty.strukt [@@deriving sexp_of, equal, compare]
 
   let create tys : t =
@@ -76,7 +54,7 @@ module Struct = struct
     in
     { fields; align = layout.align; size = layout.size }
   ;;
-end
+end *)
 
 module Bin_op = struct
   type t =
@@ -122,20 +100,20 @@ module Unary_op = struct
   type t =
     | Copy of Ty.t
     | Deref of Ty.t
-    | Offset_of of
-        { ty : Struct.t
-        ; field : int
-        }
-    | Is_null of Ty.t
+    | Offset_ptr of int
   [@@deriving sexp_of]
 end
 
 module Nullary_op = struct
   type t =
     | Int_const of int64
+    | Null_ptr
     | Bool_const of bool
     | Void_const
-    | Alloc of Ty.t
+    | Alloc of
+        { size : int
+        ; align : int
+        }
   [@@deriving sexp_of]
 end
 
@@ -255,7 +233,7 @@ module Instr = struct
     | Unreachable | Block_params _ | Nop -> ()
     | Call _ -> ()
     | Bin { dst = _; op = Store ty; src1; src2 } ->
-      f (src1, Ty.Pointer ty);
+      f (src1, Ty.Ptr);
       f (src2, ty)
     | Bin { dst = _; op; src1; src2 } ->
       let ty : Ty.t =
@@ -283,9 +261,8 @@ module Instr = struct
     | Unary { dst = _; op; src } -> begin
       match op with
       | Copy ty -> f (src, ty)
-      | Deref ty -> f (src, Pointer ty)
-      | Offset_of { ty; field = _ } -> f (src, Pointer (Struct ty))
-      | Is_null ty -> f (src, Pointer ty)
+      | Deref _ty -> f (src, Ptr)
+      | Offset_ptr _offset -> f (src, Ptr)
     end
     | Nullary { dst = _; op = _ } -> ()
     | Jump _b -> ()
@@ -334,17 +311,15 @@ module Instr = struct
       match op with
       | Copy ty -> f (dst, ty)
       | Deref ty -> f (dst, ty)
-      | Offset_of { ty; field } ->
-        let field_ty = ty.fields.@(field).ty in
-        f (dst, Pointer field_ty)
-      | Is_null _ -> f (dst, Bool)
+      | Offset_ptr _offset -> f (dst, Ptr)
     end
     | Nullary { dst; op } -> begin
       match op with
       | Int_const _ -> f (dst, Int)
       | Bool_const _ -> f (dst, Bool)
       | Void_const -> f (dst, Void)
-      | Alloc ty -> f (dst, Pointer ty)
+      | Alloc _size -> f (dst, Ptr)
+      | Null_ptr -> f (dst, Ptr)
     end
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;

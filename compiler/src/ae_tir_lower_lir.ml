@@ -60,8 +60,7 @@ let lower_ty (ty : Tir.Ty.t) : Lir.Ty.t =
   | Int -> I64
   | Bool -> I1
   | Void -> I64
-  | Pointer _ -> I64
-  | Struct _ -> todol [%here]
+  | Ptr -> I64
 ;;
 
 let lower_bin_op (op : Tir.Bin_op.t) : Lir.Bin_op.t =
@@ -137,6 +136,8 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
        ]
   | Nullary { dst; op } -> begin
     match op with
+    | Null_ptr ->
+      empty +> [ ins (Nullary { dst; op = Int_const { const = 0L; ty = I64 } }) ]
     | Int_const const ->
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I64 } }) ]
     | Bool_const const ->
@@ -147,8 +148,8 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
       in
       empty +> [ ins (Nullary { dst; op = Int_const { const; ty = I1 } }) ]
     | Void_const -> empty +> [ ins (Nullary { dst; op = Undefined I64 }) ]
-    | Alloc ty ->
-      let size = Tir.Ty.size_of ty in
+    | Alloc { size; align } ->
+      (* TODO: properly use the alignment *)
       let size_temp = fresh_temp ~name:"size" st in
       let alloc_succeed_label = fresh_label ~name:"alloc_suceeed" st in
       let alloc_fail_label = fresh_label ~name:"alloc_fail" st in
@@ -196,23 +197,16 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
   | Unary { dst; op; src } -> begin
     match op with
     | Copy ty -> empty +> [ ins (Unary { dst; op = Copy (lower_ty ty); src }) ]
-    | Is_null _ty ->
-      let const = fresh_temp ~name:"const" st in
-      empty
-      +> [ ins (Nullary { dst = const; op = Int_const { const = 0L; ty = I64 } })
-         ; ins (Bin { dst; op = Eq I64; src1 = src; src2 = const })
-         ]
     | Deref ty ->
       let ty = lower_ty ty in
       empty +> [ ins (Unary { dst; op = Load ty; src }) ]
-    | Offset_of { ty; field } ->
-      let field = ty.fields.@(field) in
+    | Offset_ptr offset ->
       let offset_temp = fresh_temp ~name:"offset" st in
       empty
       +> [ ins
              (Nullary
                 { dst = offset_temp
-                ; op = Int_const { const = Int64.of_int field.offset; ty = I64 }
+                ; op = Int_const { const = Int64.of_int offset; ty = I64 }
                 })
          ; ins (Bin { dst; op = Add; src1 = src; src2 = offset_temp })
          ]

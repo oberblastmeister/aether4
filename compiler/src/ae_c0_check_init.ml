@@ -20,6 +20,7 @@ let rec check_block (block : Ast.block) =
 and iter_expr_uses (expr : Ast.expr) ~f =
   match expr with
   | Null _ -> ()
+  | Alloc_array { arg_ty = _; expr; ty = _; span = _ } -> iter_expr_uses expr ~f
   | Ternary { cond; then_expr; else_expr; ty = _; span = _ } ->
     iter_expr_uses cond ~f;
     iter_expr_uses then_expr ~f;

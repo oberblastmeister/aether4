@@ -9,3 +9,4 @@ TODO:
 - [] remove all record types from the ir interface, it should be fully abstract
 - add invariant functions for the basic blocks and other stuff
 - implement structs
+- add opaque pointers, remove struct type from ir

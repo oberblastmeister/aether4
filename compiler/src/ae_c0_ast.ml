@@ -18,7 +18,20 @@ module Var = struct
   include T
   module Map = Map.Make_plain (T)
   module Set = Set.Make_plain (T)
+  module Hash_set = Hash_set.Make_plain (T)
   module Table = Hashtbl.Make_plain (T)
+
+  module Mutable_map = struct
+    module Key = T
+    include Core.Hashtbl
+    include Table
+  end
+
+  module Mutable_set = struct
+    module Key = T
+    include Core.Hash_set
+    include Hash_set
+  end
 end
 
 type var = Var.t [@@deriving sexp_of, compare, hash, equal]
@@ -33,6 +46,10 @@ type ty =
       ; span : Span.t
       }
   | Pointer of
+      { ty : ty
+      ; span : Span.t
+      }
+  | Array of
       { ty : ty
       ; span : Span.t
       }
@@ -122,6 +139,12 @@ and expr =
       }
   | Null of
       { span : Span.t
+      ; ty : ty option
+      }
+  | Alloc_array of
+      { arg_ty : ty
+      ; expr : expr
+      ; span : Span.t
       ; ty : ty option
       }
 [@@deriving sexp_of]
@@ -224,16 +247,21 @@ let expr_span = function
   | Field_access { span; _ }
   | Deref { span; _ }
   | Null { span; _ }
+  | Alloc_array { span; _ }
   | Bool_const { span; _ } -> span
 ;;
 
 let expr_ty_exn = function
-  | Ternary { ty; _ } | Bin { ty; _ } | Call { ty; _ } -> Option.value_exn ty
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
   | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
-  | Field_access { ty; _ } -> Option.value_exn ty
-  | Null { ty; _ } | Deref { ty; _ } -> Option.value_exn ty
+  | Field_access { ty; _ }
+  | Ternary { ty; _ }
+  | Bin { ty; _ }
+  | Call { ty; _ }
+  | Null { ty; _ }
+  | Deref { ty; _ }
+  | Alloc_array { ty; _ }
   | Var { ty; _ } -> Option.value_exn ty
 ;;
 
