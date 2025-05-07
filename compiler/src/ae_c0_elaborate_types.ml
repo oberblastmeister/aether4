@@ -107,11 +107,11 @@ let check_not_void st span (ty : Ast.ty) =
   | _ -> ()
 ;;
 
-let rec infer_expr st (expr : Ast.expr) : Ast.expr =
+let rec infer_expr_with_any st (expr : Ast.expr) : Ast.expr =
   match expr with
   | Int_const _ | Bool_const _ -> expr
   (* TODO: figure out how to integrate null, probably we need to add a casting operation in tir *)
-  | Null { span; ty } -> todol [%here]
+  | Null { span; ty = _ } -> Null { span; ty = Some Any }
   | Var ({ var; ty = _ } as p) ->
     let ty = var_ty st var in
     Var { p with ty = Some ty }
@@ -157,12 +157,26 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
        let rhs = check_expr st rhs Ast.int_ty in
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span }
      | Eq ->
-       let lhs = infer_expr st lhs in
-       let rhs = infer_expr st rhs in
+       let lhs = infer_expr_with_any st lhs in
+       let rhs = infer_expr_with_any st rhs in
        let lhs_ty = Ast.expr_ty_exn lhs in
        let rhs_ty = Ast.expr_ty_exn rhs in
-       check_ty_small st span lhs_ty;
-       check_ty_eq st span lhs_ty rhs_ty;
+       let ty_join =
+         match lhs_ty, rhs_ty with
+         | Any, Any -> Ast.Int span
+         | Any, ty ->
+           check_ty_small st span ty;
+           ty
+         | ty, Any ->
+           check_ty_small st span ty;
+           ty
+         | _, _ ->
+           check_ty_small st span lhs_ty;
+           check_ty_eq st span lhs_ty rhs_ty;
+           lhs_ty
+       in
+       let lhs = check_expr st lhs ty_join in
+       let rhs = check_expr st rhs ty_join in
        Bin { lhs; op; rhs; ty = Some Ast.bool_ty; span })
   | Call { func; args; ty = _; span } ->
     let func_sig = Map.find_exn st.declared_funcs func in
@@ -195,16 +209,28 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
     let index = check_expr st index (Int span) in
     Index { p with expr; index; ty = Some ty }
 
+and infer_expr st expr =
+  let expr = infer_expr_with_any st expr in
+  let ty = Ast.expr_ty_exn expr in
+  let span = Ast.expr_span expr in
+  match ty with
+  | Any -> throw_s [%message "Could not infer type" (span : Span.t)]
+  | _ -> expr
+
 and check_expr_pointer st (expr : Ast.expr) =
   let expr = infer_expr st expr in
   let ty = Ast.expr_ty_exn expr in
   check_ty_is_pointer st ty (Ast.expr_span expr);
   expr
 
-and check_expr st (expr : Ast.expr) (ty : Ast.ty) : Ast.expr =
-  let expr = infer_expr st expr in
-  check_ty_eq st (Ast.expr_span expr) ty (Ast.expr_ty_exn expr);
-  expr
+and check_expr st (expr : Ast.expr) (ty' : Ast.ty) : Ast.expr =
+  match expr with
+  | Null ({ span = _; ty = _ } as p) -> Null { p with ty = Some ty' }
+  | _ ->
+    let expr = infer_expr st expr in
+    let ty = Ast.expr_ty_exn expr in
+    check_ty_eq st (Ast.expr_span expr) ty ty';
+    expr
 ;;
 
 let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =

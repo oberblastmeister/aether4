@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileFail))
+)
+*/
+
+// TODO: maybe be more bidirectional when infering this, i.e. propagate types into the if statement
+void main() {
+    int bruh = true ? null : null;
+}
+----
+("Could not infer type" (span 9:23-27))

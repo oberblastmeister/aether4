@@ -53,6 +53,7 @@ type ty =
       { ty : ty
       ; span : Span.t
       }
+  | Any
 [@@deriving sexp_of]
 
 type stmt =
@@ -257,7 +258,7 @@ let expr_span = function
 let expr_ty_exn = function
   | Int_const _ -> Int Span.none
   | Bool_const _ -> Bool Span.none
-  | Nullary { op = Alloc ty; span } -> Pointer { ty; span }
+  | Nullary { op = Alloc ty; span; ty = _ } -> Pointer { ty; span }
   | Field_access { ty; _ }
   | Ternary { ty; _ }
   | Bin { ty; _ }

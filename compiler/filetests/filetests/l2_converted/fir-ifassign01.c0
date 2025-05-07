@@ -20,4 +20,4 @@ int run() {
 
 void main() {}
 ----
-("Types were not equal" (span 11:9) (ty (Bool -1:-1)) (ty' (Int -1:-1)))
+("Types were not equal" (span 11:9) (ty (Int -1:-1)) (ty' (Bool -1:-1)))

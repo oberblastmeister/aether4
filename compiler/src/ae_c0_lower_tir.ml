@@ -16,6 +16,7 @@ module Api = struct
   let label ?(params = []) l = empty +> [ First l; ins (Block_params params) ]
   let bc ?(args = []) label = { Tir.Block_call.label; args }
   let const_int ?ann ?info dst i = ins ?ann ?info (Nullary { dst; op = Int_const i })
+  let const_bool ?ann ?info dst b = ins ?ann ?info (Nullary { dst; op = Bool_const b })
   let const_null ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Null_ptr })
   let const_void ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Void_const })
 
@@ -115,6 +116,11 @@ let rec lower_ty ty =
     | Pointer _ -> `Small Ptr
     | Ty_struct { name; _ } -> `Large name
     | Array _ -> `Small Ptr
+    | Any ->
+      raise_s
+        [%message
+          "If an expression has type Any then it should not have gotten past the type \
+           checker"]
   in
   go ty
 
@@ -390,7 +396,15 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let body1 = lower_expr st dst then_expr in
     let body2 = lower_expr st dst else_expr in
     empty ++ lower_expr st cond_dst cond ++ make_cond st cond_dst body1 body2
-  | Null _ -> todol [%here]
+  | Null { ty; _ } ->
+    let ty = Option.value_exn ty in
+    begin
+      match lower_small_ty_exn ty with
+      | Int -> empty +> [ const_int dst 0L ]
+      | Bool -> empty +> [ const_bool dst false ]
+      | Ptr -> empty +> [ const_null dst ]
+      | Void -> empty +> [ const_void dst ]
+    end
   | Int_const { t = const; span } ->
     let info = Span.to_info span in
     empty +> [ ins ~info (Nullary { dst; op = Int_const const }) ]

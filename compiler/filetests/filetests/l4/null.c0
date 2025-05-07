@@ -1,0 +1,13 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void main() {
+    int *p = null;
+    assert(p == null);
+    int *p2 = alloc(int);
+    assert(*p2 == null);
+}
+----
