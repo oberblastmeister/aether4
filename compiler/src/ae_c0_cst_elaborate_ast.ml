@@ -346,7 +346,7 @@ and elab_expr st (expr : Cst.expr) : Ast.expr =
     Call { func; args; span; ty = None }
   | Alloc { ty; span } ->
     let ty = elab_ty st ty in
-    Nullary { op = Alloc ty; span }
+    Nullary { op = Alloc ty; span; ty = None }
   | Alloc_array { ty; expr; span } ->
     let ty = elab_ty st ty in
     let expr = elab_expr st expr in
@@ -466,7 +466,13 @@ let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
         let name, st' = declare_func_var st func.name in
         let params, st_with_params = elab_defn_params st' func.params in
         let body = elab_block st_with_params body.block in
-        Func_defn { ty; name; params; body; span = func.span }, st'
+        ( Func_defn
+            { ty = { ty; params; is_extern = false; span = func.span }
+            ; name
+            ; body
+            ; span = func.span
+            }
+        , st' )
     end
   | Cst.Typedef typedef ->
     let ty = elab_ty st typedef.ty in

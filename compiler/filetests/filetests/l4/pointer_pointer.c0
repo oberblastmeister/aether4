@@ -3,6 +3,7 @@
  (kind (CompileAndRun))
 )
 */
+
 void main() {
     int **p1 = alloc(int *);
     int *p3 = alloc(int);

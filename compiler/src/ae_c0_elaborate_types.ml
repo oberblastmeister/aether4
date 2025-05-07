@@ -178,14 +178,16 @@ let rec infer_expr st (expr : Ast.expr) : Ast.expr =
       List.map args_with_params ~f:(fun (arg, param) -> check_expr st arg param.ty)
     in
     Call { func; args; ty = Some func_sig.ty; span }
-  | Nullary { op; span = _ } -> begin
+  | Nullary ({ op; span; ty = _ } as p) -> begin
     match op with
     | Alloc ty ->
       check_ty_relevant st ty;
-      expr
+      let ty = eval_ty st ty in
+      Nullary { p with op = Alloc ty; ty = Some (Pointer { ty; span }) }
   end
   | Alloc_array ({ arg_ty; expr; span; ty = _ } as p) ->
     let expr = check_expr st expr (Int span) in
+    let arg_ty = eval_ty st arg_ty in
     Alloc_array { p with expr; ty = Some (Array { ty = arg_ty; span }) }
   | Index ({ expr; index; span; ty = _ } as p) ->
     let expr = infer_expr st expr in
@@ -233,10 +235,11 @@ let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   | Assert { expr; span } ->
     let expr = check_expr st expr (Bool span) in
     Assert { expr; span }
-  | Declare { ty; var = _; span } ->
+  | Declare ({ ty; var = _; span } as p) ->
+    let ty = eval_ty st ty in
     check_ty_small st span ty;
     check_not_void st span ty;
-    stmt
+    Declare { p with ty }
   | Assign { lvalue; expr; span } ->
     let lvalue = infer_expr st lvalue in
     let ty = Ast.expr_ty_exn lvalue in
@@ -293,36 +296,43 @@ let define_func st name =
 
 let check_func_sig st (func_sig : Ast.func_sig) =
   check_ty_small st func_sig.span func_sig.ty;
-  List.iter func_sig.params ~f:(fun param ->
-    check_ty_small st param.span param.ty;
-    check_not_void st param.span param.ty;
-    ());
-  ()
+  let ty = eval_ty st func_sig.ty in
+  let params =
+    List.map func_sig.params ~f:(fun param ->
+      check_ty_small st param.span param.ty;
+      check_not_void st param.span param.ty;
+      { param with ty = eval_ty st param.ty })
+  in
+  { func_sig with ty; params }
 ;;
 
 let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st =
   match global_decl with
-  | Ast.Extern_func_defn { name; ty } ->
+  | Ast.Extern_func_defn ({ name; ty } as p) ->
+    let ty = check_func_sig st ty in
     let st = declare_func st name ty in
     let st = define_func st name in
-    global_decl, st
-  | Ast.Func_decl { name; ty } ->
-    check_func_sig st ty;
+    Extern_func_defn { p with ty }, st
+  | Ast.Func_decl ({ name; ty } as p) ->
+    let ty = check_func_sig st ty in
     let st = declare_func st name ty in
-    global_decl, st
+    Func_decl { p with ty }, st
   | Ast.Func_defn func ->
-    check_func_sig st (Ast.func_defn_to_ty func);
-    let st = declare_func st func.name (Ast.func_defn_to_ty func) in
+    assert (not func.ty.is_extern);
+    let ty = check_func_sig st func.ty in
+    (* important to shadow func here, so the parameters have unfolded types that the check_block uses, so it gets unfolded types *)
+    let func = { func with ty } in
+    let st = declare_func st func.name func.ty in
     let st = define_func st func.name in
     let st_with_params =
-      List.fold func.params ~init:st ~f:(fun st param ->
+      List.fold func.ty.params ~init:st ~f:(fun st param ->
         { st with context = Map.add_exn st.context ~key:param.var ~data:param.ty })
     in
-    let body = check_block { st_with_params with return_ty = func.ty } func.body in
+    let body = check_block { st_with_params with return_ty = func.ty.ty } func.body in
     let body =
       body
       @
-      if is_ty_eq st (Void Span.none) func.ty
+      if is_ty_eq st (Void Span.none) func.ty.ty
       then [ Return { expr = None; span = func.span } ]
       else []
     in
@@ -331,14 +341,14 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
   | Ast.Typedef typedef ->
     ( global_decl
     , { st with typedefs = Map.add_exn st.typedefs ~key:typedef.name ~data:typedef.ty } )
-  | Struct { name; strukt; _ } ->
+  | Struct ({ name; strukt; _ } as p) ->
     begin
       let@: strukt = Option.iter strukt in
       let@: field = List.iter strukt.fields in
       check_not_void st field.span field.ty
     end;
-    ( global_decl
-    , Option.value_map
+    let st =
+      Option.value_map
         strukt
         ~f:(fun strukt ->
           { st with
@@ -354,7 +364,18 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
                            (name : Ast.var)
                            (strukt : Ast.strukt)]))
           })
-        ~default:st )
+        ~default:st
+    in
+    let strukt =
+      Option.map strukt ~f:(fun strukt ->
+        let fields =
+          List.map strukt.fields ~f:(fun field ->
+            let ty = eval_ty st field.ty in
+            { field with ty })
+        in
+        { strukt with fields })
+    in
+    Struct { p with strukt }, st
 ;;
 
 let check_structs_not_cyclic st =

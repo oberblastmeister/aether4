@@ -1,7 +1,3 @@
-(*
-   TODO, remove the next_temp_id field and track that inside of the Table.
-  The table should be able to give out next_temp_id as needed.
-*)
 open Std
 
 open struct
@@ -38,24 +34,6 @@ module Ty = struct
     | Ptr -> 8
   ;;
 end
-
-(* module Struct = struct
-  type t = Ty.strukt [@@deriving sexp_of, equal, compare]
-
-  let create tys : t =
-    let layout =
-      List.map tys ~f:(fun ty ->
-        Struct_layout.Field.{ size = Ty.size_of ty; align = Ty.align_of ty })
-      |> Struct_layout.calculate
-    in
-    let tys = Arrayp.of_list tys in
-    let fields =
-      Arrayp.zip_exn tys layout.offsets
-      |> Arrayp.map ~f:(fun (ty, offset) -> { Struct_field.ty; offset })
-    in
-    { fields; align = layout.align; size = layout.size }
-  ;;
-end *)
 
 module Bin_op = struct
   type t =

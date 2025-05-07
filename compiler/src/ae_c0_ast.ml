@@ -101,6 +101,7 @@ and expr =
   | Nullary of
       { op : nullary_op
       ; span : Span.t
+      ; ty : ty option
       }
   | Ternary of
       { cond : expr
@@ -189,9 +190,8 @@ type func_sig =
 [@@deriving sexp_of]
 
 type func_defn =
-  { ty : ty
-  ; name : var
-  ; params : param list
+  { name : var
+  ; ty : func_sig
   ; body : block
   ; span : Span.t
   }
@@ -235,10 +235,6 @@ type global_decl =
 
 type program = global_decl list [@@deriving sexp_of]
 
-let func_defn_to_ty (func : func_defn) =
-  { ty = func.ty; params = func.params; span = func.span; is_extern = false }
-;;
-
 let bool_ty = Bool Span.none
 let int_ty = Int Span.none
 let void_ty = Void Span.none
@@ -280,7 +276,7 @@ let get_func_ty_map program =
     match decl with
     | Extern_func_defn { name; ty } -> Some (name, ty)
     | Func_decl { name; ty } -> Some (name, ty)
-    | Func_defn ({ name; _ } as defn) -> Some (name, func_defn_to_ty defn)
+    | Func_defn { name; ty; _ } -> Some (name, ty)
     | Struct _ | Typedef _ -> None)
   |> Var.Map.of_alist_exn
 ;;

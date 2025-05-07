@@ -29,7 +29,8 @@ let%expect_test "smoke" =
      ((Func_decl (name main@0)
        (ty ((ty (Void -1:-1)) (params ()) (is_extern false) (span -1:-1))))
       (Func_defn
-       ((ty (Int 2:3-6)) (name main@0) (params ())
+       ((name main@0)
+        (ty ((ty (Int 2:3-6)) (params ()) (is_extern false) (span [2,3]-[7,12])))
         (body
          ((Declare (ty (Int 3:13-16)) (var tmp@1) (span 3:13-26))
           (Assign (lvalue (Var (var tmp@1) (ty ())))

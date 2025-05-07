@@ -57,7 +57,6 @@ type struct_info =
 
 type global_st =
   { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t
-  ; typedefs : Ast.ty Ast.Var.Table.t
   ; structs : struct_info Ast.Var.Table.t
   ; struct_layouts : Struct_layout.t Ast.Var.Table.t
   }
@@ -66,10 +65,9 @@ type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
 
 let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
-  let typedefs = Ast.Var.Table.create () in
   let structs = Ast.Var.Table.create () in
   let struct_layouts = Ast.Var.Table.create () in
-  { func_ty_map; typedefs; structs; struct_layouts }
+  { func_ty_map; structs; struct_layouts }
 ;;
 
 type st =
@@ -104,21 +102,24 @@ let fresh_label ?(name = "fresh") ?info t : Label.t =
   Label.create ?info name id
 ;;
 
-let rec lower_ty st ty =
+let rec lower_ty ty =
   let rec go (ty : Ast.ty) =
     match ty with
     | Int _ -> `Small Tir.Ty.Int
     | Bool _ -> `Small Bool
     | Void _ -> `Small Void
-    | Ty_var var -> go (Hashtbl.find_exn st.typedefs var)
+    | Ty_var var ->
+      raise_s
+        [%message
+          "Should have unfolded all typedefs in the type checker" (var : Ast.Var.t)]
     | Pointer _ -> `Small Ptr
     | Ty_struct { name; _ } -> `Large name
     | Array _ -> `Small Ptr
   in
   go ty
 
-and lower_small_ty_exn st ty =
-  match lower_ty st ty with
+and lower_small_ty_exn ty =
+  match lower_ty ty with
   | `Small ty -> ty
   | `Large _ -> raise_s [%message "Expected small type" (ty : Ast.ty)]
 
@@ -141,14 +142,14 @@ and lower_small_ty_exn st ty =
    TODO: maybe add a already visited check here just to be extra sure it terminates.
 *)
 and size_of st (ty : Ast.ty) : int =
-  match lower_ty st ty with
+  match lower_ty ty with
   | `Small ty -> Tir.Ty.size_of ty
   | `Large name ->
     let layout = calculate_struct_layout st name in
     layout.size
 
 and align_of st (ty : Ast.ty) : int =
-  match lower_ty st ty with
+  match lower_ty ty with
   | `Small ty -> Tir.Ty.align_of ty
   | `Large name ->
     let layout = calculate_struct_layout st name in
@@ -278,7 +279,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     let temp = var_temp st var in
     lower_expr st temp expr
   | Assign { lvalue; expr; span = _ } ->
-    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn st.global_st in
+    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn in
     let address = fresh_temp ~name:"address" st in
     let garbage_temp = fresh_temp ~name:"garbage" st in
     let expr_dst = fresh_temp ~name:"store_expr" st in
@@ -324,7 +325,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
       | Some expr ->
         let ty = Ast.expr_ty_exn expr in
         let info = Span.to_info span in
-        let ty = lower_small_ty_exn st.global_st ty in
+        let ty = lower_small_ty_exn ty in
         empty ++ lower_expr st dst expr +> [ ins ~info (Ret { src = dst; ty }) ]
     end
   | If { cond; body1; body2; span } ->
@@ -401,7 +402,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     let op : Tir.Bin_op.t =
       match op with
       | Eq ->
-        let ty = lower_small_ty_exn st.global_st (Ast.expr_ty_exn lhs) in
+        let ty = lower_small_ty_exn (Ast.expr_ty_exn lhs) in
         Eq ty
       | _ -> lower_bin_op op
     in
@@ -413,12 +414,12 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     +> [ ins ~info (Bin { dst; src1; op; src2 }) ]
   | Var { var; ty } ->
     let src = var_temp st var in
-    let ty = lower_small_ty_exn st.global_st (Option.value_exn ty) in
+    let ty = lower_small_ty_exn (Option.value_exn ty) in
     empty +> [ ins ~info:(Span.to_info var.span) (Unary { dst; op = Copy ty; src }) ]
   | Deref _ | Field_access _ | Index _ ->
     let lvalue = expr in
     let address = fresh_temp ~name:"address" st in
-    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn st.global_st in
+    let ty = Ast.expr_ty_exn lvalue |> lower_small_ty_exn in
     empty ++ lower_lvalue_address st address lvalue +> [ deref dst address ty ]
   | Call { func; args; ty; span } ->
     let ty = Option.value_exn ty in
@@ -428,7 +429,7 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
       List.mapi args ~f:(fun i _arg ->
         fresh_temp st ~info ~name:("arg" ^ Int.to_string i))
     in
-    let ty = lower_small_ty_exn st.global_st ty in
+    let ty = lower_small_ty_exn ty in
     let args =
       List.zip_exn arg_temps args
       |> List.map ~f:(fun (arg_temp, arg_expr) -> lower_expr st arg_temp arg_expr)
@@ -443,12 +444,11 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
               ; func = func.name
               ; args =
                   List.zip_exn arg_temps func_sig.params
-                  |> List.map ~f:(fun (arg, param) ->
-                    arg, lower_small_ty_exn st.global_st param.ty)
+                  |> List.map ~f:(fun (arg, param) -> arg, lower_small_ty_exn param.ty)
               ; is_extern = func_sig.is_extern
               })
        ]
-  | Nullary { op; span = _ } -> begin
+  | Nullary { op; span = _; ty = _ } -> begin
     match op with
     | Alloc ty ->
       let size = size_of st.global_st ty in
@@ -468,10 +468,8 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let st = create_state st in
   let start_label = fresh_label ~name:"start" st in
   let params =
-    List.map defn.params ~f:(fun param ->
-      { Tir.Block_param.param = var_temp st param.var
-      ; ty = lower_small_ty_exn st.global_st param.ty
-      })
+    List.map defn.ty.params ~f:(fun param ->
+      { Tir.Block_param.param = var_temp st param.var; ty = lower_small_ty_exn param.ty })
   in
   let linearized =
     empty ++ label ~params start_label ++ lower_block st defn.body +> [ ins Unreachable ]
@@ -494,11 +492,9 @@ let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
     Hashtbl.set st.func_ty_map ~key:name ~data:ty;
     None
   | Func_defn defn ->
-    Hashtbl.set st.func_ty_map ~key:defn.name ~data:(Ast.func_defn_to_ty defn);
+    Hashtbl.set st.func_ty_map ~key:defn.name ~data:defn.ty;
     Some (lower_func_defn st defn)
-  | Typedef { ty; name; span = _ } ->
-    Hashtbl.add_exn st.typedefs ~key:name ~data:ty;
-    None
+  | Typedef _ -> None
   | Struct { name; strukt; span = _ } ->
     begin
       let@: strukt = Option.iter strukt in

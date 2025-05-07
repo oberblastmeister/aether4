@@ -1,0 +1,55 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+int qsort (int[] A, int left, int right) {
+  /* sort A[left..right] */
+  int lower, upper;
+  int pivot;
+  if (left >= right) return 0;	/* singleton or empty: sorted */
+  lower = left;
+  upper = right;
+  pivot = A[right];
+  while (lower < upper) {
+    /* left <= lower < upper <= right
+     * A[left..lower-1] <= pivot
+     * A[upper+1..right] > pivot
+     * A[left..right] = A[left..lower] u pivot u A[upper+1..right]
+     */
+    if (A[lower] <= pivot) {
+      lower += 1;
+    } else {
+      A[upper] = A[lower];
+      upper -= 1;
+      A[lower] = A[upper];
+    }
+  }
+  /* lower == upper */
+  A[upper] = pivot;
+  qsort(A, left, lower-1);
+  qsort(A, upper+1, right);
+  return 0;
+}
+
+bool is_sorted (int[] A, int n) {
+  int i;
+  for (i = 0; i < n; i += 1)
+    if (A[i] != i) return false;
+  return true;
+}
+
+void main () {
+  int i, n;
+  int[] A;
+  n = 938;
+  A = alloc_array(int, 2 * n);
+  for (i = 0; i < 2*n-1; i += 2) {
+    A[i] = i;
+    A[i+1] = 2*n-(i+1);
+  }
+  qsort(A, 0, 2*n-1);
+  assert(is_sorted(A, 2*n));
+}
+----
