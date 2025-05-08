@@ -1,0 +1,23 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+extern void c0_runtime_print_char(int a);
+
+int g() {
+    c0_runtime_print_char(97);
+    c0_runtime_print_char(10);
+    return 1;
+}
+
+// TODO: fix this test to not call g twice
+void main() {
+    int[] a = alloc_array(int, 10);
+    a[g()] += 1;
+    assert(a[1] == 1);
+}
+----
+a
+a

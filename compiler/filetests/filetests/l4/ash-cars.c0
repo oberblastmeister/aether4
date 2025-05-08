@@ -5,8 +5,8 @@
 */
 
 
-extern int c0_runtime_print_int(int a);
-extern int c0_runtime_print_char(int a);
+extern void c0_runtime_print_int(int a);
+extern void c0_runtime_print_char(int a);
 
 void printint(int i) {
     c0_runtime_print_int(i);
