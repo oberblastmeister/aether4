@@ -5,6 +5,22 @@ module Fold = Functional.Fold
 module Iter = Functional.Iter
 module Traverse = Functional.Traverse
 
+module List = struct
+  include List
+
+  let uncons t =
+    match t with
+    | [] -> None
+    | x :: xs -> Some (x, xs)
+  ;;
+
+  let uncons_exn t =
+    match t with
+    | [] -> raise_s [%message "uncons_exn failed"]
+    | x :: xs -> x, xs
+  ;;
+end
+
 module Fn = struct
   include Fn
 

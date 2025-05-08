@@ -10,3 +10,4 @@ TODO:
 - unfold types in the elaborator, so that the lowering process works properly
 - add tests for arrays
 - add support for null pointers and pointer equivalence
+- implement break and continue

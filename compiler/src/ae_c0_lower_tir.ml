@@ -74,6 +74,7 @@ let create_global_state _program =
 type st =
   { temp_gen : Temp.Id_gen.t
   ; var_to_temp : Temp.t Ast.Var.Table.t
+  ; label_table : Tir.Label.t Ast.Var.Table.t
   ; label_gen : Label.Id_gen.t
   ; global_st : global_st
   }
@@ -81,6 +82,7 @@ type st =
 let create_state global_st =
   { temp_gen = Temp.Id_gen.create 0
   ; var_to_temp = Ast.Var.Table.create ()
+  ; label_table = Ast.Var.Table.create ()
   ; label_gen = Label.Id_gen.create 0
   ; global_st
   }
@@ -91,6 +93,13 @@ let var_temp t var =
     let id = Temp.Id_gen.get t.temp_gen in
     let temp = Temp.create ~info:(Span.to_info var.span) var.name id in
     temp)
+;;
+
+let get_label t label =
+  Hashtbl.find_or_add t.label_table label ~default:(fun () ->
+    let id = Label.Id_gen.get t.label_gen in
+    let label = Label.create ~info:(Span.to_info label.span) label.name id in
+    label)
 ;;
 
 let fresh_temp ?(name = "fresh") ?info t : Temp.t =
@@ -221,7 +230,18 @@ let check_bounds st ~array ~index =
 ;;
 
 let rec lower_block st (block : Ast.block) : instrs =
-  List.map block ~f:(lower_stmt st) |> Bag.concat
+  let instrs = List.map block.stmts ~f:(lower_stmt st) |> Bag.concat in
+  let label =
+    Option.map
+      ~f:(fun label ->
+        let label = get_label st label in
+        (* TODO: allow implicit fallthrough for linearized *)
+        empty +> [ ins (Jump (bc label)) ] ++ Api.label label)
+      block.label
+    |> Option.to_list
+    |> Bag.concat
+  in
+  instrs ++ label
 
 (* returns the address of the lvalue *)
 and lower_lvalue_address st dst (lvalue : Ast.expr) =
@@ -230,7 +250,11 @@ and lower_lvalue_address st dst (lvalue : Ast.expr) =
     empty ++ lower_expr st dst expr ++ check_not_null st dst
   | Field_access { expr; field; span = _; ty = _res_ty } ->
     (* TODO: issue here with evaluating ty. Let's just unfold all types in the elaborator *)
-    let%fail_exn (Ty_struct { name; _ }) = Ast.expr_ty_exn expr in
+    let name =
+      match Ast.expr_ty_exn expr with
+      | Ty_struct { name; _ } -> name
+      | ty -> raise_s [%message "Expected struct ty" (ty : Ast.ty)]
+    in
     let struct_info = Hashtbl.find_exn st.global_st.structs name in
     let field_index = Hashtbl.find_exn struct_info.field_name_to_index field.t in
     let layout = calculate_struct_layout st.global_st name in
@@ -277,6 +301,9 @@ and lower_lvalue_address st dst (lvalue : Ast.expr) =
 *)
 and lower_stmt st (stmt : Ast.stmt) : instrs =
   match stmt with
+  | Break { label; span = _ } ->
+    let label = get_label st label in
+    empty +> [ ins (Jump (bc label)) ]
   | Declare { ty = _; var; span = _ } ->
     (* this adds it into the map, but ignore the temp *)
     let _ = var_temp st var in
@@ -294,7 +321,7 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     ++ lower_expr st expr_dst expr
     +> [ ins (Bin { dst = garbage_temp; op = Store ty; src1 = address; src2 = expr_dst })
        ]
-  | Block { block; span = _ } -> lower_block st block
+  | Block block -> lower_block st block
   | Effect expr ->
     let dst = fresh_temp ~name:"effect" st in
     lower_expr st dst expr
@@ -488,6 +515,7 @@ let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
   let linearized =
     empty ++ label ~params start_label ++ lower_block st defn.body +> [ ins Unreachable ]
   in
+  trace_ls [%lazy_message (linearized : Tir.Linearized.instr Bag.t)];
   let blocks = Tir.Linearized.to_blocks_exn (Bag.to_list linearized) in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in

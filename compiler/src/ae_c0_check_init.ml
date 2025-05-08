@@ -2,22 +2,18 @@
 open Std
 open Ae_trace
 module Ast = Ae_c0_ast
+open Ast
 
 exception Exn of Sexp.t
 
 let throw_s s = raise (Exn s)
 
-let rec check_block (block : Ast.block) =
-  let rec go stmts =
-    match stmts with
-    | stmt :: stmts ->
-      let live = go stmts in
-      check_stmt live stmt
-    | [] -> Ast.Var.Set.empty
-  in
-  go block
+type st =
+  { declared : Ast.Var.Set.t
+  ; declared_stack : Ast.Var.Set.t Var.Map.t
+  }
 
-and iter_expr_uses (expr : Ast.expr) ~f =
+let rec iter_expr_uses (expr : Ast.expr) ~f =
   match expr with
   | Null _ -> ()
   | Alloc_array { arg_ty = _; expr; ty = _; span = _ } -> iter_expr_uses expr ~f
@@ -44,46 +40,100 @@ and iter_expr_uses (expr : Ast.expr) ~f =
   | Call { func = _; args; ty = _; span = _ } ->
     (List.iter @> iter_expr_uses) args ~f;
     ()
+;;
 
-(* and iter_lvalue_uses (lvalue : Ast.lvalue) ~f =
-  match lvalue with
-  | Ast.Lvalue_var { var; _ } -> f var
-  | Ast.Lvalue_deref { lvalue; _ } -> iter_lvalue_uses lvalue ~f
-  | Ast.Lvalue_field { lvalue; _ } -> iter_lvalue_uses lvalue ~f
-  | Ast.Lvalue_expr expr -> iter_expr_uses expr ~f *)
+let expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_list
 
-and expr_uses_set expr = iter_expr_uses expr |> Iter.to_list |> Ast.Var.Set.of_list
+let check_expr expr defined =
+  begin
+    let@: use = iter_expr_uses expr in
+    if not (Set.mem defined use)
+    then throw_s [%message "Variable was used before initialized" ~var:(use : Ast.var)]
+  end
+;;
 
-and check_stmt live (stmt : Ast.stmt) =
+let rec check_block declared_stack defined (block : Ast.block) =
+  let declared_stack, defined =
+    List.fold
+      block.stmts
+      ~init:((block.label, Ast.Var.Set.empty) :: declared_stack, defined)
+      ~f:(fun (declared_stack, defined) stmt ->
+        let defined = check_stmt declared_stack defined stmt in
+        match stmt with
+        | Declare { var; _ } ->
+          let (label, declared_last), declared_stack = List.uncons_exn declared_stack in
+          let declared_stack = (label, Set.add declared_last var) :: declared_stack in
+          declared_stack, defined
+        | _ -> declared_stack, defined)
+  in
+  let (_label, declared), _declared_stack = List.uncons_exn declared_stack in
+  Set.diff defined declared
+
+and check_stmt
+      (declared_stack : (Ast.Var.t option * Ast.Var.Set.t) list)
+      defined
+      (stmt : Ast.stmt)
+  =
+  trace_s
+    [%message
+      "check_stmt"
+        (declared_stack : (Ast.Var.t option * Ast.Var.Set.t) list)
+        (defined : Ast.Var.Set.t)
+        (stmt : Ast.stmt)];
   match stmt with
-  | If { cond; body1; body2; span = _ } ->
-    let live1 = check_stmt live body1 in
-    let live2 = Option.value_map body2 ~f:(check_stmt live) ~default:Ast.Var.Set.empty in
-    let cond_uses = expr_uses_set cond in
-    live1 |> Set.union live2 |> Set.union cond_uses
-  | Block { block; span = _ } ->
-    List.fold_right ~init:live ~f:(fun stmt live -> check_stmt live stmt) block
+  | Ast.If { cond; body1; body2; span = _ } ->
+    check_expr cond defined;
+    let defined1 = check_stmt declared_stack defined body1 in
+    Option.value_map
+      body2
+      ~f:(fun stmt -> check_stmt declared_stack defined stmt |> Set.inter defined1)
+      ~default:defined1
+  | Ast.Block block -> check_block declared_stack defined block
   | Ast.While { cond; body; span = _ } ->
-    let live_body = check_stmt live body in
-    let cond_uses = expr_uses_set cond in
-    live |> Set.union live_body |> Set.union cond_uses
-  | Assert { expr; span = _ } | Effect expr -> Set.union live (expr_uses_set expr)
-  | Return { expr; span = _ } ->
-    (* just discard the live set, because nothing is live before it *)
-    Option.value_map ~f:expr_uses_set ~default:Ast.Var.Set.empty expr
-  | Declare { ty = _; var; span = _ } ->
-    if Set.mem live var
-    then throw_s [%message "Variable was used before initialized" (var : Ast.var)]
-    else live
-  | Assign { lvalue = Var { var; _ }; expr; span = _ } ->
-    live |> Fn.flip Set.remove var |> Set.union (expr_uses_set expr)
-  | Assign { lvalue; expr; _ } ->
-    live |> Set.union (expr_uses_set lvalue) |> Set.union (expr_uses_set expr)
+    check_expr cond defined;
+    let _defined = check_stmt declared_stack defined body in
+    defined
+  | Ast.Effect expr ->
+    check_expr expr defined;
+    defined
+  | Ast.Return { expr; span = _ } ->
+    Option.iter expr ~f:(fun expr -> check_expr expr defined);
+    let declared =
+      List.map declared_stack ~f:(fun (_label, s) -> s) |> Var.Set.union_list
+    in
+    (* declares literally everything in scope *)
+    declared
+  | Ast.Declare _ -> defined
+  | Ast.Assign { lvalue; expr; span = _ } ->
+    check_expr expr defined;
+    begin
+      match lvalue with
+      | Var { var; _ } -> Set.add defined var
+      | _ -> defined
+    end
+  | Ast.Assert { expr; span = _ } ->
+    check_expr expr defined;
+    defined
+  | Ast.Break { label; span = _ } ->
+    let%fail_exn declared, (label', declared_at_label) :: _ =
+      List.split_while declared_stack ~f:(fun (label', _) ->
+        not ([%equal: Var.t option] label' (Some label)))
+    in
+    assert ([%equal: Var.t option] label' (Some label));
+    let declared = declared_at_label :: List.map declared ~f:snd |> Var.Set.union_list in
+    (*
+      The declares everything up until the label.
+      We have to union it with the defined because some things weren't defined
+      in the scope of this label, or declared in this label.
+    *)
+    Set.union defined declared
 ;;
 
 let check_global_decl (decl : Ast.global_decl) =
   match decl with
-  | Func_defn func -> check_block func.body |> ignore
+  | Func_defn func ->
+    let params = List.map func.ty.params ~f:(fun param -> param.var) |> Var.Set.of_list in
+    check_block [ None, params ] params func.body |> ignore
   | _ -> ()
 ;;
 

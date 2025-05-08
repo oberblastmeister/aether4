@@ -10,10 +10,10 @@ int run() {
         int i;
         for (i = 2; i < 100; i += 1) {
                 int j;
-                bool break = false;
-                for (j = 2; !break && j < i; j += 1) {
+                bool break_ = false;
+                for (j = 2; !break_ && j < i; j += 1) {
                         if (i % j == 0)
-                                break = true;
+                                break_ = true;
                 }
                 if (j == i)
                         count += 1;

@@ -7,11 +7,11 @@
 int run() {
   /* Tests for loops, with break and continue */
   int n;
-  bool break = false;
-  for (n = -1234; !break && 42 != 0; n += 1) {
+  bool break_ = false;
+  for (n = -1234; !break_ && 42 != 0; n += 1) {
     if (n != 12) {
     } else {
-        break = true;
+        break_ = true;
     }
   }
 

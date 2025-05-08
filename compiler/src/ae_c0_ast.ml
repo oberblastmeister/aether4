@@ -63,10 +63,7 @@ type stmt =
       ; body2 : stmt option
       ; span : Span.t
       }
-  | Block of
-      { block : block
-      ; span : Span.t
-      }
+  | Block of block
   | While of
       { cond : expr
       ; body : stmt
@@ -91,9 +88,19 @@ type stmt =
       { expr : expr
       ; span : Span.t
       }
+  | Break of
+      { label : var
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
-and block = stmt list [@@deriving sexp_of]
+and block =
+  { label : var option
+  ; stmts : stmt list
+  ; span : Span.t
+  }
+[@@deriving sexp_of]
+
 and nullary_op = Alloc of ty
 
 and expr =
@@ -270,7 +277,7 @@ let expr_ty_exn = function
   | Var { ty; _ } -> Option.value_exn ty
 ;;
 
-let nop_stmt span = Block { block = []; span }
+let nop_stmt span = Block { label = None; stmts = []; span }
 
 let get_func_ty_map program =
   List.filter_map program ~f:(fun decl ->

@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void main() {
+    while (true) {
+        break;
+    }
+    int i = 0;
+    for (; i < 100; i++) {
+        if (i == 5) break;
+    }
+    assert (i == 5);
+}
+----

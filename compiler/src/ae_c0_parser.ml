@@ -208,16 +208,29 @@ and parse_ty env =
   chain_post ~post ty env
 ;;
 
+let parse_label_define env : Cst.var =
+  let label = parse_general_ident env in
+  expect_eq_ Colon env;
+  label
+;;
+
+let parse_label_use env : Cst.var =
+  expect_eq_ Colon env;
+  let label = parse_general_ident env in
+  label
+;;
+
 let rec parse_block env : Cst.block =
   let open Span.Syntax in
+  let label = Parser.optional parse_label_define env in
   let lbrace = expect_eq LBrace env in
-  let block = Parser.many try_parse_stmt |> scoped |> Fn.( |> ) env in
+  let stmts = Parser.many try_parse_stmt |> scoped |> Fn.( |> ) env in
   let rbrace =
     expect_eq RBrace
     |> Parser.cut (Sexp [%message "expected closing brace for block"])
     |> Fn.( |> ) env
   in
-  { block; span = lbrace.span ++ rbrace.span }
+  { label; stmts; span = lbrace.span ++ rbrace.span }
 
 and try_parse_stmt env : Cst.stmt =
   let stmt =
@@ -242,10 +255,21 @@ and parse_semi_stmt env : Cst.stmt =
      <|> (parse_post <* expect_eq_ Semi)
      <|> (parse_effect <* expect_eq_ Semi)
      <|> (parse_decl <* expect_eq_ Semi)
+     <|> (parse_break <* expect_eq_ Semi)
+     <|> (parse_continue <* expect_eq_ Semi)
      <|> parse_single_semi_stmt)
       env
   in
   res
+
+and parse_break env : Cst.stmt =
+  let tok = expect_eq Break env in
+  let label = Parser.optional parse_label_use env in
+  Break { label; span = tok.span }
+
+and parse_continue env : Cst.stmt =
+  let tok = expect_eq Continue env in
+  Continue tok.span
 
 and parse_single_semi_stmt env =
   expect_eq_ Semi env;

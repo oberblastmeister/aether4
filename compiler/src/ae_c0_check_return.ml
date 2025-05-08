@@ -5,13 +5,13 @@ exception Exn of Error.t
 
 let throw_s s = raise (Exn (Error.create_s s))
 
-let rec block_returns (block : Ast.block) = List.exists block ~f:stmt_returns
+let rec block_returns (block : Ast.block) = List.exists block.stmts ~f:stmt_returns
 
 and stmt_returns (stmt : Ast.stmt) =
   match stmt with
   | Return _ -> true
-  | Assert _ | Assign _ | Declare _ | While _ | Effect _ -> false
-  | Block { block; span = _ } -> block_returns block
+  | Break _ | Assert _ | Assign _ | Declare _ | While _ | Effect _ -> false
+  | Block block -> block_returns block
   | If { cond = _; body1; body2 = Some body2; span = _ } ->
     stmt_returns body1 && stmt_returns body2
   | If { cond = _; body1 = _; body2 = None; span = _ } -> false

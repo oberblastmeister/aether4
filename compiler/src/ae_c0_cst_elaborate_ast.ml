@@ -15,30 +15,45 @@ type st =
   ; next_func_id : int ref
   ; next_type_id : int ref
   ; next_struct_id : int ref
+  ; next_label_id : int ref
   ; context : Ast.var String.Map.t
   ; func_context : Ast.var String.Map.t
   ; typedef_context : Ast.var String.Map.t
   ; struct_context : Ast.var String.Map.t
+  ; label_context : Ast.var String.Map.t
+  ; break_label : Ast.var option
+  ; continue_label : Ast.var option
   }
+[@@deriving sexp_of]
 
 let create_state () =
   let next_temp_id = ref 0 in
   let next_func_id = ref 0 in
   let next_type_id = ref 0 in
   let next_struct_id = ref 0 in
+  let next_label_id = ref 0 in
   let context = String.Map.empty in
   let func_context = String.Map.empty in
   let typedef_context = String.Map.empty in
   let struct_context = String.Map.empty in
+  let label_context = String.Map.empty in
   { next_temp_id
   ; next_func_id
   ; next_type_id
   ; next_struct_id
+  ; next_label_id
   ; context
   ; func_context
   ; typedef_context
   ; struct_context
+  ; label_context
+  ; break_label = None
+  ; continue_label = None
   }
+;;
+
+let add_control_labels st ~break_label ~continue_label =
+  { st with break_label = Some break_label; continue_label = Some continue_label }
 ;;
 
 let throw_s s = raise (Exn s)
@@ -69,6 +84,18 @@ let fresh_var st (var : Cst.var) : Ast.var =
   let id : int = !(st.next_temp_id) in
   st.next_temp_id := id + 1;
   { name = var.t; id; span = var.span }
+;;
+
+let fresh_label st (label : Cst.var) : Ast.var =
+  let id : int = !(st.next_label_id) in
+  st.next_label_id := id + 1;
+  { name = label.t; id; span = label.span }
+;;
+
+let elab_label st (label : Cst.var) : Ast.var =
+  Map.find st.label_context label.t
+  |> Option.value_or_thunk ~default:(fun () ->
+    throw_s [%message "Label not found" (label : Cst.var)])
 ;;
 
 let fresh_func_var st (var : Cst.var) : Ast.var =
@@ -112,6 +139,14 @@ let declare_var st (var : Cst.var) : Ast.var * st =
   var', { st with context = Map.add_exn st.context ~key:var.t ~data:var' }
 ;;
 
+let declare_label st (label : Cst.var) : Ast.var * st =
+  if Map.mem st.label_context label.t
+  then throw_s [%message "Label was already declared!" (label : Cst.var)];
+  let label' = fresh_label st label in
+  ( label'
+  , { st with label_context = Map.add_exn st.label_context ~key:label.t ~data:label' } )
+;;
+
 let declare_struct_var st (var : Cst.var) : Ast.var * st =
   (* we can declare structs multiple times *)
   match Map.find st.struct_context var.t with
@@ -152,6 +187,25 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
+  | Break { label; span } ->
+    let label =
+      match label with
+      | Some label -> elab_label st label
+      | None ->
+        Option.value_or_thunk st.break_label ~default:(fun () ->
+          throw_s
+            [%message
+              "Cannot break outside of loop"
+                (span : Span.t)
+                (st.break_label : Ast.var option)])
+    in
+    empty +> [ Ast.Break { label; span } ], st
+  | Continue span ->
+    let label =
+      Option.value_or_thunk st.continue_label ~default:(fun () ->
+        throw_s [%message "Cannot continue outside of loop" (span : Span.t)])
+    in
+    empty +> [ Ast.Break { label; span } ], st
   | Assert { expr; span } ->
     let expr = elab_expr st expr in
     empty +> [ Ast.Assert { expr; span } ], st
@@ -187,8 +241,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
       stmts
     in
     Bag.concat stmts, !st_ref
-  | Block { block; span } ->
-    (empty +> Ast.[ Block { block = elab_block st block; span } ]), st
+  | Block block ->
+    let block = elab_block st block in
+    (empty +> Ast.[ Block block ]), st
   | Post { lvalue; op; span } ->
     let lvalue = elab_expr st lvalue in
     let expr =
@@ -239,12 +294,33 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
     (empty +> Ast.[ If { cond; body1; body2; span } ]), st
   | While { cond; body; span } ->
     let cond = elab_expr st cond in
-    let body = elab_stmt_to_block st body in
-    (empty +> Ast.[ While { cond; body; span } ]), st
+    let break_label = fresh_label st (Spanned.create "break" span) in
+    let continue_label = fresh_label st (Spanned.create "continue" span) in
+    let body =
+      elab_stmt_to_block (add_control_labels st ~break_label ~continue_label) body
+    in
+    ( (empty
+       +> Ast.
+            [ Block
+                { label = Some break_label
+                ; stmts =
+                    [ While
+                        { cond
+                        ; body =
+                            Block { label = Some continue_label; stmts = [ body ]; span }
+                        ; span
+                        }
+                    ]
+                ; span
+                }
+            ])
+    , st )
   | For { paren = { init; cond; incr }; body; span } ->
     let init_stmts, init_st =
       Option.value_map ~f:(elab_stmt st) ~default:(empty, st) init
     in
+    let break_label = fresh_label st (Spanned.create "break" span) in
+    let continue_label = fresh_label st (Spanned.create "continue" span) in
     let body_span = Cst.stmt_span body in
     let cond =
       Option.value_map
@@ -252,7 +328,9 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
         ~f:(elab_expr init_st)
         cond
     in
-    let body = elab_stmt_to_block init_st body in
+    let body =
+      elab_stmt_to_block (add_control_labels init_st ~break_label ~continue_label) body
+    in
     let incr =
       Option.value_map
         ~f:(elab_stmt_to_block init_st)
@@ -260,21 +338,39 @@ let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
         incr
     in
     let while_stmt =
-      Ast.(
-        While
-          { cond
-          ; body = Block { block = [ body; incr ]; span = body_span }
-          ; span = body_span
-          })
+      Ast.Block
+        { label = Some break_label
+        ; stmts =
+            [ Ast.While
+                { cond
+                ; body =
+                    Block
+                      { label = None
+                      ; stmts =
+                          [ Block { label = Some continue_label; stmts = [ body ]; span }
+                          ; incr
+                          ]
+                      ; span = body_span
+                      }
+                ; span = body_span
+                }
+            ]
+        ; span
+        }
     in
     let res =
-      Ast.(Block { block = Bag.to_list (empty ++ init_stmts +> [ while_stmt ]); span })
+      Ast.(
+        Block
+          { label = None
+          ; stmts = Bag.to_list (empty ++ init_stmts +> [ while_stmt ])
+          ; span
+          })
     in
     empty +> [ res ], st
 
 and elab_stmt_to_block st (stmt : Cst.stmt) : Ast.stmt =
   let res, _ = elab_stmt st stmt in
-  Block { block = Bag.to_list res; span = Cst.stmt_span stmt }
+  Block { label = None; stmts = Bag.to_list res; span = Cst.stmt_span stmt }
 
 and elab_expr st (expr : Cst.expr) : Ast.expr =
   match expr with
@@ -377,7 +473,14 @@ and elab_bin_op (op : Cst.bin_op) : Ast.bin_op =
   | Lshift -> Lshift
   | Rshift -> Rshift
 
-and elab_block st (block : Cst.stmt list) : Ast.block =
+and elab_block st ({ label; stmts; span } : Cst.block) : Ast.block =
+  let label, st =
+    match label with
+    | None -> None, st
+    | Some label ->
+      let label, st = declare_label st label in
+      Some label, st
+  in
   let rec go st stmts =
     match stmts with
     | [] -> Bag.empty
@@ -386,7 +489,8 @@ and elab_block st (block : Cst.stmt list) : Ast.block =
       let stmts = go st' stmts in
       stmt ++ stmts
   in
-  go st block |> Bag.to_list
+  let stmts = go st stmts |> Bag.to_list in
+  { label; stmts; span }
 ;;
 
 let elab_decl_param st (param : Cst.param) : Ast.param =
@@ -465,7 +569,7 @@ let elab_global_decl st (decl : Cst.global_decl) : Ast.global_decl * st =
         let ty = elab_ty st func.ty in
         let name, st' = declare_func_var st func.name in
         let params, st_with_params = elab_defn_params st' func.params in
-        let body = elab_block st_with_params body.block in
+        let body = elab_block st_with_params body in
         ( Func_defn
             { ty = { ty; params; is_extern = false; span = func.span }
             ; name

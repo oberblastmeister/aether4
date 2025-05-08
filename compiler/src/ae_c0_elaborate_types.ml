@@ -12,6 +12,7 @@ type st =
   ; defined_structs : Ast.strukt Ast.Var.Map.t
   ; typedefs : Ast.ty Ast.Var.Map.t
   ; return_ty : Ast.ty
+  ; is_in_loop : bool
   }
 
 let create_state () =
@@ -21,6 +22,7 @@ let create_state () =
   ; defined_structs = Ast.Var.Map.empty
   ; typedefs = Ast.Var.Map.empty
   ; return_ty = Ast.void_ty
+  ; is_in_loop = false
   }
 ;;
 
@@ -32,13 +34,15 @@ let var_ty st var =
     throw_s [%message "Var not found!" (var : Ast.Var.t)])
 ;;
 
-let rec eval_ty st (ty : Ast.ty) =
+let rec eval_ty st (ty : Ast.ty) : Ast.ty =
   match ty with
   | Ty_var v ->
     Map.find st.typedefs v
     |> Option.value_or_thunk ~default:(fun () ->
       throw_s [%message "Type def not found" (v : Ast.var)])
     |> eval_ty st
+  | Pointer p -> Pointer { p with ty = eval_ty st p.ty }
+  | Array p -> Array { p with ty = eval_ty st p.ty }
   | _ -> ty
 ;;
 
@@ -114,6 +118,12 @@ let rec infer_expr_with_any st (expr : Ast.expr) : Ast.expr =
   | Null { span; ty = _ } -> Null { span; ty = Some Any }
   | Var ({ var; ty = _ } as p) ->
     let ty = var_ty st var in
+    begin
+      match ty with
+      | Ty_var _ ->
+        raise_s [%message "Everything in the context must be evaluated" (ty : Ast.ty)]
+      | _ -> ()
+    end;
     Var { p with ty = Some ty }
   | Deref ({ expr; span; ty = _ } as p) ->
     let expr = infer_expr st expr in
@@ -121,7 +131,7 @@ let rec infer_expr_with_any st (expr : Ast.expr) : Ast.expr =
     check_ty_is_pointer st ty span;
     let%fail_exn (Pointer { ty; _ }) = ty in
     Deref { p with expr; ty = Some ty }
-  | Field_access ({ expr; field; span; ty } as p) ->
+  | Field_access ({ expr; field; span; ty = _ } as p) ->
     let expr = infer_expr st expr in
     let ty = Ast.expr_ty_exn expr |> eval_ty st in
     let fail () =
@@ -235,19 +245,21 @@ and check_expr st (expr : Ast.expr) (ty' : Ast.ty) : Ast.expr =
 
 let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   match stmt with
+  | Break { label; span } -> Break { label; span }
   | If { cond; body1; body2; span } ->
     let cond = check_expr st cond Ast.bool_ty in
     let body1 = check_stmt st body1 in
     let body2 = Option.map body2 ~f:(check_stmt st) in
     If { cond; body1; body2; span }
-  | Block { block; span } -> Block { block = check_block st block; span }
+  | Block block -> Block (check_block st block)
   | While { cond; body; span } ->
     let cond = check_expr st cond Ast.bool_ty in
     let body = check_stmt st body in
     While { cond; body; span }
   | Return { expr; span } -> begin
     match st.return_ty, expr with
-    | Void _, Some _ -> throw_s [%message "Cannot return expression, return type is void"]
+    | Void _, Some _ ->
+      throw_s [%message "Cannot return expression, return type is void" (span : Span.t)]
     | Void _, None -> stmt
     | ty, None ->
       throw_s [%message "Must return expression, return type is not void" (ty : Ast.ty)]
@@ -288,7 +300,8 @@ and check_block st (block : Ast.block) : Ast.block =
       let stmts = loop st' stmts in
       stmt :: stmts
   in
-  loop st block
+  let stmts = loop st block.stmts in
+  { block with stmts }
 ;;
 
 let check_func_sig_eq st name (func_sig1 : Ast.func_sig) (func_sig2 : Ast.func_sig) =
@@ -356,11 +369,14 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
     in
     let body = check_block { st_with_params with return_ty = func.ty.ty } func.body in
     let body =
-      body
-      @
-      if is_ty_eq st (Void Span.none) func.ty.ty
-      then [ Return { expr = None; span = func.span } ]
-      else []
+      let stmts =
+        body.stmts
+        @
+        if is_ty_eq st (Void Span.none) func.ty.ty
+        then [ Return { expr = None; span = func.span } ]
+        else []
+      in
+      { body with stmts }
     in
     let func = { func with body } in
     Ast.Func_defn func, st
@@ -373,6 +389,15 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
       let@: field = List.iter strukt.fields in
       check_not_void st field.span field.ty
     end;
+    let strukt =
+      Option.map strukt ~f:(fun strukt ->
+        let fields =
+          List.map strukt.fields ~f:(fun field ->
+            let ty = eval_ty st field.ty in
+            { field with ty })
+        in
+        { strukt with fields })
+    in
     let st =
       Option.value_map
         strukt
@@ -391,15 +416,6 @@ let check_global_decl st (global_decl : Ast.global_decl) : Ast.global_decl * st 
                            (strukt : Ast.strukt)]))
           })
         ~default:st
-    in
-    let strukt =
-      Option.map strukt ~f:(fun strukt ->
-        let fields =
-          List.map strukt.fields ~f:(fun field ->
-            let ty = eval_ty st field.ty in
-            { field with ty })
-        in
-        { strukt with fields })
     in
     Struct { p with strukt }, st
 ;;

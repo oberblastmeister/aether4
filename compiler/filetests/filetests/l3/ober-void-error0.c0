@@ -16,4 +16,4 @@ int run() {
 
 void main() {}
 ----
-"Cannot return expression, return type is void"
+("Cannot return expression, return type is void" (span 8:5-13))

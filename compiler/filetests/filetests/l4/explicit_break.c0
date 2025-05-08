@@ -1,0 +1,17 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+void main() {
+    int i;
+    bool b;
+    label: {
+        i = 1234;
+        b = false;
+        break :label;
+    }
+    assert (i == 1234);
+    assert (!b);
+}
+----

@@ -6,9 +6,9 @@
 
 int run() {
   int x145;
-  bool break = false;
-  while (!break && true) {
-    break = true;
+  bool break_ = false;
+  while (!break_ && true) {
+    break_ = true;
     x144 = 2;
   }
   return x145;

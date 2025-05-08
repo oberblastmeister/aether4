@@ -23,7 +23,8 @@ let%expect_test "simple" =
     (Ok
      ((Func
        ((is_extern false) (ty (Int 2:5-8)) (name ((t bruh) (span 2:9-13)))
-        (params ()) (body (((block ()) (span [2,16]-[4,6])))) (span [2,5]-[4,6])))))
+        (params ()) (body (((label ()) (stmts ()) (span [2,16]-[4,6]))))
+        (span [2,5]-[4,6])))))
     |}]
 ;;
 
@@ -53,7 +54,8 @@ let%expect_test "pointer" =
        ((is_extern false) (ty (Void 2:5-9)) (name ((t main) (span 2:10-14)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Pointer (ty (Int 3:7-10)) (span 3:7-12)))
               (names (((t first) (span 3:13-18)))) (expr ()) (span 3:7-12))
              (Decl (ty (Int 4:7-10)) (names (((t bruh) (span 4:11-15))))
@@ -68,7 +70,8 @@ let%expect_test "pointer" =
        ((is_extern false) (ty (Void 10:5-9)) (name ((t another) (span 10:10-17)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl
               (ty
                (Pointer (ty (Ty_var ((t bruh) (span 11:7-11)))) (span 11:7-13)))
@@ -98,7 +101,8 @@ let%expect_test "simple decl" =
        ((is_extern false) (ty (Int 2:5-8)) (name ((t first) (span 2:9-14)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Int 3:7-10)) (names (((t first) (span 3:11-16))))
               (expr
                ((Bin (lhs (Int_const ((t 12) (span 3:19-21)))) (op Add)
@@ -146,13 +150,15 @@ let%expect_test "simple control flow" =
        ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Int 3:7-10)) (names (((t i) (span 3:11))))
               (expr ((Int_const ((t 1234) (span 3:15-19))))) (span 3:7-19))
              (If (cond (Var ((t b) (span 4:11))))
               (body1
                (Block
-                ((block
+                ((label ())
+                 (stmts
                   ((Assign
                     ((lvalue (Var ((t another) (span 5:9-16)))) (op Id_assign)
                      (expr (Int_const ((t 1243) (span 5:19-23)))) (span 5:9-23)))))
@@ -178,7 +184,8 @@ let%expect_test "simple assign" =
        ((is_extern false) (ty (Int 2:7-10)) (name ((t first) (span 2:11-16)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Assign
               ((lvalue (Var ((t first) (span 3:9-14)))) (op Mul_assign)
                (expr
@@ -213,7 +220,8 @@ let%expect_test "bool" =
        ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Int 3:11-14)) (names (((t first) (span 3:15-20))))
               (expr ((Int_const ((t 0) (span 3:23))))) (span 3:11-24))
              (Decl (ty (Int 4:11-14)) (names (((t second) (span 4:15-21))))
@@ -263,7 +271,8 @@ let%expect_test "typedef" =
        ((is_extern false) (ty (Ty_var ((t testing) (span 6:3-10))))
         (name ((t main) (span 6:11-15))) (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Ty_var ((t testing) (span 7:5-12))))
               (names (((t first) (span 7:13-18))))
               (expr ((Int_const ((t 0) (span 7:21))))) (span 7:5-22))
@@ -282,7 +291,8 @@ let%expect_test "typedef" =
        ((is_extern false) (ty (Ty_var ((t testing) (span 11:3-10))))
         (name ((t another) (span 11:11-18))) (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Ty_var ((t testing) (span 12:5-12))))
               (names (((t second) (span 12:13-19))))
               (expr ((Int_const ((t 1234) (span 12:22-26))))) (span 12:5-26))))
@@ -323,7 +333,8 @@ let%expect_test _ =
        ((is_extern false) (ty (Int 2:5-8)) (name ((t main) (span 2:9-13)))
         (params ())
         (body
-         (((block
+         (((label ())
+           (stmts
             ((Decl (ty (Int 3:7-10)) (names (((t first) (span 3:11-16))))
               (expr ((Int_const ((t 0) (span 3:19))))) (span 3:7-20))
              (Decl (ty (Pointer (ty (Int 4:7-10)) (span 4:7-11)))
@@ -367,6 +378,36 @@ let%expect_test "struct" =
        ((is_extern false)
         (ty (Ty_struct (name ((t bruh) (span 9:12-16))) (span 9:5-16)))
         (name ((t main) (span 9:17-21))) (params ())
-        (body (((block ()) (span [9,24]-[11,6])))) (span [9,5]-[11,6])))))
+        (body (((label ()) (stmts ()) (span [9,24]-[11,6]))))
+        (span [9,5]-[11,6])))))
     |}]
 ;;
+
+let%expect_test "labeled block" =
+  check {|
+    void main() {
+      label: {
+        int first = 1234;
+        int second = 1234;
+      }
+    }
+  |};
+  [%expect {|
+    (Ok
+     ((Func
+       ((is_extern false) (ty (Void 2:5-9)) (name ((t main) (span 2:10-14)))
+        (params ())
+        (body
+         (((label ())
+           (stmts
+            ((Block
+              ((label (((t label) (span 3:7-12))))
+               (stmts
+                ((Decl (ty (Int 4:9-12)) (names (((t first) (span 4:13-18))))
+                  (expr ((Int_const ((t 1234) (span 4:21-25))))) (span 4:9-25))
+                 (Decl (ty (Int 5:9-12)) (names (((t second) (span 5:13-19))))
+                  (expr ((Int_const ((t 1234) (span 5:22-26))))) (span 5:9-26))))
+               (span [3,14]-[6,8])))))
+           (span [2,17]-[7,6]))))
+        (span [2,5]-[7,6])))))
+    |}]

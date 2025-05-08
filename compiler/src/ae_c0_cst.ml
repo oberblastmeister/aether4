@@ -24,7 +24,8 @@ type ty =
 [@@deriving sexp_of]
 
 type block =
-  { block : stmt list
+  { label : var option
+  ; stmts : stmt list
   ; span : Span.t
   }
 [@@deriving sexp_of]
@@ -68,6 +69,11 @@ and stmt =
       ; body : stmt
       ; span : Span.t
       }
+  | Break of
+      { label : var option
+      ; span : Span.t
+      }
+  | Continue of Span.t
 [@@deriving sexp_of]
 
 and for_paren =
@@ -254,7 +260,9 @@ let stmt_span (stmt : stmt) =
   | If { span; _ }
   | While { span; _ }
   | Return { span; _ }
-  | For { span; _ } -> span
+  | For { span; _ }
+  | Break { label = _; span }
+  | Continue span
   | Assert { span; _ } -> span
   | Effect expr -> expr_span expr
 ;;
@@ -277,4 +285,4 @@ let bin ~lhs ~op ~rhs =
 ;;
 
 let bool_const b = Bool_const b
-let nop_stmt span = Block { block = []; span }
+let nop_stmt span = Block { label = None; stmts = []; span }

@@ -70,4 +70,6 @@ type t =
   | AllocArray
   | Null
   | Eof
+  | Break
+  | Continue
 [@@deriving sexp_of, equal, compare, variants]

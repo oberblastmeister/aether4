@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void main() {
+    int hello = 1234 + null;
+    assert(hello == 1234);
+    assert(false == null);
+}
+----

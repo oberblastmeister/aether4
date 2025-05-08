@@ -12,12 +12,12 @@ int run() {
   {
     int x = 1;
     int j;
-    bool break = false;
-    for (j = 2; !break && j < i - 1; j += 1)
+    bool break_ = false;
+    for (j = 2; !break_ && j < i - 1; j += 1)
       if (i % j == 0)
       {
         x = 0;
-        break = true;
+        break_ = true;
       }
     if (x != 0)
       n -= 1;

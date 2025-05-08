@@ -17,15 +17,16 @@ struct cpustate {
 typedef cpustate struct cpustate;
 
 extern int c0_runtime_print_char(int a);
+extern int c0_runtime_print_int(int a);
 
 int abort()
 {
 	return 1/0;
 }
 
-int [] ROM()
+int[] ROM()
 {
-	int a;
+	int[] a;
 	a = alloc_array(int, 32);
 	a[0] = 			3632;
 	a[1] = 			9;
@@ -156,8 +157,8 @@ void main()
 				continue;
 			d = muxreg(rs, s);
 			if (muxreg(rt, s) != 16384)
-				return abort();
-			d = printchar(d);
+				abort();
+			d = c0_runtime_print_char(d);
 		} else if (insn == 3) {
 			s->pc += 1;
 			if (predcheck(pred, s) == 0)
@@ -199,10 +200,20 @@ void main()
 			setreg(rt, d, s);
 		}
 	}
-	
-	assert(crc == -293203597);
+	c0_runtime_print_int(crc);
+	assert (crc == 545383778);
 }
 ----
-("Filetest failed"
- ("Could not compile test"
-  ("Variable not found" (var ((t continue) (span 142:5-13))))))
+9
+8
+7
+6
+5
+4
+3
+2
+1
+0
+
+
+545383778

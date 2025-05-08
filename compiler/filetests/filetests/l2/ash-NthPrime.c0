@@ -13,12 +13,12 @@ int run() {
     int prime = 1;
     for (int found = 1; found < N; found += 1) {
       prime += 2;
-      bool break = false;
-      for (int i = 3; !break && prime >= i * i; i += 2) {
+      bool break_ = false;
+      for (int i = 3; !break_ && prime >= i * i; i += 2) {
         if (prime % i != 0) {
         } else {
             found -= 1;
-            break = true;
+            break_ = true;
         }
       }
     }
