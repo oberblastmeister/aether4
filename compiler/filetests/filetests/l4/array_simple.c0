@@ -8,6 +8,7 @@ typedef int_array int[];
 
 void main() {
     int n = 100;
+    int *p = alloc(int);
     int_array array = alloc_array(int, n);
     for (int i = 0; i < n; i++) {
         array[i] = i;

@@ -24,7 +24,7 @@ export fn c0_runtime_print_int(i: i64) void {
 }
 
 export fn c0_runtime_print_char(c: u64) void {
-    std.debug.print("{c}\n", .{@as(u8, @truncate(c))});
+    std.debug.print("{c}", .{@as(u8, @truncate(c))});
 }
 
 export fn c0_runtime_print_bool(b: bool) void {
