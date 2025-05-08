@@ -38,6 +38,7 @@ module Api = struct
   let eq_int = bin (Eq Int)
   let offset_ptr = bin Offset_ptr
   let lt = bin Lt
+  let ge = bin Ge
   let copy_int = unary (Copy Int)
   let load_int = unary (Deref Int)
   let nary ?ann ?info dst op srcs = ins ?ann ?info (Nary { dst; op; srcs })
@@ -210,14 +211,29 @@ let check_not_null st temp =
 ;;
 
 let check_bounds st ~array ~index =
-  let cond = fresh_temp ~name:"cond" st in
+  let cond1 = fresh_temp ~name:"cond" st in
+  let cond2 = fresh_temp ~name:"cond" st in
+  let zero = fresh_temp ~name:"zero" st in
   let len = fresh_temp ~name:"len" st in
   let garbage_temp = fresh_temp ~name:"garbage" st in
   empty
-  +> [ load_int len array; lt cond index len ]
+  +> [ load_int len array; lt cond1 index len ]
   ++ make_cond
        st
-       cond
+       cond1
+       empty
+       (empty
+        +> [ call
+               ~dst:(garbage_temp, Void)
+               ~is_extern:true
+               "c0_runtime_out_of_bounds_panic"
+               []
+           ; unreachable
+           ])
+  +> [ const_int zero 0L; ge cond2 index zero ]
+  ++ make_cond
+       st
+       cond2
        empty
        (empty
         +> [ call

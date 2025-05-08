@@ -3,6 +3,7 @@
  (kind (CompileAndRun))
 )
 */
+
 void main() {
     int i;
     bool b;

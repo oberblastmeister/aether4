@@ -1,0 +1,12 @@
+/*
+(
+ (kind (CompileAndRun))
+)
+*/
+
+void main() {
+    int[] array = alloc_array(int, 10);
+    array[0] = 1243;
+    // array[-1] = 1234;
+}
+----

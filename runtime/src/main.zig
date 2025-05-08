@@ -44,7 +44,7 @@ export fn lir_runtime_unreachable() void {
 }
 
 export fn c0_runtime_out_of_bounds_panic() void {
-    std.debug.panic("Array out of bounds", .{});
+    std.debug.panic("Index out of bounds", .{});
 }
 
 fn run() !void {
