@@ -1,0 +1,19 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+struct testing;
+
+struct testing f() {
+    
+}
+
+void main() {
+}
+----
+("Filetest failed"
+ ("Could not compile test"
+  ("Expected small type" (span [9,1]-[11,2])
+   (ty (Ty_struct (name testing@0) (span 9:1-15))))))

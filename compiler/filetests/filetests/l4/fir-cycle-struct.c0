@@ -1,0 +1,40 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+extern int c0_runtime_print_int(int a);
+struct a { b * b; };
+
+typedef a struct a;
+struct b { c * c; };
+
+typedef b struct b;
+struct c { d * d; };
+
+typedef c struct c;
+struct d { e * e; };
+
+typedef d struct d;
+struct e { f * f; };
+
+typedef e struct e;
+struct f { g * g; };
+
+typedef f struct f;
+struct g { h * h; };
+
+typedef g struct g;
+struct h { a * a; };
+
+typedef h struct h;
+void main(){
+	c0_runtime_print_int(0);
+assert(0 == 0);
+}
+----
+("Filetest failed"
+ ("Could not compile test"
+  ("Parse error"
+   ((((t (Ident b)) (span 8:12))) ("expected closing " (delimiter LBrace))))))

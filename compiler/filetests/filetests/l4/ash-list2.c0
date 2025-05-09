@@ -1,0 +1,75 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+struct List {
+  int head;
+  struct List* tail;
+};
+
+typedef List struct List;
+
+/* basic list */
+
+List* nil() {
+  return null;
+}
+
+List* cons(int i, List* list) {
+  List* newList;
+  newList = alloc(List);
+  newList->head = i;
+  newList->tail = list;
+  return newList;
+}
+
+bool isEmpty(List* list) {
+  return list == null;
+}
+
+
+// list [start, ..., end)
+List* range(int start, int end) {
+  if(start < end)
+    return cons(start, range(start + 1, end));
+  else
+    return nil();
+} 
+
+// list [1, ..., end]
+List* upto(int end) {
+  return range(1, end + 1);
+}
+
+// test list creation
+
+void main() {
+  int test, x;
+  List* a,b,c;
+  
+  test = 0;
+  
+  a = upto(3);
+  b = range(0, 4);
+  c = cons(0, a);
+  test |= ((b->head == c->head) ? 1 : 0);
+  test |= ((b->tail->head == c->tail->head) ? 1 : 0) << 1;
+  test |= ((b->tail->tail->head == c->tail->tail->head) ? 1 : 0) << 2;
+  test |= ((c->tail->tail->tail == a->tail->tail) ? 1 : 0) << 3;
+  test |= ((b->tail->tail->tail->tail == null) ? 1 : 0) << 4;
+  test |= ((c->tail->tail->tail->tail == null) ? 1 : 0) << 5;
+  test |= ((c->tail->tail->tail == a->tail->tail) ? 1 : 0) << 6;
+  
+  for(x = 0; !isEmpty(c);) {
+    if(c->head == b->head) x+= 1;
+    b = b->tail;
+	c = c->tail;
+  }
+  
+  test |= ((x == 4) ? 1 : 0) << 7;
+  
+  assert(test == 255);
+}
+----

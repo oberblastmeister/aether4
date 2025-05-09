@@ -1,0 +1,54 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+struct List {
+  int head;
+  struct List* tail;
+};
+
+typedef List struct List;
+
+/* basic list */
+
+List* nil() {
+  return null;
+}
+
+List* cons(int i, List* list) {
+  List* newList;
+  newList = alloc(List);
+  newList->head = i;
+  newList->tail = list;
+  return newList;
+}
+
+bool isEmpty(List* list) {
+  return list == null;
+}
+
+// test int list library
+
+void main(){
+  int test, x;
+  List* a,b,c;
+  
+  test = 0;
+  
+  a = nil();
+  b = cons(77, a);
+  c = cons(88, b);
+  
+  test |= (isEmpty(a) ? 1 : 0);
+  test |= (!(isEmpty(b) || isEmpty(c)) ? 1 : 0) << 1;
+  test |= ((a == null && b != null && c != null) ? 1 : 0) << 2;
+  test |= ((a != b && a != c && b != c) ? 1 : 0) << 3;
+  test |= ((c->head == 11 + b->head) ? 1 : 0) << 4;
+  test |= ((c->tail == b) ? 1 : 0) << 5;
+  test |= ((b->tail == a) ? 1 : 0) << 6;
+  
+  assert(test == 127);
+}
+----
