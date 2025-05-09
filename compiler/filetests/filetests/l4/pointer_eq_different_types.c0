@@ -1,0 +1,24 @@
+/*
+(
+ (kind(CompileFail))
+)
+*/
+
+struct testing {
+    int first;
+    int second;
+    int third;
+};
+
+typedef testing struct testing;
+
+void main() {
+    testing *p1 = alloc(testing);
+    int *p2 = alloc(testing);
+    p1 == p2;
+}
+----
+("Types were not equal" (span 17:15-29)
+ (ty
+  (Pointer (ty (Ty_struct (name testing@0) (span 13:17-31))) (span 17:15-29)))
+ (ty' (Pointer (ty (Int 17:5-8)) (span 17:5-10))))

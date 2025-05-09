@@ -1,0 +1,10 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+void main() { 
+    assert(null == null);
+}
+----

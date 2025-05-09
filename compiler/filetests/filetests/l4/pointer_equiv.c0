@@ -1,0 +1,22 @@
+/*
+(
+ (kind(CompileAndRun))
+)
+*/
+
+struct testing {
+    int first;
+    int second;
+    int third;
+};
+
+typedef testing struct testing;
+
+void main() {
+    testing *p = alloc(testing);
+    testing *p2 = alloc(testing);
+    assert (p == p);
+    assert (p != p2);
+    assert (p != null);
+}
+----
