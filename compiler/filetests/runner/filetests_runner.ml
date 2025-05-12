@@ -80,7 +80,7 @@ let run_test path =
               ~stderr:(Use_this fd_write)
               ()
           in
-          (* This gets duped in the child, we need to close this so that input_all receives EOF *)
+          (* The file description reference is incremented in the child, we need to close this so that input_all receives EOF *)
           Core_unix.close fd_write;
           Core_unix.close proc.stdin;
           let status = Core_unix.waitpid proc.pid in

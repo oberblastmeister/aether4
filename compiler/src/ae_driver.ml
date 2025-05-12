@@ -61,12 +61,7 @@ let find_runtime_path () = Filename.(concat (find_runtime_dir ()) "libc0_runtime
 
 let link_files_with_runtime ~paths ~out_path =
   let runtime_path = find_runtime_path () in
-  let args =
-    [ "cc"; "-Wno-unused-command-line-argument" ]
-    @ [ runtime_path ]
-    @ paths
-    @ [ "-o"; out_path ]
-  in
+  let args = [ "build-exe" ] @ [ runtime_path ] @ paths @ [ "-femit-bin=" ^ out_path ] in
   let child =
     Core_unix.create_process_with_fds
       ~stdin:(Use_this Core_unix.stdin)
