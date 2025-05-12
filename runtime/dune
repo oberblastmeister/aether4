@@ -15,7 +15,7 @@
 )
 
 (rule
-  (targets (dir zig-out) (dir .zig-cache))
+  (targets (dir zig-out))
   (mode promote)
   (deps build.zig (source_tree src) (source_tree test_utils))
   (action
