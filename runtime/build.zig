@@ -9,6 +9,7 @@ pub fn build_lib(b: *std.Build, name: []const u8, root: []const u8, target: anyt
         .target = target,
         .optimize = optimize,
     });
+    lib.pie = true;
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
