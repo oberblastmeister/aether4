@@ -25,11 +25,11 @@ module type Stream = sig
   val restore : t -> Snapshot.t -> unit
 end
 
-module Make_stream (Token : Token) :
-  Stream
-  with module Token = Token
-   and type Chunk.t = Token.t array
-   and type Snapshot.t = int = struct
+module Make_stream (Token : Token) : sig
+  include Stream with module Token = Token and type Chunk.t = Token.t array
+
+  val create : Chunk.t -> t
+end = struct
   type t =
     { tokens : Token.t Array.t
     ; mutable pos : int
@@ -43,6 +43,8 @@ module Make_stream (Token : Token) :
   end
 
   module Snapshot = Int
+
+  let create tokens = { tokens; pos = 0 }
 
   let next ({ pos; tokens } as stream) =
     if pos < Array.length tokens
@@ -58,6 +60,44 @@ module Make_stream (Token : Token) :
   let snapshot t = t.pos
   let restore t pos = t.pos <- pos
 end
+
+module String_stream = struct
+  module Token = Char
+  module Chunk = String
+  module Snapshot = Int
+
+  type t =
+    { s : string
+    ; mutable i : int
+    }
+  [@@deriving sexp_of]
+
+  let create s = { s; i = 0 }
+
+  let next t =
+    if t.i < String.length t.s
+    then begin
+      let res = t.s.[t.i] in
+      t.i <- succ t.i;
+      Some res
+    end
+    else None
+  ;;
+
+  let peek t =
+    if t.i < String.length t.s
+    then begin
+      let res = t.s.[t.i] in
+      Some res
+    end
+    else None
+  ;;
+
+  let snapshot t = t.i
+  let restore t i = t.i <- i
+end
+
+module String_array_stream = Make_stream (String)
 
 module type Arg = sig
   module Data : sig

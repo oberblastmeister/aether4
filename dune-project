@@ -54,7 +54,6 @@
   (base64
    (= 3.5.1))
   menhir
-  (shexp (= v0.17.0))
   )
  (tags
   ("add topics" "to describe" your project))

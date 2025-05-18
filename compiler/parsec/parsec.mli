@@ -27,11 +27,11 @@ module type Stream = sig
   val restore : t -> Snapshot.t -> unit
 end
 
-module Make_stream (Token : Token) :
-  Stream
-  with module Token = Token
-   and type Chunk.t = Token.t array
-   and type Snapshot.t = int
+module Make_stream (Token : Token) : sig
+  include Stream with module Token = Token and type Chunk.t = Token.t array
+
+  val create : Chunk.t -> t
+end
 
 module type Arg = sig
   module Data : sig
@@ -44,6 +44,15 @@ module type Arg = sig
 
   module Stream : Stream
 end
+
+module String_stream : sig
+  include Stream with module Token = Char and module Chunk = String
+
+  val create : string -> t
+end
+
+module String_array_stream :
+  Stream with type Token.t = String.t and type Chunk.t = string array
 
 module Parse_result : sig
   type ('a, 'e) t =
