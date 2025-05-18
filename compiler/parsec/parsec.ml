@@ -1,29 +1,5 @@
 open Core
-
-module type Token = sig
-  type t [@@deriving sexp_of, compare, equal]
-end
-
-module type Chunk = sig
-  type t [@@deriving sexp_of, compare, equal]
-end
-
-module type Snapshot = sig
-  type t [@@deriving sexp_of]
-end
-
-module type Stream = sig
-  module Token : Token
-  module Chunk : Chunk
-  module Snapshot : Snapshot
-
-  type t [@@deriving sexp_of]
-
-  val next : t -> Token.t option
-  val peek : t -> Token.t option
-  val snapshot : t -> Snapshot.t
-  val restore : t -> Snapshot.t -> unit
-end
+include Parsec_intf
 
 module Make_stream (Token : Token) : sig
   include Stream with module Token = Token and type Chunk.t = Token.t array
@@ -99,33 +75,8 @@ end
 
 module String_array_stream = Make_stream (String)
 
-module type Arg = sig
-  module Data : sig
-    type t [@@deriving sexp_of]
-  end
-
-  module Error : sig
-    type t [@@deriving sexp_of]
-  end
-
-  module Stream : Stream
-end
-
-module Parse_result = struct
-  type ('a, 'e) t =
-    | Ok of 'a
-    | Error of 'e
-    | Fail
-  [@@deriving sexp_of]
-
-  let to_result_exn = function
-    | Ok x -> Result.Ok x
-    | Error e -> Error e
-    | _ -> failwith "parsec: uncaught failure"
-  ;;
-end
-
 module Make (Arg : Arg) = struct
+  module Arg = Arg
   open Arg
   module Token = Stream.Token
 
@@ -155,6 +106,8 @@ module Make (Arg : Arg) = struct
   let error env e = raise_notrace (Error (e, Stream.peek env.stream))
 
   type 'a t = env -> 'a
+
+  let guard b env = if not b then fail env
 
   let expect_eq t env =
     match Stream.peek env.stream with
@@ -193,6 +146,7 @@ module Make (Arg : Arg) = struct
     | x -> x
   ;;
 
+  let commit e env f = cut e (fun _env -> f ()) env
   let map p ~f env = f (p env)
 
   let many p env =
@@ -210,6 +164,23 @@ module Make (Arg : Arg) = struct
   let some p env =
     let x = p env in
     x :: many p env
+  ;;
+
+  let choice ps env =
+    let rec loop ps env =
+      match ps with
+      | [] -> fail env
+      | p :: ps ->
+        let snap = Stream.snapshot env.stream in
+        begin
+          match p env with
+          | res -> res
+          | exception Fail ->
+            Stream.restore env.stream snap;
+            loop ps env
+        end
+    in
+    loop ps env
   ;;
 
   module Syntax = struct
@@ -259,4 +230,86 @@ module Make (Arg : Arg) = struct
 
   let optional p = Syntax.(Option.some <$> p <|> pure None)
   let either p1 p2 = Syntax.(Either.first <$> p1 <|> (Either.second <$> p2))
+end
+
+module Arg_parse_arg = struct
+  module Data = Unit
+  module Error = Core.Error
+  module Stream = String_array_stream
+end
+
+module String = struct
+  include String
+
+  let strip_prefix s ~prefix =
+    if String.is_prefix s ~prefix
+    then Some (String.drop_prefix s (String.length prefix))
+    else None
+  ;;
+
+  let strip_suffix s ~suffix =
+    if String.is_suffix s ~suffix
+    then Some (String.drop_suffix s (String.length suffix))
+    else None
+  ;;
+end
+
+module Arg_parse = struct
+  include Make (Arg_parse_arg)
+  open Syntax
+
+  let parse s f =
+    let stream = String_array_stream.create s in
+    with_env () stream f
+  ;;
+
+  let flag_gen ~prefix env =
+    let flag, arg =
+      expect
+        (fun s ->
+           let open Option.Let_syntax in
+           let%bind flag = String.strip_prefix ~prefix s in
+           return
+             (match String.strip_prefix ~prefix:"=" flag with
+              | Some arg -> flag, Some arg
+              | None -> flag, None))
+        env
+    in
+    flag, arg
+  ;;
+
+  let opt_prefix ~flag:s ~prefix env =
+    let flag, arg = flag_gen ~prefix env in
+    let arg =
+      Option.value_or_thunk arg ~default:(fun () ->
+        cut
+          (Error.create "Expected argument for option" () sexp_of_unit)
+          (expect Option.some)
+          env)
+    in
+    guard (String.equal flag s) env;
+    arg
+  ;;
+
+  let flag_prefix ~flag:s ~prefix env =
+    let flag, arg = flag_gen ~prefix env in
+    guard (String.equal flag s) env;
+    begin
+      match arg with
+      | Some arg ->
+        error
+          env
+          (Error.create_s [%message "Unexpected argument for flag" (arg : string)])
+      | None -> ()
+    end;
+    ()
+  ;;
+
+  let flag1 flag env = flag_prefix ~flag ~prefix:"-" env
+  let flag2 flag env = flag_prefix ~flag ~prefix:"--" env
+  let flag_any flag env = (flag1 flag <|> flag2 flag) env
+  let opt1 flag env = opt_prefix ~flag ~prefix:"-" env
+  let opt2 flag env = opt_prefix ~flag ~prefix:"--" env
+  let opt_any opt env = (opt1 opt <|> opt2 opt) env
+  let positional = expect Option.some
 end
