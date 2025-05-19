@@ -83,6 +83,7 @@ module type S = sig
   val stream : env -> Stream.t
   val error : env -> Error.t -> _
   val orelse : 'a t -> 'a t -> 'a t
+  val choice : 'a t list -> 'a t
   val pure : 'a -> 'a t
   val optional : 'a t -> 'a option t
   val either : 'a t -> 'b t -> ('a, 'b) Either.t t
