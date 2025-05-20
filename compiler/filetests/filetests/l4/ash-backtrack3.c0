@@ -7,6 +7,7 @@
 
 extern int c0_runtime_print_char(int c);
 
+
 // extern int abs(int x);
 
 // construct all n-queens solutions

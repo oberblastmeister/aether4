@@ -1,9 +1,10 @@
 const std = @import("std");
+const Scheduler = @import("Scheduler.zig");
+const Context = @import("context.zig").Context;
 
-const Context = extern struct {
-    hp_lim: *anyopaque,
-    sp_lim: *anyopaque,
-};
+comptime {
+    std.testing.refAllDeclsRecursive(Scheduler);
+}
 
 // first argument is CX pointer.
 // second argument is HP pointer.
@@ -47,9 +48,20 @@ export fn c0_runtime_out_of_bounds_panic() void {
     std.debug.panic("Index out of bounds", .{});
 }
 
-export fn c0_runtime_par(task1: *anyopaque, task2: *anyopaque) void {
-    _ = task1;
-    _ = task2;
+const Task = struct {
+    code: *anyopaque,
+    len: usize,
+};
+
+extern fn c0_runtime_call(func: *anyopaque, cx: *Context, hp: [*]u8, self: *anyopaque) void;
+extern fn _c0_main() callconv(.Naked) void;
+
+var global_hp: [*]u8 = undefined;
+var global_cx: Context = undefined;
+
+export fn c0_runtime_par(task1: *Task, task2: *Task) void {
+    c0_runtime_call(task1.code, &global_cx, global_hp, task1);
+    c0_runtime_call(task2.code, &global_cx, global_hp, task2);
 }
 
 fn run() !void {
@@ -63,9 +75,16 @@ fn run() !void {
     const allocator = std.heap.page_allocator;
     const HP = try allocator.alloc(u8, 1024 * 1024);
     @memset(HP, 0);
-    defer allocator.free(HP);
-    var context = Context{ .hp_lim = HP[HP.len..].ptr, .sp_lim = undefined };
-    c0_main_export(&context, HP.ptr);
+    global_hp = HP.ptr;
+    global_cx = Context{ .hp_lim = HP[HP.len..].ptr, .sp_lim = undefined };
+
+    const scheduler = Scheduler.init(24, std.heap.smp_allocator) catch unreachable;
+    defer scheduler.deinit();
+    const closure = std.heap.smp_allocator.create(*anyopaque) catch unreachable;
+    closure.* = @constCast(@ptrCast(&_c0_main));
+    const job = Scheduler.Job.init(closure);
+    scheduler.spawn(job);
+    while (!job.done.load(.seq_cst)) {}
 }
 
 pub fn main() !void {

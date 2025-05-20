@@ -4,13 +4,29 @@
 )
 */
 
+extern void c0_runtime_print_int(int i);
+
 void main() {
+    int closed = 12312341324;
     par(
         {
             int x = 1;
+            c0_runtime_print_int(x);
+            closed = 11234;
+            c0_runtime_print_int(closed);
         },
         {
             int x = 2;
+            c0_runtime_print_int(x);
+            closed = 1;
+            c0_runtime_print_int(closed);
         }
     );
+    c0_runtime_print_int(closed);
 }
+----
+1
+11234
+2
+1
+12312341324

@@ -10,6 +10,7 @@ pub fn build_lib(b: *std.Build, name: []const u8, root: []const u8, target: anyt
         .optimize = optimize,
     });
     lib.pie = true;
+    lib.addAssemblyFile(b.path("src/asm_bits.s"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -21,20 +22,30 @@ pub fn build_lib(b: *std.Build, name: []const u8, root: []const u8, target: anyt
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{});
 
-    // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    build_lib(b, "c0_runtime", "src/main.zig", target, optimize);
+    const c0_runtime_lib = b.addStaticLibrary(.{
+        .name = "c0_runtime",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    c0_runtime_lib.pie = true;
+    c0_runtime_lib.addAssemblyFile(b.path("src/asm_bits.s"));
 
-    build_lib(b, "c0_test_utils", "test_utils/lib.zig", target, optimize);
+    b.installArtifact(c0_runtime_lib);
+
+    const c0_test_utils_lib = b.addStaticLibrary(.{
+        .name = "c0_test_utils",
+        .root_source_file = b.path("test_utils/lib.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    c0_test_utils_lib.pie = true;
+
+    b.installArtifact(c0_test_utils_lib);
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
@@ -43,7 +54,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    main_tests.pie = true;
+    main_tests.addAssemblyFile(b.path("src/asm_bits.s"));
 
+    b.installArtifact(main_tests);
     const run_main_tests = b.addRunArtifact(main_tests);
 
     // This creates a build step. It will be visible in the `zig build --help` menu,

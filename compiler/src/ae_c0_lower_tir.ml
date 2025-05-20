@@ -478,7 +478,6 @@ and lower_create_closure st dst (free_vars : Ast.Var.Set.t) (block : Ast.block) 
     |> Bag.concat
   in
   empty
-  ++ store_instrs
   +> [ ins (Nullary { dst = ptr_temp; op = Alloc { size = (len + 2) * 8; align = 8 } })
      ; func_addr func_ptr_temp func_name
      ; store_int garbage ptr_temp func_ptr_temp
@@ -488,6 +487,7 @@ and lower_create_closure st dst (free_vars : Ast.Var.Set.t) (block : Ast.block) 
      ; store_int garbage off_ptr_temp size_temp
      ; copy_ptr dst ptr_temp
      ]
+  ++ store_instrs
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
