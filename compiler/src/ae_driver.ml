@@ -154,15 +154,12 @@ let compile_source_to_a_out (env : Env.t) sources =
   let asm_path = Path.(hashed_dir_path / (name ^ ".s")) in
   let out_path = Path.(hashed_dir_path / "a.out") in
   Fs.create_dir_all ~perm:0o777 hashed_dir_path;
-  if Path.is_file out_path
-  then Ok out_path
-  else (
-    match compile_source_to_asm ~emit:env.emit source with
-    | Ok asm_content ->
-      Out_channel.write_all asm_path ~data:asm_content;
-      link_files_with_runtime ~paths:(object_files @ [ asm_path ]) ~out_path;
-      Ok out_path
-    | Error e -> Error e)
+  match compile_source_to_asm ~emit:env.emit source with
+  | Ok asm_content ->
+    Out_channel.write_all asm_path ~data:asm_content;
+    link_files_with_runtime ~paths:(object_files @ [ asm_path ]) ~out_path;
+    Ok out_path
+  | Error e -> Error e
 ;;
 
 let compile_path_to_a_out (env : Env.t) =

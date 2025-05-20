@@ -1,0 +1,499 @@
+/*
+(
+ (kind (CompileAndRun))
+ (emit (Lir))
+)
+*/
+
+int sum(int[] a, int n) {
+    int res = 0;
+    for (int i = 0; i < n; i++) {
+        res += a[i];
+    }
+    return res;
+}
+
+void main() {
+    int n = 1000000;
+    int[] a = alloc_array(int, n);
+    for (int i = 0; i < n; i++) {
+        a[i] = i;
+    }
+    int res = sum(a, n);
+}
+----
+(lir
+ ((funcs
+   (((name _c0_sum)
+     (blocks
+      ((start@0
+        ((label start@0)
+         (body
+          (((i
+             (Block_params
+              (((param CX@35) (ty I64)) ((param HP@34) (ty I64))
+               ((param a@0) (ty I64)) ((param n@1) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst tmp@2) (op (Int_const (const 0) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Unary (dst res@3) (op (Copy I64)) (src tmp@2))) (index 2)
+            (info (9:9-12)) (ann ()))
+           ((i (Nullary (dst tmp@4) (op (Int_const (const 0) (ty I64)))))
+            (index 3) (info ()) (ann ()))
+           ((i (Unary (dst i@5) (op (Copy I64)) (src tmp@4))) (index 4)
+            (info (10:14)) (ann ()))
+           ((i (Jump ((label loop@2) (args (i@5 res@3))))) (index 5)
+            (info ([10,33]-[12,6])) (ann ()))))))
+       (done@1
+        ((label done@1)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label break@14) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (loop@2
+        ((label loop@2)
+         (body
+          (((i
+             (Block_params (((param i@6) (ty I64)) ((param res@7) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i (Unary (dst lhs@8) (op (Copy I64)) (src i@6))) (index 1)
+            (info (10:14)) (ann ()))
+           ((i (Unary (dst rhs@9) (op (Copy I64)) (src n@1))) (index 2)
+            (info (8:22)) (ann ()))
+           ((i (Bin (dst cond@10) (op Lt) (src1 lhs@8) (src2 rhs@9)))
+            (index 3) (info (10:21-26)) (ann ()))
+           ((i
+             (Cond_jump (cond cond@10) (b1 ((label body@3) (args ())))
+              (b2 ((label done@1) (args ())))))
+            (index 4) (info ([10,33]-[12,6])) (ann ()))))))
+       (body@3
+        ((label body@3)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst lhs@11) (op (Copy I64)) (src res@7))) (index 1)
+            (info (9:9-12)) (ann ()))
+           ((i (Unary (dst array@12) (op (Copy I64)) (src a@0))) (index 2)
+            (info (8:15)) (ann ()))
+           ((i (Nullary (dst null@13) (op (Int_const (const 0) (ty I64)))))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Bin (dst cond@14) (op (Eq I64)) (src1 array@12) (src2 null@13)))
+            (index 4) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@14) (b1 ((label then@10) (args ())))
+              (b2 ((label else@11) (args ())))))
+            (index 5) (info ()) (ann ()))))))
+       (then@4
+        ((label then@4)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@6) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@5
+        ((label else@5)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@21 I64)))
+              (func c0_runtime_out_of_bounds_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@6
+        ((label join@6)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst size@22) (op (Int_const (const 8) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst offset@23) (op Mul) (src1 size@22) (src2 index@15)))
+            (index 2) (info ()) (ann ()))
+           ((i (Nullary (dst temp@24) (op (Int_const (const 8) (ty I64)))))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Bin (dst offset@25) (op Add) (src1 offset@23) (src2 temp@24)))
+            (index 4) (info ()) (ann ()))
+           ((i
+             (Bin (dst address@26) (op Add) (src1 array@12) (src2 offset@25)))
+            (index 5) (info ()) (ann ()))
+           ((i (Unary (dst rhs@27) (op (Load I64)) (src address@26)))
+            (index 6) (info ()) (ann ()))
+           ((i (Bin (dst res@28) (op Add) (src1 lhs@11) (src2 rhs@27)))
+            (index 7) (info (11:9-20)) (ann ()))
+           ((i (Jump ((label continue@13) (args ())))) (index 8) (info ())
+            (ann ()))))))
+       (then@7
+        ((label then@7)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@9) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@8
+        ((label else@8)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@18 I64)))
+              (func c0_runtime_out_of_bounds_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@9
+        ((label join@9)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst zero@19) (op (Int_const (const 0) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst cond@20) (op Ge) (src1 index@15) (src2 zero@19)))
+            (index 2) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@20) (b1 ((label then@4) (args ())))
+              (b2 ((label else@5) (args ())))))
+            (index 3) (info ()) (ann ()))))))
+       (then@10
+        ((label then@10)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@32 I64)))
+              (func c0_runtime_null_pointer_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (else@11
+        ((label else@11)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@12) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (join@12
+        ((label join@12)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst index@15) (op (Copy I64)) (src i@6))) (index 1)
+            (info (10:14)) (ann ()))
+           ((i (Unary (dst len@16) (op (Load I64)) (src array@12))) (index 2)
+            (info ()) (ann ()))
+           ((i (Bin (dst cond@17) (op Lt) (src1 index@15) (src2 len@16)))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@17) (b1 ((label then@7) (args ())))
+              (b2 ((label else@8) (args ())))))
+            (index 4) (info ()) (ann ()))))))
+       (continue@13
+        ((label continue@13)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst lhs@29) (op (Copy I64)) (src i@6))) (index 1)
+            (info (10:14)) (ann ()))
+           ((i (Nullary (dst rhs@30) (op (Int_const (const 1) (ty I64)))))
+            (index 2) (info ()) (ann ()))
+           ((i (Bin (dst i@31) (op Add) (src1 lhs@29) (src2 rhs@30)))
+            (index 3) (info (10:28-31)) (ann ()))
+           ((i (Jump ((label loop@2) (args (i@31 res@28))))) (index 4)
+            (info ([10,33]-[12,6])) (ann ()))))))
+       (break@14
+        ((label break@14)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst ret@33) (op (Copy I64)) (src res@7))) (index 1)
+            (info (9:9-12)) (ann ()))
+           ((i
+             (Ret (srcs ((HP@34 I64) (ret@33 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 2) (info (13:5-15)) (ann ()))))))))
+     (start start@0) (next_temp_id 36) (next_label_id 15)
+     (call_conv
+      ((name c0) (return_regs (RAX RBX))
+       (call_args (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+       (num_args_in_regs 13)
+       (call_clobbers (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15)))))
+    ((name _c0_main)
+     (blocks
+      ((start@0
+        ((label start@0)
+         (body
+          (((i
+             (Block_params
+              (((param CX@38) (ty I64)) ((param HP@48) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i
+             (Nullary (dst tmp@0) (op (Int_const (const 1000000) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Unary (dst n@1) (op (Copy I64)) (src tmp@0))) (index 2)
+            (info (17:9)) (ann ()))
+           ((i (Unary (dst amount@2) (op (Copy I64)) (src n@1))) (index 3)
+            (info (17:9)) (ann ()))
+           ((i (Nullary (dst const@39) (op (Int_const (const 8) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Bin (dst size@49) (op Mul) (src1 amount@2) (src2 const@39)))
+            (index 5) (info ()) (ann ()))
+           ((i (Nullary (dst word@41) (op (Int_const (const 8) (ty I64)))))
+            (index 6) (info ()) (ann ()))
+           ((i (Bin (dst size@50) (op Add) (src1 size@49) (src2 word@41)))
+            (index 7) (info ()) (ann ()))
+           ((i (Nullary (dst align@46) (op (Int_const (const 8) (ty I64)))))
+            (index 8) (info ()) (ann ()))
+           ((i (Nullary (dst align'@47) (op (Int_const (const 7) (ty I64)))))
+            (index 9) (info ()) (ann ()))
+           ((i (Bin (dst tmp@51) (op Add) (src1 HP@48) (src2 align'@47)))
+            (index 10) (info ()) (ann ()))
+           ((i (Bin (dst tmp@52) (op Div) (src1 tmp@51) (src2 align@46)))
+            (index 11) (info ()) (ann ()))
+           ((i (Bin (dst tmp@53) (op Mul) (src1 tmp@52) (src2 align@46)))
+            (index 12) (info ()) (ann ()))
+           ((i (Bin (dst HP'@43) (op Add) (src1 tmp@53) (src2 size@50)))
+            (index 13) (info ()) (ann ()))
+           ((i (Unary (dst HP_LIM@44) (op (Load I64)) (src CX@38)))
+            (index 14) (info ()) (ann ()))
+           ((i (Bin (dst hp_cmp@45) (op Le) (src1 HP'@43) (src2 HP_LIM@44)))
+            (index 15) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond hp_cmp@45) (b1 ((label then@15) (args ())))
+              (b2 ((label else@16) (args ())))))
+            (index 16) (info ()) (ann ()))))))
+       (done@1
+        ((label done@1)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label break@14) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (loop@2
+        ((label loop@2)
+         (body
+          (((i (Block_params (((param i@7) (ty I64))))) (index 0) (info ())
+            (ann ()))
+           ((i (Unary (dst lhs@8) (op (Copy I64)) (src i@7))) (index 1)
+            (info (19:14)) (ann ()))
+           ((i (Unary (dst rhs@9) (op (Copy I64)) (src n@1))) (index 2)
+            (info (17:9)) (ann ()))
+           ((i (Bin (dst cond@10) (op Lt) (src1 lhs@8) (src2 rhs@9)))
+            (index 3) (info (19:21-26)) (ann ()))
+           ((i
+             (Cond_jump (cond cond@10) (b1 ((label body@3) (args ())))
+              (b2 ((label done@1) (args ())))))
+            (index 4) (info ([19,33]-[21,6])) (ann ()))))))
+       (body@3
+        ((label body@3)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst array@11) (op (Copy I64)) (src a@4))) (index 1)
+            (info (18:11)) (ann ()))
+           ((i (Nullary (dst null@12) (op (Int_const (const 0) (ty I64)))))
+            (index 2) (info ()) (ann ()))
+           ((i
+             (Bin (dst cond@13) (op (Eq I64)) (src1 array@11) (src2 null@12)))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@13) (b1 ((label then@10) (args ())))
+              (b2 ((label else@11) (args ())))))
+            (index 4) (info ()) (ann ()))))))
+       (then@4
+        ((label then@4)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@6) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@5
+        ((label else@5)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@20 I64)))
+              (func c0_runtime_out_of_bounds_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@6
+        ((label join@6)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst size@21) (op (Int_const (const 8) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst offset@22) (op Mul) (src1 size@21) (src2 index@14)))
+            (index 2) (info ()) (ann ()))
+           ((i (Nullary (dst temp@23) (op (Int_const (const 8) (ty I64)))))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Bin (dst offset@24) (op Add) (src1 offset@22) (src2 temp@23)))
+            (index 4) (info ()) (ann ()))
+           ((i
+             (Bin (dst address@25) (op Add) (src1 array@11) (src2 offset@24)))
+            (index 5) (info ()) (ann ()))
+           ((i (Unary (dst store_expr@26) (op (Copy I64)) (src i@7)))
+            (index 6) (info (19:14)) (ann ()))
+           ((i
+             (Bin (dst garbage@27) (op (Store I64)) (src1 address@25)
+              (src2 store_expr@26)))
+            (index 7) (info ()) (ann ()))
+           ((i (Jump ((label continue@13) (args ())))) (index 8) (info ())
+            (ann ()))))))
+       (then@7
+        ((label then@7)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@9) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@8
+        ((label else@8)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@17 I64)))
+              (func c0_runtime_out_of_bounds_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@9
+        ((label join@9)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst zero@18) (op (Int_const (const 0) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst cond@19) (op Ge) (src1 index@14) (src2 zero@18)))
+            (index 2) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@19) (b1 ((label then@4) (args ())))
+              (b2 ((label else@5) (args ())))))
+            (index 3) (info ()) (ann ()))))))
+       (then@10
+        ((label then@10)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((garbage@31 I64)))
+              (func c0_runtime_null_pointer_panic) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (else@11
+        ((label else@11)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@12) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (join@12
+        ((label join@12)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst index@14) (op (Copy I64)) (src i@7))) (index 1)
+            (info (19:14)) (ann ()))
+           ((i (Unary (dst len@15) (op (Load I64)) (src array@11))) (index 2)
+            (info ()) (ann ()))
+           ((i (Bin (dst cond@16) (op Lt) (src1 index@14) (src2 len@15)))
+            (index 3) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond cond@16) (b1 ((label then@7) (args ())))
+              (b2 ((label else@8) (args ())))))
+            (index 4) (info ()) (ann ()))))))
+       (continue@13
+        ((label continue@13)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst lhs@28) (op (Copy I64)) (src i@7))) (index 1)
+            (info (19:14)) (ann ()))
+           ((i (Nullary (dst rhs@29) (op (Int_const (const 1) (ty I64)))))
+            (index 2) (info ()) (ann ()))
+           ((i (Bin (dst i@30) (op Add) (src1 lhs@28) (src2 rhs@29)))
+            (index 3) (info (19:28-31)) (ann ()))
+           ((i (Jump ((label loop@2) (args (i@30))))) (index 4)
+            (info ([19,33]-[21,6])) (ann ()))))))
+       (break@14
+        ((label break@14)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst arg0@32) (op (Copy I64)) (src a@4))) (index 1)
+            (info (18:11)) (ann ()))
+           ((i (Unary (dst arg1@33) (op (Copy I64)) (src n@1))) (index 2)
+            (info (17:9)) (ann ()))
+           ((i
+             (Call (dsts ((HP@55 I64) (tmp@34 I64))) (func _c0_sum)
+              (args ((CX@38 I64) (HP@54 I64) (arg0@32 I64) (arg1@33 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 3) (info ()) (ann ()))
+           ((i (Unary (dst res@35) (op (Copy I64)) (src tmp@34))) (index 4)
+            (info (22:9-12)) (ann ()))
+           ((i (Nullary (dst ret@36) (op (Undefined I64)))) (index 5)
+            (info ()) (ann ()))
+           ((i
+             (Ret (srcs ((HP@55 I64) (ret@36 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 6) (info ([16,1]-[23,2])) (ann ()))))))
+       (then@15
+        ((label then@15)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@17) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@16
+        ((label else@16)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ()) (func c0_runtime_alloc_fail) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@17
+        ((label join@17)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst HP@54) (op (Copy I64)) (src HP'@43))) (index 1)
+            (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@42) (op (Store I64)) (src1 tmp@53)
+              (src2 amount@2)))
+            (index 2) (info ()) (ann ()))
+           ((i (Unary (dst a@4) (op (Copy I64)) (src tmp@53))) (index 3)
+            (info (18:11)) (ann ()))
+           ((i (Nullary (dst tmp@5) (op (Int_const (const 0) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Unary (dst i@6) (op (Copy I64)) (src tmp@5))) (index 5)
+            (info (19:14)) (ann ()))
+           ((i (Jump ((label loop@2) (args (i@6))))) (index 6)
+            (info ([19,33]-[21,6])) (ann ()))))))))
+     (start start@0) (next_temp_id 56) (next_label_id 18)
+     (call_conv
+      ((name c0) (return_regs (RAX RBX))
+       (call_args (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+       (num_args_in_regs 13)
+       (call_clobbers (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15)))))))))
+spawn id: 0

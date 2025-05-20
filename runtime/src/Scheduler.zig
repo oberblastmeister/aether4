@@ -8,10 +8,10 @@ const Context = @import("context.zig").Context;
 const Allocator = std.mem.Allocator;
 const smp_allocator = std.heap.smp_allocator;
 
-extern fn c0_runtime_call(func: *anyopaque, cx: *Context, hp: [*]u8, self: *anyopaque) void;
+extern fn c0_runtime_call(func: *anyopaque, cx: *Context, hp: [*]u8, self: *anyopaque) [*]u8;
 
 const WorkerInfo = struct {
-    id: u32,
+    id: u32 = 0,
     cx: Context,
     hp: [*]u8,
 };
@@ -76,12 +76,12 @@ pub fn spawn(self: *Scheduler, job: *Job) void {
 
 fn run_closure(closure: **anyopaque) void {
     const func = closure.*;
-    c0_runtime_call(func, &worker_info.cx, worker_info.hp, @ptrCast(closure));
+    worker_info.hp = c0_runtime_call(func, &worker_info.cx, worker_info.hp, @ptrCast(closure));
 }
 
 fn run_job(job: *Job) void {
     const func = job.closure.*;
-    c0_runtime_call(func, &worker_info.cx, worker_info.hp, @ptrCast(job.closure));
+    worker_info.hp = c0_runtime_call(func, &worker_info.cx, worker_info.hp, @ptrCast(job.closure));
     job.done.store(true, .seq_cst);
 }
 
@@ -103,6 +103,14 @@ pub fn wait_for_work(self: *Scheduler) void {
     _ = self.num_awake_workers.fetchSub(1, .seq_cst);
     Futex.wait(&self.wake_up_counter, self.wake_up_counter.load(.seq_cst));
     _ = self.num_awake_workers.fetchAdd(1, .seq_cst);
+}
+
+pub fn set_worker_hp(hp: [*]u8) void {
+    worker_info.hp = hp;
+}
+
+pub fn get_worker_hp() [*]u8 {
+    return worker_info.hp;
 }
 
 pub fn par(self: *Scheduler, left: **anyopaque, right: **anyopaque) void {
@@ -127,8 +135,12 @@ pub fn init(num_threads: u32, allocator: Allocator) !*Scheduler {
         scheduler.deques.append(.{}) catch unreachable;
     }
     for (0..num_threads) |worker_id| {
-        const HP = try std.heap.page_allocator.alloc(u8, 1024 * 1024);
-        @memset(HP, 0);
+        // const size: usize = if (worker_id == 0) 1024 * 1024 * 1024 else 1024 * 1024;
+        // const size: usize = if (worker_id == 0) 4096 * 4096 else 1024 * 1024;
+        const size: usize = 1096 * 1096 * 16;
+        const HP = try std.heap.page_allocator.alloc(u8, size);
+        std.debug.assert(HP.len == size);
+        // @memset(HP, 0);
         const thread = Thread.spawn(.{}, worker, .{ scheduler, @as(u32, @intCast(worker_id)), HP }) catch unreachable;
         scheduler.spawned_threads.append(thread) catch unreachable;
     }

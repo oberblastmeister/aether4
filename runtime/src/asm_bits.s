@@ -12,6 +12,7 @@ c0_runtime_call:
     movq %rsi, %rax
     movq %rdx, %rbx
     movq %rcx, %rdi
+    # returns HP pointer in %rax
     callq *%r11
     popq %r15
     popq %r14

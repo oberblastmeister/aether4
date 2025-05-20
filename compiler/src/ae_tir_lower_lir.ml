@@ -273,9 +273,9 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
     | C0_runtime_par, [ t0; t1 ] ->
       lower_call
         st
-        ~dsts:[ dst, Void ]
+        ~dsts:[ st.hp_temp, Ptr ] (* use hp temp instead of dst, the dst is garbage *)
         ~func:"c0_runtime_par"
-        ~args:[ t0, Ptr; t1, Ptr ]
+        ~args:[ t0, Ptr; t1, Ptr; st.hp_temp, Ptr ]
         ~is_extern:true
     | (C0_runtime_assert | C0_runtime_null_pointer_panic | C0_runtime_par), _ ->
       raise_s [%message "Invalid operation configuration"]

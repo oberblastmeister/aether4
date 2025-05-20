@@ -53,15 +53,17 @@ const Task = struct {
     len: usize,
 };
 
-extern fn c0_runtime_call(func: *anyopaque, cx: *Context, hp: [*]u8, self: *anyopaque) void;
+extern fn c0_runtime_call(func: *anyopaque, cx: *Context, hp: [*]u8, self: *anyopaque) [*]u8;
 extern fn _c0_main() callconv(.Naked) void;
 
 var global_hp: [*]u8 = undefined;
 var global_cx: Context = undefined;
+var global_scheduler: *Scheduler = undefined;
 
-export fn c0_runtime_par(task1: *Task, task2: *Task) void {
-    c0_runtime_call(task1.code, &global_cx, global_hp, task1);
-    c0_runtime_call(task2.code, &global_cx, global_hp, task2);
+export fn c0_runtime_par(task1: *Task, task2: *Task, hp: [*]u8) [*]u8 {
+    Scheduler.set_worker_hp(hp);
+    global_scheduler.par(@ptrCast(task1), @ptrCast(task2));
+    return Scheduler.get_worker_hp();
 }
 
 fn run() !void {
@@ -78,7 +80,8 @@ fn run() !void {
     global_hp = HP.ptr;
     global_cx = Context{ .hp_lim = HP[HP.len..].ptr, .sp_lim = undefined };
 
-    const scheduler = Scheduler.init(24, std.heap.smp_allocator) catch unreachable;
+    const scheduler = Scheduler.init(12, std.heap.smp_allocator) catch unreachable;
+    global_scheduler = scheduler;
     defer scheduler.deinit();
     const closure = std.heap.smp_allocator.create(*anyopaque) catch unreachable;
     closure.* = @constCast(@ptrCast(&_c0_main));
