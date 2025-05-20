@@ -1,6 +1,6 @@
 module Token = Ae_c0_token
 module Cst = Ae_c0_cst
-module Ast = Ae_c0_ast
+module Ast = Ae_c0_ast_std
 module Check = Ae_c0_check
 module Lexer = Ae_c0_lexer
 module Parser = Ae_c0_parser

@@ -99,6 +99,7 @@ let instr (t : Instr.t) =
     @ []
     @ List.map ~f:(fun (dst, _ty) -> location dst) dsts
     @ [ list ([ atom func ] @ List.map ~f:(fun (loc, _ty) -> location loc) args) ]
+  | Lea { dst; addr } -> list [ instr "lea" Qword; operand (Reg dst); operand (Mem addr) ]
 ;;
 
 let block (t : Block.t) =

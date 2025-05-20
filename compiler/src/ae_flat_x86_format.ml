@@ -90,9 +90,16 @@ let string_of_mach_reg : Ty.t -> _ = function
   | Qword -> string_of_reg64
 ;;
 
-let format_addr_base (base : Address.Base.t) =
+let format_addr_base base =
   match base with
-  | Reg r -> "%" ^ string_of_reg64 r
+  | Some base -> "%" ^ string_of_reg64 base
+  | None -> "%rip"
+;;
+
+let format_offset offset =
+  match offset with
+  | `Int i -> Int.to_string i
+  | `Label label -> label
 ;;
 
 let format_operand (operand : Operand.t) size =
@@ -101,10 +108,10 @@ let format_operand (operand : Operand.t) size =
   | Reg r -> "%" ^ string_of_mach_reg size r
   | Mem addr ->
     (match addr.index with
-     | None -> [%string "%{addr.offset#Int}(%{format_addr_base addr.base})"]
+     | None -> [%string "%{format_offset addr.offset}(%{format_addr_base addr.base})"]
      | Some index ->
        [%string
-         "%{addr.offset#Int}(%{format_addr_base addr.base}, %{string_of_reg64 \
+         "%{format_offset addr.offset}(%{format_addr_base addr.base}, %{string_of_reg64 \
           index.index}, %{index.scale#Int})"])
 ;;
 
@@ -150,7 +157,9 @@ let format_instr (instr : Instr.t) =
   | Sar { dst; size } -> [%string "sar%{suff size} %cl, %{op dst size}"]
   | Push { src; size } -> [%string "push%{suff size} %{op src size}"]
   | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
-  | Lea _ -> todol [%here]
+  | Lea { dst; src; size } -> 
+    let src = Operand.Mem src in
+    [%string "lea%{suff size} %{op src size}, %{op dst size}"]
   | Ret -> [%string "ret"]
   | Jmp label -> [%string "jmp %{label}"]
   | J { cc; label } -> [%string "j%{string_of_cond cc} %{label}"]

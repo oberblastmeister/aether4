@@ -187,6 +187,19 @@ let rec elab_ty st (ty : Cst.ty) : Ast.ty =
 
 let rec elab_stmt st (stmt : Cst.stmt) : Ast.stmt Bag.t * st =
   match stmt with
+  | Par { block1; block2; span } ->
+    let block1 = elab_block st block1 in
+    let block2 = elab_block st block2 in
+    ( empty
+      +> [ Ast.Par
+             { block1
+             ; block1_free_vars = Ast.Var.Set.empty
+             ; block2
+             ; block2_free_vars = Ast.Var.Set.empty
+             ; span
+             }
+         ]
+    , st )
   | Break { label; span } ->
     let label =
       match label with

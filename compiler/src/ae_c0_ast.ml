@@ -88,6 +88,13 @@ type stmt =
       { expr : expr
       ; span : Span.t
       }
+  | Par of
+      { block1 : block
+      ; block1_free_vars : Var.Set.t
+      ; block2 : block
+      ; block2_free_vars : Var.Set.t
+      ; span : Span.t
+      }
   | Break of
       { label : var
       ; span : Span.t

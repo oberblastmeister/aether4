@@ -81,6 +81,7 @@ rule lex =
   | "alloc_array" { Token.AllocArray }
   | "break" { Token.Break }
   | "continue" { Token.Continue }
+  | "par" { Token.Par }
   | ident { Token.Ident (Lexing.lexeme lexbuf) }
   | eof { Token.Eof }
   | _ { Token.Unknown (Lexing.lexeme lexbuf) }

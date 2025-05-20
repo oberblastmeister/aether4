@@ -61,6 +61,8 @@ type global_st =
   { func_ty_map : (Ast.var, Ast.func_sig) Hashtbl.t
   ; structs : struct_info Ast.Var.Table.t
   ; struct_layouts : Struct_layout.t Ast.Var.Table.t
+  ; closure_id : int ref
+  ; lowered_funcs : Tir.Func.t Lstack.t
   }
 
 type instrs = Tir.Linearized.instr Bag.t [@@deriving sexp_of]
@@ -69,7 +71,9 @@ let create_global_state _program =
   let func_ty_map = Hashtbl.create (module Ast.Var) in
   let structs = Ast.Var.Table.create () in
   let struct_layouts = Ast.Var.Table.create () in
-  { func_ty_map; structs; struct_layouts }
+  let closure_id = ref 0 in
+  let lowered_funcs = Lstack.create () in
+  { func_ty_map; structs; struct_layouts; closure_id; lowered_funcs }
 ;;
 
 type st =
@@ -402,6 +406,32 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     ++ body
     +> [ ins ~info (Jump (bc loop_label)) ]
     ++ label done_label
+  | Par { block1; block2; block1_free_vars; block2_free_vars; span } -> todol [%here]
+
+and lower_alloc_closure st dst (free_vars : Ast.Var.Set.t) (block : Ast.block) : instrs =
+  let len = Set.length free_vars in
+  let ptr_temp = fresh_temp ~name:"ptr" st in
+  let closure_id = !(st.global_st.closure_id) in
+  (* TODO: pick a better name *)
+  let func_name = "__c0_closure_" ^ Int.to_string closure_id in
+  (* let func_sig : Ast.func_sig =
+    { name = func_name
+    ; ty =
+        { Ast.ty = Ast.Ty.Void Ast.Span.none
+        ; params =
+            List.map free_vars ~f:(fun var ->
+              { Ast.var; ty = Ast.Ty.Int Ast.Span.none; span = Ast.Span.none })
+        ; is_extern = false
+        ; span = Ast.Span.none
+        }
+    ; body = block
+    ; span = Ast.Span.none
+    }
+  in
+  let func_defn = { name = func_name; ty = func_sig; body = block } in *)
+  incr st.global_st.closure_id;
+  empty
+  +> [ ins (Nullary { dst = ptr_temp; op = Alloc { size = (len + 2) * 8; align = 8 } }) ]
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
@@ -521,53 +551,56 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     +> [ ins (Unary { dst; op = Alloc_array { size; align }; src = amount }) ]
 ;;
 
-let lower_func_defn st (defn : Ast.func_defn) : Tir.Func.t =
+let create_tir_func (st : global_st) name ~f =
   let st = create_state st in
   let start_label = fresh_label ~name:"start" st in
-  let params =
-    List.map defn.ty.params ~f:(fun param ->
-      { Tir.Block_param.param = var_temp st param.var; ty = lower_small_ty_exn param.ty })
-  in
-  let linearized =
-    empty ++ label ~params start_label ++ lower_block st defn.body +> [ ins Unreachable ]
-  in
-  trace_ls [%lazy_message (linearized : Tir.Linearized.instr Bag.t)];
+  let linearized = f st start_label +> [ ins Unreachable ] in
   let blocks = Tir.Linearized.to_blocks_exn (Bag.to_list linearized) in
   let next_temp_id = Temp.Id_gen.get st.temp_gen in
   let next_label_id = Label.Id_gen.get st.label_gen in
   let func : Tir.Func.t =
-    { name = defn.name.name; blocks; start = start_label; next_temp_id; next_label_id }
+    { name; blocks; start = start_label; next_temp_id; next_label_id }
   in
   func
 ;;
 
-let lower_global_decl st (decl : Ast.global_decl) : Tir.Func.t option =
+let lower_func_defn (st : global_st) (defn : Ast.func_defn) : Tir.Func.t =
+  let func =
+    create_tir_func st defn.name.name ~f:(fun st start ->
+      let params =
+        List.map defn.ty.params ~f:(fun param ->
+          { Tir.Block_param.param = var_temp st param.var
+          ; ty = lower_small_ty_exn param.ty
+          })
+      in
+      label ~params start ++ lower_block st defn.body)
+  in
+  func
+;;
+
+let lower_global_decl st (decl : Ast.global_decl) =
   match decl with
-  | Extern_func_defn { name; ty } ->
-    Hashtbl.set st.func_ty_map ~key:name ~data:ty;
-    None
-  | Func_decl { name; ty } ->
-    Hashtbl.set st.func_ty_map ~key:name ~data:ty;
-    None
+  | Extern_func_defn { name; ty } -> Hashtbl.set st.func_ty_map ~key:name ~data:ty
+  | Func_decl { name; ty } -> Hashtbl.set st.func_ty_map ~key:name ~data:ty
   | Func_defn defn ->
     Hashtbl.set st.func_ty_map ~key:defn.name ~data:defn.ty;
-    Some (lower_func_defn st defn)
-  | Typedef _ -> None
-  | Struct { name; strukt; span = _ } ->
-    begin
-      let@: strukt = Option.iter strukt in
-      let field_name_to_index =
-        List.mapi strukt.fields ~f:(fun i field -> field.name.t, i)
-        |> String.Table.of_alist_exn
-      in
-      let struct_info = { strukt; field_name_to_index } in
-      Hashtbl.add_exn st.structs ~key:name ~data:struct_info
-    end;
-    None
+    let lowered_func = lower_func_defn st defn in
+    Lstack.push st.lowered_funcs lowered_func
+  | Typedef _ -> ()
+  | Struct { name; strukt; span = _ } -> begin
+    let@: strukt = Option.iter strukt in
+    let field_name_to_index =
+      List.mapi strukt.fields ~f:(fun i field -> field.name.t, i)
+      |> String.Table.of_alist_exn
+    in
+    let struct_info = { strukt; field_name_to_index } in
+    Hashtbl.add_exn st.structs ~key:name ~data:struct_info
+  end
 ;;
 
 let lower_program (program : Ast.program) : Tir.Program.t =
   let st = create_global_state program in
-  let funcs = List.filter_map ~f:(lower_global_decl st) program in
+  List.iter ~f:(lower_global_decl st) program;
+  let funcs = Lstack.to_list st.lowered_funcs in
   { funcs }
 ;;

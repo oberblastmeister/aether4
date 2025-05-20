@@ -193,6 +193,10 @@ module Instr = struct
         { srcs : (Location.t * Ty.t) list
         ; call_conv : Call_conv.t
         }
+    | Lea of
+        { dst : Temp.t
+        ; addr : Address.t
+        }
     (*
        TODO: we should have an invariant that it can only have num_args_in_registers amount of args.
       The other args should be spilled by the instruction selector
@@ -227,6 +231,10 @@ module Instr = struct
   let iter_operand_use_defs (instr : t) ~on_def ~on_use =
     match instr with
     | Nop -> ()
+    | Lea { dst; addr } ->
+      on_def (Operand.Reg dst, Ty.Qword);
+      Address.iter_uses addr ~f:(fun temp -> on_use (Operand.Reg temp));
+      ()
     | Push { src; size = _ } ->
       on_use (Operand.Reg src);
       ()
@@ -271,8 +279,7 @@ module Instr = struct
         | Add | Sub | Imul | Idiv | Imod | Lshift | Rshift -> Qword
         | Eq _ | Lt | Gt | Le | Ge -> Byte
       in
-      on_def (dst, ty);
-      ()
+      on_def (dst, ty)
     | Ret { srcs; call_conv = _ } ->
       (List.iter @> Fold.of_fn fst @> Location.iter_temp) srcs ~f:(fun r ->
         on_use (Reg r))
@@ -289,6 +296,10 @@ module Instr = struct
     in
     match instr with
     | Nop -> instr
+    | Lea { dst; addr } ->
+      let dst = map_temp dst ~f:on_def in
+      let addr = Address.map_uses addr ~f:(map_temp ~f:on_use) in
+      Lea { dst; addr }
     | Undefined { dst; size } -> Undefined { dst = on_def dst; size }
     | Push { src; size } ->
       let src = map_temp src ~f:on_use in
@@ -444,6 +455,7 @@ module Instr = struct
     match t with
     | Undefined _ | Block_params _ | Nop | Unreachable | Jump _ | Cond_jump _ | Pop _ ->
       ()
+    | Lea { dst = _; addr } -> Address.iter_uses addr ~f:(fun temp -> f (temp, Ty.Qword))
     | Push { src; size } -> f (src, size)
     | Call { args; _ } ->
       List.iter args ~f:(fun (loc, ty) ->
@@ -501,6 +513,7 @@ module Instr = struct
       List.iter call_conv.return_regs ~f;
       List.iter call_conv.call_args ~f;
       ()
+    | Lea _
     | Undefined _
     | Push _
     | Pop _
@@ -509,11 +522,11 @@ module Instr = struct
     | Jump _
     | Cond_jump _
     | Mov _
-    | Mov_abs _ -> ()
+    | Mov_abs _
+    | Unreachable -> ()
     | Ret { srcs = _; call_conv } ->
       List.iter call_conv.return_regs ~f;
       ()
-    | Unreachable -> ()
   ;;
 
   let map_uses instr ~f =
@@ -559,6 +572,7 @@ module Instr = struct
 
   let map_location_use_defs (t : t) ~on_use ~on_def =
     match t with
+    | Lea _
     | Unreachable
     | Block_params _
     | Nop

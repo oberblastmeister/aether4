@@ -246,6 +246,10 @@ and check_expr st (expr : Ast.expr) (ty' : Ast.ty) : Ast.expr =
 let rec check_stmt st (stmt : Ast.stmt) : Ast.stmt =
   match stmt with
   | Break { label; span } -> Break { label; span }
+  | Par { block1; block1_free_vars; block2; block2_free_vars; span } ->
+    let block1 = check_block st block1 in
+    let block2 = check_block st block2 in
+    Par { block1; block1_free_vars; block2; block2_free_vars; span }
   | If { cond; body1; body2; span } ->
     let cond = check_expr st cond Ast.bool_ty in
     let body1 = check_stmt st body1 in

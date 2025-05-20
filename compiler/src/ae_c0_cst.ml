@@ -74,6 +74,11 @@ and stmt =
       ; span : Span.t
       }
   | Continue of Span.t
+  | Par of
+      { block1 : block
+      ; block2 : block
+      ; span : Span.t
+      }
 [@@deriving sexp_of]
 
 and for_paren =
@@ -264,6 +269,7 @@ let stmt_span (stmt : stmt) =
   | Break { label = _; span }
   | Continue span
   | Assert { span; _ } -> span
+  | Par { span; _ } -> span
   | Effect expr -> expr_span expr
 ;;
 

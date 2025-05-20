@@ -72,4 +72,5 @@ type t =
   | Eof
   | Break
   | Continue
+  | Par
 [@@deriving sexp_of, equal, compare, variants]

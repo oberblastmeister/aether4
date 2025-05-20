@@ -212,6 +212,7 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
     match op with
     | Null_ptr -> empty +> [ const_i64 dst 0L ]
     | Int_const const -> empty +> [ const_i64 dst const ]
+    | Func_addr func -> empty +> [ ins (Nullary { dst; op = Func_addr func }) ]
     | Bool_const const ->
       let const =
         match const with

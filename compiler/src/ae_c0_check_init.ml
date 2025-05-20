@@ -74,12 +74,6 @@ and check_stmt
       defined
       (stmt : Ast.stmt)
   =
-  trace_s
-    [%message
-      "check_stmt"
-        (declared_stack : (Ast.Var.t option * Ast.Var.Set.t) list)
-        (defined : Ast.Var.Set.t)
-        (stmt : Ast.stmt)];
   match stmt with
   | Ast.If { cond; body1; body2; span = _ } ->
     check_expr cond defined;
@@ -114,6 +108,11 @@ and check_stmt
   | Ast.Assert { expr; span = _ } ->
     check_expr expr defined;
     defined
+  | Ast.Par { block1; block2; span = _ } ->
+    (* par does not define anything, because we may run this stuff on different threads *)
+    let _ = check_block declared_stack defined block1 in
+    let _ = check_block declared_stack defined block2 in
+    defined
   | Ast.Break { label; span = _ } ->
     let%fail_exn declared, (label', declared_at_label) :: _ =
       List.split_while declared_stack ~f:(fun (label', _) ->
@@ -122,7 +121,7 @@ and check_stmt
     assert ([%equal: Var.t option] label' (Some label));
     let declared = declared_at_label :: List.map declared ~f:snd |> Var.Set.union_list in
     (*
-      The declares everything up until the label.
+       The declares everything up until the label.
       We have to union it with the defined because some things weren't defined
       in the scope of this label, or declared in this label.
     *)

@@ -10,7 +10,7 @@ let rec block_returns (block : Ast.block) = List.exists block.stmts ~f:stmt_retu
 and stmt_returns (stmt : Ast.stmt) =
   match stmt with
   | Return _ -> true
-  | Break _ | Assert _ | Assign _ | Declare _ | While _ | Effect _ -> false
+  | Par _ | Break _ | Assert _ | Assign _ | Declare _ | While _ | Effect _ -> false
   | Block block -> block_returns block
   | If { cond = _; body1; body2 = Some body2; span = _ } ->
     stmt_returns body1 && stmt_returns body2

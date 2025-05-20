@@ -57,6 +57,7 @@ module Nullary_op = struct
         ; ty : Ty.t
         }
     | Undefined of Ty.t
+    | Func_addr of string
   [@@deriving sexp_of]
 end
 
@@ -217,6 +218,7 @@ module Instr = struct
     | Nullary { dst; op = Int_const { const = _; ty } | Undefined ty } ->
       f (dst, ty);
       ()
+    | Nullary { dst; op = Func_addr _ } -> f (dst, I64)
     | Unreachable | Jump _ | Cond_jump _ | Ret _ -> ()
   ;;
 

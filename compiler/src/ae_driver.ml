@@ -94,6 +94,7 @@ let compile_source_to_tir ?(emit = []) source =
   if Emit.mem emit Ast then print_s [%message "ast" (program : C0.Ast.program)];
   let%bind program = C0.Elaborate_types.check_program program in
   let%bind () = C0.Check.check_program program in
+  let program = C0.Ast.Closure_convert.convert_program program in
   let tir = C0.Lower_tree_ir.lower_program program in
   let tir =
     (Tir.Program.map_funcs & List.map) ~f:(Tir.Convert_ssa.convert ~renumber:()) tir

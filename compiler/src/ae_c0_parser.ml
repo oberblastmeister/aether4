@@ -348,6 +348,9 @@ and parse_assert env : Cst.stmt =
   let expr = parse_expr env in
   Cst.Assert { expr; span = Span.Syntax.(assert_tok.span ++ Cst.expr_span expr) }
 
+and parse_par env : Cst.stmt =
+  todo ()
+
 and parse_return env : Cst.stmt =
   let open Span.Syntax in
   let ret = expect_eq Return env in

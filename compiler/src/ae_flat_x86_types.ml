@@ -88,6 +88,7 @@ module Instr = struct
     | Lea of
         { dst : Operand.t
         ; src : Address.t
+        ; size : Ty.t
         }
     | Mov_abs of
         { dst : Operand.t

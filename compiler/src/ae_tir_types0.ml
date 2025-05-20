@@ -97,6 +97,7 @@ module Nullary_op = struct
         { size : int
         ; align : int
         }
+    | Func_addr of string
   [@@deriving sexp_of]
 end
 
@@ -304,6 +305,7 @@ module Instr = struct
     | Nullary { dst; op } -> begin
       match op with
       | Int_const _ -> f (dst, Int)
+      | Func_addr _ -> f (dst, Int)
       | Bool_const _ -> f (dst, Bool)
       | Void_const -> f (dst, Void)
       | Alloc _size -> f (dst, Ptr)

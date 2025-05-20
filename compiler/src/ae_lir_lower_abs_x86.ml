@@ -72,6 +72,9 @@ let lower_instr st (instr : Lir.Instr'.t) : Abs_x86.Instr'.t Bag.t =
       if Int64.(const <> 0L && const <> 1L)
       then raise_s [%message "const was not I1" (const : int64)];
       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Byte }) ]
+    | Func_addr func ->
+      empty
+      +> [ ins (Lea { dst; addr = Abs_x86.Address.create_rip_relative (`Label func) }) ]
     | Int_const { const; ty = I64 } when Option.is_some (Int32.of_int64 const) ->
       let dst = get_operand st dst in
       empty +> [ ins (Mov { dst; src = Imm (Int32.of_int64_exn const); size = Qword }) ]

@@ -33,7 +33,8 @@ let get_temp t (temp : Abs_x86.Temp.t) = Mach_reg.of_enum_exn t.allocation.Temp.
 let lower_address st (address : Abs_x86.Address.t) =
   let base =
     match address.base with
-    | Reg temp -> Flat_x86.Address.Base.Reg (get_temp st temp)
+    | Some temp -> Some (get_temp st temp)
+    | None -> None
   in
   let index =
     Option.map address.index ~f:(fun { index; scale } ->
@@ -49,13 +50,13 @@ let lower_operand st (operand : Abs_x86.Operand.t) : Flat_x86.Operand.t =
   | Stack stack_addr -> begin
     match stack_addr with
     | Slot slot ->
-      let offset = Frame_layout.resolve_frame_base_offset st.frame_layout slot in
+      let offset = `Int (Frame_layout.resolve_frame_base_offset st.frame_layout slot) in
       Mem (Flat_x86.Address.create Mach_reg.RBP ~offset)
     | Previous_frame i ->
       (* -16 to skip over the pushed return address and pushed base pointer *)
-      Mem (Flat_x86.Address.create Mach_reg.RBP ~offset:(16 + Int.of_int32_exn i))
+      Mem (Flat_x86.Address.create Mach_reg.RBP ~offset:(`Int (16 + Int.of_int32_exn i)))
     | Current_frame i ->
-      Mem (Flat_x86.Address.create Mach_reg.RSP ~offset:(Int.of_int32_exn i))
+      Mem (Flat_x86.Address.create Mach_reg.RSP ~offset:(`Int (Int.of_int32_exn i)))
   end
   | Reg temp -> Reg (get_temp st temp)
   | Mem address -> Mem (lower_address st address)
@@ -130,6 +131,10 @@ let lower_instr st (instr : Abs_x86.Instr'.t) : Flat_x86.Line.t Bag.t =
     (* just for safety, remove this in performance mode *)
     empty +> [ ins (Mov { dst; src = Imm 0xAAAAAAAAl; size }) ]
   | Block_params _ -> empty
+  | Lea { dst; addr } ->
+    let dst = get_temp st dst in
+    let addr = lower_address st addr in
+    empty +> [ ins (Lea { dst = Reg dst; src = addr; size = Qword }) ]
   | Push { src; size } ->
     let src = get_temp st src in
     empty +> [ ins (Push { src = Reg src; size }) ]
