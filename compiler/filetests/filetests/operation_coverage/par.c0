@@ -1,7 +1,6 @@
 /*
 (
  (kind (CompileAndRun))
- (emit (Lir))
 )
 */
 
@@ -26,8 +25,8 @@ void main() {
     c0_runtime_print_int(closed);
 }
 ----
-1
-11234
 2
 1
+1
+11234
 12312341324

@@ -140,7 +140,8 @@ pub fn init(num_threads: u32, allocator: Allocator) !*Scheduler {
         const size: usize = 1096 * 1096 * 16;
         const HP = try std.heap.page_allocator.alloc(u8, size);
         std.debug.assert(HP.len == size);
-        // @memset(HP, 0);
+        // the memset is very important to preserve the semantics of C0
+        @memset(HP, 0);
         const thread = Thread.spawn(.{}, worker, .{ scheduler, @as(u32, @intCast(worker_id)), HP }) catch unreachable;
         scheduler.spawned_threads.append(thread) catch unreachable;
     }
