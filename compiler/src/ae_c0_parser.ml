@@ -252,6 +252,7 @@ and parse_semi_stmt env : Cst.stmt =
      <* expect_eq_ Semi
      <|> (parse_return <* expect_eq_ Semi)
      <|> (parse_assert <* expect_eq_ Semi)
+     <|> (parse_par <* expect_eq_ Semi)
      <|> (parse_post <* expect_eq_ Semi)
      <|> (parse_effect <* expect_eq_ Semi)
      <|> (parse_decl <* expect_eq_ Semi)
@@ -273,7 +274,7 @@ and parse_continue env : Cst.stmt =
 
 and parse_single_semi_stmt env =
   expect_eq_ Semi env;
-  Cst.Assert { expr = Bool_const { t = true; span = Span.none }; span = Span.none }
+  Cst.nop_stmt Span.none
 
 and parse_effect env =
   let e = try_parse_expr env in
@@ -349,7 +350,17 @@ and parse_assert env : Cst.stmt =
   Cst.Assert { expr; span = Span.Syntax.(assert_tok.span ++ Cst.expr_span expr) }
 
 and parse_par env : Cst.stmt =
-  todo ()
+  let par_tok = expect_eq Par env in
+  expect_eq_ LParen env;
+  let block1 = parse_block env in
+  expect_eq_ Comma env;
+  let block2 = parse_block env in
+  let rparen_tok = expect_eq RParen env in
+  Cst.Par
+    { block1
+    ; block2
+    ; span = Span.Syntax.(par_tok.span ++ block1.span ++ block2.span ++ rparen_tok.span)
+    }
 
 and parse_return env : Cst.stmt =
   let open Span.Syntax in

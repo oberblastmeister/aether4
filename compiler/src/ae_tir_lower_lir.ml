@@ -212,7 +212,8 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
     match op with
     | Null_ptr -> empty +> [ const_i64 dst 0L ]
     | Int_const const -> empty +> [ const_i64 dst const ]
-    | Func_addr func -> empty +> [ ins (Nullary { dst; op = Func_addr func }) ]
+    | Func_addr func ->
+      empty +> [ ins (Nullary { dst; op = Func_addr (mangle_func_name func) }) ]
     | Bool_const const ->
       let const =
         match const with
@@ -269,7 +270,14 @@ let lower_instr st ~is_start_block (instr : Tir.Instr'.t) : instrs =
         ~func:"c0_runtime_null_pointer_panic"
         ~args:[]
         ~is_extern:true
-    | (C0_runtime_assert | C0_runtime_null_pointer_panic), _ ->
+    | C0_runtime_par, [ t0; t1 ] ->
+      lower_call
+        st
+        ~dsts:[ dst, Void ]
+        ~func:"c0_runtime_par"
+        ~args:[ t0, Ptr; t1, Ptr ]
+        ~is_extern:true
+    | (C0_runtime_assert | C0_runtime_null_pointer_panic | C0_runtime_par), _ ->
       raise_s [%message "Invalid operation configuration"]
   end
   | Ret { src; ty } ->

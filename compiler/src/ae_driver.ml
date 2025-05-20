@@ -64,19 +64,29 @@ let link_files_with_runtime ~paths ~out_path =
   let args =
     [ "build-exe" ] @ [ runtime_path ] @ paths @ [ "-femit-bin=" ^ out_path; "-fPIE" ]
   in
+  let fd_read, fd_write = Spawn.safe_pipe () in
   let child =
     Core_unix.create_process_with_fds
-      ~stdin:(Use_this Core_unix.stdin)
-      ~stdout:(Use_this Core_unix.stdout)
-      ~stderr:(Use_this Core_unix.stderr)
+      ~stdin:Generate
+      ~stdout:(Use_this fd_write)
+      ~stderr:(Use_this fd_write)
       ~prog:"zig"
       ~args
       ~env:(`Extend [])
       ()
   in
+  Core_unix.close fd_write;
+  Core_unix.close child.stdin;
   (* TODO: don't use wait_exn here *)
-  Core_unix.waitpid_exn child.pid;
-  ()
+  let status = Core_unix.waitpid child.pid in
+  match status with
+  | Ok () -> ()
+  | Error e ->
+    let in_channel = Core_unix.in_channel_of_descr fd_read in
+    let output = in_channel |> In_channel.input_all in
+    raise_s
+      [%message
+        "Failed to run zig" (e : Core_unix.Exit_or_signal.error) (output : string)]
 ;;
 
 let compile_source_to_tir ?(emit = []) source =

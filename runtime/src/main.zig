@@ -47,6 +47,11 @@ export fn c0_runtime_out_of_bounds_panic() void {
     std.debug.panic("Index out of bounds", .{});
 }
 
+export fn c0_runtime_par(task1: *anyopaque, task2: *anyopaque) void {
+    _ = task1;
+    _ = task2;
+}
+
 fn run() !void {
     var act = std.os.linux.Sigaction{
         .handler = .{ .handler = std.os.linux.SIG.DFL },

@@ -20,6 +20,10 @@ module Api = struct
   let const_null ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Null_ptr })
   let const_void ?ann ?info dst = ins ?ann ?info (Nullary { dst; op = Void_const })
 
+  let func_addr ?ann ?info dst func =
+    ins ?ann ?info (Nullary { dst; op = Func_addr func })
+  ;;
+
   open struct
     let bin (op : Tir.Bin_op.t) ?ann ?info dst src1 src2 =
       ins ?ann ?info (Bin { dst; op; src1; src2 })
@@ -34,13 +38,17 @@ module Api = struct
   let mul = bin Mul
   let sub = bin Sub
   let div = bin Div
+  let store_int = bin (Store Int)
+  let store ty = bin (Store ty)
   let eq_ptr = bin (Eq Ptr)
   let eq_int = bin (Eq Int)
   let offset_ptr = bin Offset_ptr
   let lt = bin Lt
   let ge = bin Ge
   let copy_int = unary (Copy Int)
+  let copy_ptr = unary (Copy Ptr)
   let load_int = unary (Deref Int)
+  let load ty = unary (Deref ty)
   let nary ?ann ?info dst op srcs = ins ?ann ?info (Nary { dst; op; srcs })
   let unreachable = ins Unreachable
   let deref ?ann ?info dst src ty = ins ?ann ?info (Unary { dst; op = Deref ty; src })
@@ -406,32 +414,80 @@ and lower_stmt st (stmt : Ast.stmt) : instrs =
     ++ body
     +> [ ins ~info (Jump (bc loop_label)) ]
     ++ label done_label
-  | Par { block1; block2; block1_free_vars; block2_free_vars; span } -> todol [%here]
+  | Par { block1; block2; block1_free_vars; block2_free_vars; span = _ } ->
+    let closure1_temp = fresh_temp ~name:"closure1" st in
+    let closure2_temp = fresh_temp ~name:"closure2" st in
+    let garbage_dst = fresh_temp ~name:"garbage" st in
+    empty
+    ++ lower_create_closure st closure1_temp block1_free_vars block1
+    ++ lower_create_closure st closure2_temp block2_free_vars block2
+    +> [ ins
+           (Nary
+              { dst = garbage_dst
+              ; op = C0_runtime_par
+              ; srcs = [ closure1_temp; closure2_temp ]
+              })
+       ]
 
-and lower_alloc_closure st dst (free_vars : Ast.Var.Set.t) (block : Ast.block) : instrs =
+and lower_create_closure st dst (free_vars : Ast.Var.Set.t) (block : Ast.block) : instrs =
   let len = Set.length free_vars in
   let ptr_temp = fresh_temp ~name:"ptr" st in
   let closure_id = !(st.global_st.closure_id) in
-  (* TODO: pick a better name *)
-  let func_name = "__c0_closure_" ^ Int.to_string closure_id in
-  (* let func_sig : Ast.func_sig =
-    { name = func_name
-    ; ty =
-        { Ast.ty = Ast.Ty.Void Ast.Span.none
-        ; params =
-            List.map free_vars ~f:(fun var ->
-              { Ast.var; ty = Ast.Ty.Int Ast.Span.none; span = Ast.Span.none })
-        ; is_extern = false
-        ; span = Ast.Span.none
-        }
-    ; body = block
-    ; span = Ast.Span.none
-    }
-  in
-  let func_defn = { name = func_name; ty = func_sig; body = block } in *)
   incr st.global_st.closure_id;
+  let func_name = "____closure" ^ Int.to_string closure_id in
+  let free_vars_list = Set.to_list free_vars in
+  let closure_func =
+    create_tir_func st.global_st func_name ~f:(fun st start ->
+      let self_temp = fresh_temp ~name:"self" st in
+      let params = [ { Tir.Block_param.param = self_temp; ty = Int } ] in
+      let load_instrs =
+        List.mapi free_vars_list ~f:(fun i var ->
+          let var = var_temp st var in
+          let off_self = fresh_temp ~name:"off_self" st in
+          let const_temp = fresh_temp ~name:"const" st in
+          empty
+          +> [ const_int const_temp (Int64.of_int ((i + 2) * 8))
+             ; offset_ptr off_self self_temp const_temp
+               (* TODO: we need to use another type here, or else free variables other than int doesn't work *)
+             ; load Int var off_self
+             ])
+        |> Bag.concat
+      in
+      let void_const = fresh_temp ~name:"void" st in
+      label ~params start
+      ++ load_instrs
+      ++ lower_block st block
+      +> [ const_void void_const; ins (Ret { src = void_const; ty = Void }) ])
+  in
+  Lstack.push st.global_st.lowered_funcs closure_func;
+  let func_ptr_temp = fresh_temp ~name:"func_ptr" st in
+  let garbage = fresh_temp ~name:"garbage" st in
+  let const_temp = fresh_temp ~name:"const" st in
+  let size_temp = fresh_temp ~name:"size" st in
+  let off_ptr_temp = fresh_temp ~name:"off_ptr" st in
+  let store_instrs =
+    List.mapi free_vars_list ~f:(fun i var ->
+      let var = var_temp st var in
+      empty
+      +> [ const_int const_temp (Int64.of_int ((i + 2) * 8))
+         ; offset_ptr off_ptr_temp ptr_temp const_temp
+           (* TODO: we need to store the type inside of var *)
+           (* todo: we need to use another type here, or else free variables other than int doesn't work *)
+         ; store Int garbage off_ptr_temp var
+         ])
+    |> Bag.concat
+  in
   empty
-  +> [ ins (Nullary { dst = ptr_temp; op = Alloc { size = (len + 2) * 8; align = 8 } }) ]
+  ++ store_instrs
+  +> [ ins (Nullary { dst = ptr_temp; op = Alloc { size = (len + 2) * 8; align = 8 } })
+     ; func_addr func_ptr_temp func_name
+     ; store_int garbage ptr_temp func_ptr_temp
+     ; const_int const_temp (Int64.of_int 8)
+     ; offset_ptr off_ptr_temp ptr_temp const_temp
+     ; const_int size_temp (Int64.of_int len)
+     ; store_int garbage off_ptr_temp size_temp
+     ; copy_ptr dst ptr_temp
+     ]
 
 and lower_bin_op (op : Ast.bin_op) : Tir.Bin_op.t =
   match op with
@@ -549,9 +605,8 @@ and lower_expr st (dst : Temp.t) (expr : Ast.expr) : instrs =
     empty
     ++ lower_expr st amount expr
     +> [ ins (Unary { dst; op = Alloc_array { size; align }; src = amount }) ]
-;;
 
-let create_tir_func (st : global_st) name ~f =
+and create_tir_func (st : global_st) name ~f =
   let st = create_state st in
   let start_label = fresh_label ~name:"start" st in
   let linearized = f st start_label +> [ ins Unreachable ] in

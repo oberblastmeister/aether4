@@ -105,6 +105,7 @@ module Nary_op = struct
   type t =
     | C0_runtime_assert
     | C0_runtime_null_pointer_panic
+    | C0_runtime_par
   [@@deriving sexp_of]
 end
 
@@ -267,7 +268,11 @@ module Instr = struct
         f (t4, Int);
         ()
       | C0_runtime_null_pointer_panic, [] -> ()
-      | (C0_runtime_assert | C0_runtime_null_pointer_panic), _ ->
+      | C0_runtime_par, [ t0; t1 ] ->
+        f (t0, Ptr);
+        f (t1, Ptr);
+        ()
+      | (C0_runtime_assert | C0_runtime_null_pointer_panic | C0_runtime_par), _ ->
         raise_s [%message "Invalid Nary operation"]
     end
     | Ret { src; ty } ->
@@ -281,6 +286,7 @@ module Instr = struct
     | Nary { dst; op; srcs = _ } -> begin
       match op with
       | C0_runtime_assert -> f (dst, Void)
+      | C0_runtime_par -> f (dst, Void)
       | C0_runtime_null_pointer_panic -> f (dst, Void)
     end
     | Nop -> ()
