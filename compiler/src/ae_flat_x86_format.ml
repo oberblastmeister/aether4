@@ -157,7 +157,7 @@ let format_instr (instr : Instr.t) =
   | Sar { dst; size } -> [%string "sar%{suff size} %cl, %{op dst size}"]
   | Push { src; size } -> [%string "push%{suff size} %{op src size}"]
   | Pop { dst; size } -> [%string "pop%{suff size} %{op dst size}"]
-  | Lea { dst; src; size } -> 
+  | Lea { dst; src; size } ->
     let src = Operand.Mem src in
     [%string "lea%{suff size} %{op src size}, %{op dst size}"]
   | Ret -> [%string "ret"]

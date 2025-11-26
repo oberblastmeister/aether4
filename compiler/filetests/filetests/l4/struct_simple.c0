@@ -1,5 +1,5 @@
 /*
-(
+e
  (kind (CompileAndRun))
 )
 */
@@ -18,5 +18,10 @@ void main() {
     struct line *line = alloc(struct line);
     (*line).start.x = 1243;
     assert((*line).start.x == 1243);
+}
+
+void fn() {
+    int i = 13241234;
+    return &i;
 }
 ----

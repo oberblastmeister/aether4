@@ -1,0 +1,50 @@
+// spawn sync
+int mega_sum(int[] a, int n, int m) {
+    int res = 0;
+    for (int i = 0; i < m; i++) {
+        spawn {
+            res += sum(a, n);
+        }
+    }
+    sync;
+    return res;
+}
+
+// parfor
+int mega_sum(int[] a, int n, int m) {
+    int res = 0;
+    parfor (int i = 0; i < m; i++) {
+        res += sum(a, n);
+    }
+    sync;
+    return res;
+}
+
+// composable
+int mega_sum(int[] a, int n, int m) {
+    int res = 0;
+    iter (fun i => {
+        spawn(fun _ => {
+            res += sum(a, n);
+        });
+    }
+    sync();
+    return res;
+}
+
+int nested(int a[], int n) {
+    int res = 0;
+    spawn(fun _ => {
+        res += sum(a, n);
+    });
+    return res;
+}
+
+int mega_sum(int[] a, int n, int m) {
+    int res = 0;
+    iter(fun i => {
+        nested(a, n);
+    });
+    sync();
+    return res;
+}

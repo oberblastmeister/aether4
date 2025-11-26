@@ -135,8 +135,6 @@ pub fn init(num_threads: u32, allocator: Allocator) !*Scheduler {
         scheduler.deques.append(.{}) catch unreachable;
     }
     for (0..num_threads) |worker_id| {
-        // const size: usize = if (worker_id == 0) 1024 * 1024 * 1024 else 1024 * 1024;
-        // const size: usize = if (worker_id == 0) 4096 * 4096 else 1024 * 1024;
         const size: usize = 1096 * 1096 * 16;
         const HP = try std.heap.page_allocator.alloc(u8, size);
         std.debug.assert(HP.len == size);

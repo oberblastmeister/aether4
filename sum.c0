@@ -51,8 +51,8 @@ void main() {
     for (int i = 0; i < n; i++) {
         a[i] = i + 1;
     }
-    // int res1 = mega_sum(a, n, m);
-    int res2 = mega_sum_par(a, n, m);
+    int res1 = mega_sum(a, n, m);
+    // int res2 = mega_sum_par(a, n, m);
     // c0_runtime_print_int(res1);
     // c0_runtime_print_int(res2);
     // assert (res1 == res2);

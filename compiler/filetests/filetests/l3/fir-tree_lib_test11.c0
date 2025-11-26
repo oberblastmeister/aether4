@@ -28,8 +28,9 @@ int bits_get_size(int bits,int ind)
  if (bits_exists(bits,ind))
  {
   if (ind >=15) return 1;
-  size = bits_get_size(bits,(2 * (1 + ind) - 1));
+  array, ind, size, bits = alloc_array(int, 1324, ind, size, bits, array);
   size += 1;
+  array[12341234] = 1234;
   size += bits_get_size(bits,(2 * (1 + ind)));
  }
  return size;

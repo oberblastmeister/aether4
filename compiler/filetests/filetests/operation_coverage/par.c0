@@ -1,6 +1,7 @@
 /*
 (
  (kind (CompileAndRun))
+ (emit (Lir))
 )
 */
 
@@ -25,8 +26,326 @@ void main() {
     c0_runtime_print_int(closed);
 }
 ----
-2
-1
+(lir
+ ((funcs
+   (((name _c0_____closure0)
+     (blocks
+      ((start@0
+        ((label start@0)
+         (body
+          (((i
+             (Block_params
+              (((param CX@13) (ty I64)) ((param HP@12) (ty I64))
+               ((param self@0) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst const@1) (op (Int_const (const 16) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst off_self@2) (op Add) (src1 self@0) (src2 const@1)))
+            (index 2) (info ()) (ann ()))
+           ((i (Unary (dst closed@3) (op (Load I64)) (src off_self@2)))
+            (index 3) (info ()) (ann ()))
+           ((i (Nullary (dst tmp@4) (op (Int_const (const 2) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Unary (dst x@5) (op (Copy I64)) (src tmp@4))) (index 5)
+            (info (20:17)) (ann ()))
+           ((i (Unary (dst arg0@6) (op (Copy I64)) (src x@5))) (index 6)
+            (info (20:17)) (ann ()))
+           ((i
+             (Call (dsts ((effect@7 I64))) (func c0_runtime_print_int)
+              (args ((arg0@6 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 7) (info ()) (ann ()))
+           ((i (Nullary (dst closed@8) (op (Int_const (const 1) (ty I64)))))
+            (index 8) (info ()) (ann ()))
+           ((i (Unary (dst arg0@9) (op (Copy I64)) (src closed@8))) (index 9)
+            (info (11:9-15)) (ann ()))
+           ((i
+             (Call (dsts ((effect@10 I64))) (func c0_runtime_print_int)
+              (args ((arg0@9 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 10) (info ()) (ann ()))
+           ((i (Nullary (dst void@11) (op (Undefined I64)))) (index 11)
+            (info ()) (ann ()))
+           ((i
+             (Ret (srcs ((HP@12 I64) (void@11 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 12) (info ()) (ann ()))))))))
+     (start start@0) (next_temp_id 14) (next_label_id 1)
+     (call_conv
+      ((name c0) (return_regs (RAX RBX))
+       (call_args (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+       (num_args_in_regs 13)
+       (call_clobbers (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15)))))
+    ((name _c0_____closure1)
+     (blocks
+      ((start@0
+        ((label start@0)
+         (body
+          (((i
+             (Block_params
+              (((param CX@13) (ty I64)) ((param HP@12) (ty I64))
+               ((param self@0) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i (Nullary (dst const@1) (op (Int_const (const 16) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Bin (dst off_self@2) (op Add) (src1 self@0) (src2 const@1)))
+            (index 2) (info ()) (ann ()))
+           ((i (Unary (dst closed@3) (op (Load I64)) (src off_self@2)))
+            (index 3) (info ()) (ann ()))
+           ((i (Nullary (dst tmp@4) (op (Int_const (const 1) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Unary (dst x@5) (op (Copy I64)) (src tmp@4))) (index 5)
+            (info (14:17)) (ann ()))
+           ((i (Unary (dst arg0@6) (op (Copy I64)) (src x@5))) (index 6)
+            (info (14:17)) (ann ()))
+           ((i
+             (Call (dsts ((effect@7 I64))) (func c0_runtime_print_int)
+              (args ((arg0@6 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 7) (info ()) (ann ()))
+           ((i
+             (Nullary (dst closed@8) (op (Int_const (const 11234) (ty I64)))))
+            (index 8) (info ()) (ann ()))
+           ((i (Unary (dst arg0@9) (op (Copy I64)) (src closed@8))) (index 9)
+            (info (11:9-15)) (ann ()))
+           ((i
+             (Call (dsts ((effect@10 I64))) (func c0_runtime_print_int)
+              (args ((arg0@9 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 10) (info ()) (ann ()))
+           ((i (Nullary (dst void@11) (op (Undefined I64)))) (index 11)
+            (info ()) (ann ()))
+           ((i
+             (Ret (srcs ((HP@12 I64) (void@11 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 12) (info ()) (ann ()))))))))
+     (start start@0) (next_temp_id 14) (next_label_id 1)
+     (call_conv
+      ((name c0) (return_regs (RAX RBX))
+       (call_args (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+       (num_args_in_regs 13)
+       (call_clobbers (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15)))))
+    ((name _c0_main)
+     (blocks
+      ((start@0
+        ((label start@0)
+         (body
+          (((i
+             (Block_params
+              (((param CX@29) (ty I64)) ((param HP@42) (ty I64)))))
+            (index 0) (info ()) (ann ()))
+           ((i
+             (Nullary (dst tmp@0)
+              (op (Int_const (const 12312341324) (ty I64)))))
+            (index 1) (info ()) (ann ()))
+           ((i (Unary (dst closed@1) (op (Copy I64)) (src tmp@0))) (index 2)
+            (info (11:9-15)) (ann ()))
+           ((i (Nullary (dst const@30) (op (Int_const (const 24) (ty I64)))))
+            (index 3) (info ()) (ann ()))
+           ((i (Nullary (dst align@34) (op (Int_const (const 8) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Nullary (dst align'@35) (op (Int_const (const 7) (ty I64)))))
+            (index 5) (info ()) (ann ()))
+           ((i (Bin (dst ptr@43) (op Add) (src1 HP@42) (src2 align'@35)))
+            (index 6) (info ()) (ann ()))
+           ((i (Bin (dst ptr@44) (op Div) (src1 ptr@43) (src2 align@34)))
+            (index 7) (info ()) (ann ()))
+           ((i (Bin (dst ptr@45) (op Mul) (src1 ptr@44) (src2 align@34)))
+            (index 8) (info ()) (ann ()))
+           ((i (Bin (dst HP'@31) (op Add) (src1 ptr@45) (src2 const@30)))
+            (index 9) (info ()) (ann ()))
+           ((i (Unary (dst HP_LIM@32) (op (Load I64)) (src CX@29)))
+            (index 10) (info ()) (ann ()))
+           ((i (Bin (dst hp_cmp@33) (op Le) (src1 HP'@31) (src2 HP_LIM@32)))
+            (index 11) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond hp_cmp@33) (b1 ((label then@1) (args ())))
+              (b2 ((label else@2) (args ())))))
+            (index 12) (info ()) (ann ()))))))
+       (then@1
+        ((label then@1)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@3) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@2
+        ((label else@2)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ()) (func c0_runtime_alloc_fail) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@3
+        ((label join@3)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst HP@46) (op (Copy I64)) (src HP'@31))) (index 1)
+            (info ()) (ann ()))
+           ((i (Nullary (dst func_ptr@3) (op (Func_addr _c0_____closure1))))
+            (index 2) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@4) (op (Store I64)) (src1 ptr@45)
+              (src2 func_ptr@3)))
+            (index 3) (info ()) (ann ()))
+           ((i (Nullary (dst const@5) (op (Int_const (const 8) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Bin (dst off_ptr@6) (op Add) (src1 ptr@45) (src2 const@5)))
+            (index 5) (info ()) (ann ()))
+           ((i (Nullary (dst size@7) (op (Int_const (const 1) (ty I64)))))
+            (index 6) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@8) (op (Store I64)) (src1 off_ptr@6)
+              (src2 size@7)))
+            (index 7) (info ()) (ann ()))
+           ((i (Unary (dst closure1@9) (op (Copy I64)) (src ptr@45)))
+            (index 8) (info ()) (ann ()))
+           ((i (Nullary (dst const@10) (op (Int_const (const 16) (ty I64)))))
+            (index 9) (info ()) (ann ()))
+           ((i (Bin (dst off_ptr@11) (op Add) (src1 ptr@45) (src2 const@10)))
+            (index 10) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@12) (op (Store I64)) (src1 off_ptr@11)
+              (src2 closed@1)))
+            (index 11) (info ()) (ann ()))
+           ((i (Nullary (dst const@36) (op (Int_const (const 24) (ty I64)))))
+            (index 12) (info ()) (ann ()))
+           ((i (Nullary (dst align@40) (op (Int_const (const 8) (ty I64)))))
+            (index 13) (info ()) (ann ()))
+           ((i (Nullary (dst align'@41) (op (Int_const (const 7) (ty I64)))))
+            (index 14) (info ()) (ann ()))
+           ((i (Bin (dst ptr@47) (op Add) (src1 HP@46) (src2 align'@41)))
+            (index 15) (info ()) (ann ()))
+           ((i (Bin (dst ptr@48) (op Div) (src1 ptr@47) (src2 align@40)))
+            (index 16) (info ()) (ann ()))
+           ((i (Bin (dst ptr@49) (op Mul) (src1 ptr@48) (src2 align@40)))
+            (index 17) (info ()) (ann ()))
+           ((i (Bin (dst HP'@37) (op Add) (src1 ptr@49) (src2 const@36)))
+            (index 18) (info ()) (ann ()))
+           ((i (Unary (dst HP_LIM@38) (op (Load I64)) (src CX@29)))
+            (index 19) (info ()) (ann ()))
+           ((i (Bin (dst hp_cmp@39) (op Le) (src1 HP'@37) (src2 HP_LIM@38)))
+            (index 20) (info ()) (ann ()))
+           ((i
+             (Cond_jump (cond hp_cmp@39) (b1 ((label then@4) (args ())))
+              (b2 ((label else@5) (args ())))))
+            (index 21) (info ()) (ann ()))))))
+       (then@4
+        ((label then@4)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Jump ((label join@6) (args ())))) (index 1) (info ())
+            (ann ()))))))
+       (else@5
+        ((label else@5)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i
+             (Call (dsts ()) (func c0_runtime_alloc_fail) (args ())
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 1) (info ()) (ann ()))
+           ((i Unreachable) (index 2) (info ()) (ann ()))))))
+       (join@6
+        ((label join@6)
+         (body
+          (((i (Block_params ())) (index 0) (info ()) (ann ()))
+           ((i (Unary (dst HP@50) (op (Copy I64)) (src HP'@37))) (index 1)
+            (info ()) (ann ()))
+           ((i (Nullary (dst func_ptr@14) (op (Func_addr _c0_____closure0))))
+            (index 2) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@15) (op (Store I64)) (src1 ptr@49)
+              (src2 func_ptr@14)))
+            (index 3) (info ()) (ann ()))
+           ((i (Nullary (dst const@16) (op (Int_const (const 8) (ty I64)))))
+            (index 4) (info ()) (ann ()))
+           ((i (Bin (dst off_ptr@17) (op Add) (src1 ptr@49) (src2 const@16)))
+            (index 5) (info ()) (ann ()))
+           ((i (Nullary (dst size@18) (op (Int_const (const 1) (ty I64)))))
+            (index 6) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@19) (op (Store I64)) (src1 off_ptr@17)
+              (src2 size@18)))
+            (index 7) (info ()) (ann ()))
+           ((i (Unary (dst closure2@20) (op (Copy I64)) (src ptr@49)))
+            (index 8) (info ()) (ann ()))
+           ((i (Nullary (dst const@21) (op (Int_const (const 16) (ty I64)))))
+            (index 9) (info ()) (ann ()))
+           ((i (Bin (dst off_ptr@22) (op Add) (src1 ptr@49) (src2 const@21)))
+            (index 10) (info ()) (ann ()))
+           ((i
+             (Bin (dst garbage@23) (op (Store I64)) (src1 off_ptr@22)
+              (src2 closed@1)))
+            (index 11) (info ()) (ann ()))
+           ((i
+             (Call (dsts ((HP@51 I64))) (func c0_runtime_par)
+              (args ((closure1@9 I64) (closure2@20 I64) (HP@50 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 12) (info ()) (ann ()))
+           ((i (Unary (dst arg0@25) (op (Copy I64)) (src closed@1)))
+            (index 13) (info (11:9-15)) (ann ()))
+           ((i
+             (Call (dsts ((effect@26 I64))) (func c0_runtime_print_int)
+              (args ((arg0@25 I64)))
+              (call_conv
+               ((name sysv) (return_regs (RAX))
+                (call_args (RDI RSI RDX RCX R8 R9)) (num_args_in_regs 6)
+                (call_clobbers (RAX RDI RSI RDX RCX R8 R9 R10))))))
+            (index 14) (info ()) (ann ()))
+           ((i (Nullary (dst ret@27) (op (Undefined I64)))) (index 15)
+            (info ()) (ann ()))
+           ((i
+             (Ret (srcs ((HP@51 I64) (ret@27 I64)))
+              (call_conv
+               ((name c0) (return_regs (RAX RBX))
+                (call_args
+                 (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+                (num_args_in_regs 13)
+                (call_clobbers
+                 (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15))))))
+            (index 16) (info ([10,1]-[27,2])) (ann ()))))))))
+     (start start@0) (next_temp_id 52) (next_label_id 7)
+     (call_conv
+      ((name c0) (return_regs (RAX RBX))
+       (call_args (RAX RBX RDI RSI RCX RDX R8 R9 R10 R12 R13 R14 R15))
+       (num_args_in_regs 13)
+       (call_clobbers (RAX RCX RDX RBX RSI RDI R8 R9 R10 R12 R13 R14 R15)))))))))
 1
 11234
+2
+1
 12312341324

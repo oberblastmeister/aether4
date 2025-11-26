@@ -1,0 +1,39 @@
+let first = 1234;
+type second = 1234;
+mod third = 1243;
+sig fourth = 1234;
+
+type second a b c = list a b c;
+
+let first = fun {a : type} (mod M : some_sig) = another
+
+let another = first {int} (mod Third)
+
+let second = fun {a : type} (b : int) (c : int) = b + c; 
+
+let first = fun a b c => fun d e f => {
+    let another = a + b + c + d + e + f;
+    let final = another + final;
+    // first
+    // second
+    // third
+    let first = 12341234;
+    let second =
+        \\first
+        \\second
+        \\third
+        \\fourth
+    ;
+    another + final;
+};
+
+mod first = {
+    let first = 1234;
+    let second = 1234;
+    mod bruh = first second third;
+    type another another = 134234;
+    struct {
+        first;
+        second;
+    }
+};
